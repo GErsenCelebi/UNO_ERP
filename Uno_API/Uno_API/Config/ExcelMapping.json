@@ -1,0 +1,15 @@
+{
+  "Rooming": {
+    "Yolcu Adı": { "dbField": "FirstName", "required": true, "type": "string" },
+    "Yolcu Soyadı": { "dbField": "LastName", "required": true, "type": "string" },
+    "Cinsiyet": { "dbField": "Gender", "required": false, "type": "string" },
+    "RoomType": { "dbField": "RoomType", "required": false, "type": "string" },
+    "Pax Type": { "dbField": "PaxType", "required": false, "type": "string" },
+    "T.C. Kimlik No": { "dbField": "NationalId", "required": false, "type": "string" },
+    "Doğum Tarihi": { "dbField": "DateOfBirth", "required": false, "type": "date" },
+    "Telefon": { "dbField": "Phone", "required": false, "type": "string" },
+    "Pasaport No": { "dbField": "PassportNo", "required": false, "type": "string" },
+    "Pasaport type": { "dbField": "PassportType", "required": false, "type": "string" },
+    "Visa No": { "dbField": "VisaNo", "required": false, "type": "string" }
+  }
+}

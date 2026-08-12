@@ -1,0 +1,86 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Uno_API.Models;
+using Uno_API.Data;
+
+namespace Uno_API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ExcursionVendorsController : ControllerBase
+    {
+        private readonly UnoDbContext _context;
+
+        public ExcursionVendorsController(UnoDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<ExcursionVendor>>> GetExcursionVendors([FromQuery] int? excursionId)
+        {
+            var query = _context.ExcursionVendors.Include(ev => ev.Vendor).AsQueryable();
+
+            if (excursionId.HasValue)
+            {
+                query = query.Where(ev => ev.ExcursionId == excursionId.Value);
+            }
+
+            return await query.ToListAsync();
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ExcursionVendor>> GetExcursionVendor(int id)
+        {
+            var excursionVendor = await _context.ExcursionVendors
+                .Include(ev => ev.Vendor)
+                .FirstOrDefaultAsync(ev => ev.Id == id);
+
+            if (excursionVendor == null) return NotFound();
+            return excursionVendor;
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<ExcursionVendor>> PostExcursionVendor(ExcursionVendor excursionVendor)
+        {
+            _context.ExcursionVendors.Add(excursionVendor);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetExcursionVendor), new { id = excursionVendor.Id }, excursionVendor);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutExcursionVendor(int id, ExcursionVendor excursionVendor)
+        {
+            if (id != excursionVendor.Id) return BadRequest();
+            _context.Entry(excursionVendor).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ExcursionVendorExists(id)) return NotFound();
+                else throw;
+            }
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteExcursionVendor(int id)
+        {
+            var excursionVendor = await _context.ExcursionVendors.FindAsync(id);
+            if (excursionVendor == null) return NotFound();
+            _context.ExcursionVendors.Remove(excursionVendor);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private bool ExcursionVendorExists(int id)
+        {
+            return _context.ExcursionVendors.Any(e => e.Id == id);
+        }
+    }
+}

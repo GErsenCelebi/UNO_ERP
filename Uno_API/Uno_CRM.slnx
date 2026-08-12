@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../Uno_E2E_Tests/Uno_E2E_Tests.csproj" />
+  <Project Path="Uno_API.Tests/Uno_API.Tests.csproj" />
+  <Project Path="Uno_API/Uno_API.csproj" />
+</Solution>

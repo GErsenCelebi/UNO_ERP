@@ -1,0 +1,2 @@
+:HL["/_next/static/css/dbdbb0372f7dd9f3.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"tour-details","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"tnZ-5yx55TuIJWuTMSwlU"}

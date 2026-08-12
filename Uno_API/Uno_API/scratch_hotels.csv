@@ -1,0 +1,4 @@
+HotelName,Location,Star,Startdate,Enddate,Double,single,Triple,Twin
+Automated Test Hotel b8a9b523,Prague,5,05.09.2026,07.09.2026,18,4,15,10
+Budapest Grand Hotel,Budapest,4,01.09.2026,03.09.2026,18,4,15,10
+Vienna Imperial,Vienna,5,01.03.2026,05.09.2026,18,4,15,10

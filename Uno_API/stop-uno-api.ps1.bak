@@ -1,0 +1,61 @@
+param(
+    [switch]$Quiet,
+    [switch]$Aggressive
+)
+
+$ErrorActionPreference = "SilentlyContinue"
+
+$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$apiProjectPath = Join-Path $repoRoot "Uno_API\Uno_API.csproj"
+$apiDllPath = Join-Path $repoRoot "Uno_API\bin\Release\net10.0\Uno_API.dll"
+$publishedDllPath = Join-Path $repoRoot "Uno_API\bin\Release\net10.0\publish\Uno_API.dll"
+
+$unoApiProcesses = Get-Process Uno_API
+if ($unoApiProcesses) {
+    $unoApiProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 300
+    $remainingUnoApiProcesses = Get-Process Uno_API
+    if (-not $remainingUnoApiProcesses -and -not $Quiet) {
+        Write-Host "Stopped running Uno_API.exe process(es)."
+    }
+    elseif ($remainingUnoApiProcesses -and -not $Quiet) {
+        Write-Warning "Uno_API.exe is still running and may need to be stopped from an elevated session."
+    }
+}
+
+try {
+    $dotnetProcesses = Get-CimInstance Win32_Process |
+        Where-Object {
+            $_.Name -ieq "dotnet.exe" -and
+            $_.CommandLine -and
+            ($_.CommandLine.Contains($apiProjectPath) -or $_.CommandLine.Contains($apiDllPath) -or $_.CommandLine.Contains($publishedDllPath))
+        }
+
+    foreach ($process in $dotnetProcesses) {
+        Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 200
+        if (Get-Process -Id $process.ProcessId) {
+            taskkill /PID $process.ProcessId /F | Out-Null
+        }
+        if (-not $Quiet) {
+            Write-Host "Stopped dotnet process $($process.ProcessId) for Uno_API."
+        }
+    }
+}
+catch {
+}
+
+if ($Aggressive) {
+    $candidateProcesses = Get-CimInstance Win32_Process |
+        Where-Object {
+            ($_.Name -ieq "dotnet.exe" -or $_.Name -ieq "node.exe" -or $_.Name -ieq "Uno_API.exe") -and
+            $_.CommandLine -and
+            ($_.CommandLine.Contains($repoRoot) -or $_.CommandLine.Contains("Uno_API")) -and
+            -not ($_.CommandLine -match "msbuild") -and
+            -not ($_.CommandLine -match "devenv")
+        }
+
+    foreach ($process in $candidateProcesses) {
+        taskkill /PID $process.ProcessId /F | Out-Null
+    }
+}

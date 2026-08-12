@@ -1,0 +1,17 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Uno_API.Models
+{
+    public class Vendor
+    {
+        [Key]
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Contact { get; set; } = string.Empty;
+        public string ServiceType { get; set; } = string.Empty;  // Restaurant, Night Event, Boat Tour, Ticket, Tax, etc.
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ICollection<ExcursionVendor>? ExcursionVendors { get; set; }
+    }
+}
