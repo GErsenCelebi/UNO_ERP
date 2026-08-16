@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, Key, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, User, Globe, Calendar, Layers, Database } from 'lucide-react';
-import { authenticateUser, getCurrentUser } from '@/lib/auth';
+import { authenticateUser, authenticateUserAsync, getCurrentUser } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,20 +19,23 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      const result = authenticateUser(email, password);
+    try {
+      const result = await authenticateUserAsync(email, password);
       if (result.success) {
         window.location.href = '/dashboard';
       } else {
         setError(result.error || 'Authentication failed');
         setLoading(false);
       }
-    }, 300);
+    } catch (err) {
+      setError('An unexpected error occurred');
+      setLoading(false);
+    }
   };
 
   const handleQuickLogin = (uEmail: string, uPass: string) => {

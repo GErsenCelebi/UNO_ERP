@@ -26,11 +26,12 @@ namespace Uno_API.Data
         public DbSet<Vendor> Vendors { get; set; } = null!;
         public DbSet<ExcursionVendor> ExcursionVendors { get; set; } = null!;
 
-        // Bookings & Collections & Invoices
+        // Bookings & Collections & Invoices & Users
         public DbSet<Booking> Bookings { get; set; } = null!;
         public DbSet<Collection> Collections { get; set; } = null!;
         public DbSet<SalesTracker> SalesTrackers { get; set; } = null!;
         public DbSet<Invoice> Invoices { get; set; } = null!;
+        public DbSet<User> Users { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -94,6 +95,14 @@ namespace Uno_API.Data
             modelBuilder.Entity<Vendor>().HasData(new Vendor { Id = 1, Name = "Sample Vendor", Email = "vendor@test.com", ServiceType = "Catering" });
             modelBuilder.Entity<Excursion>().HasData(new Excursion { Id = 1, Name = "City Tour", Type = "Half Day", Price = 30m, SalePrice = 50m });
             modelBuilder.Entity<Guide>().HasData(new Guide { Id = 1, Name = "Jane Smith", Language = "English", PhoneNumber = "098-765-4321", DailyRate = 100m });
+
+            // Seed Users
+            modelBuilder.Entity<User>().HasData(
+                new User { Id = 1, Email = "evren@uno-dmc.cz", Password = "FenerliDerya@1907", Name = "Evren", Role = "Administrator", IsActive = true, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 8, 1, 0, 0, 0), DateTimeKind.Utc) },
+                new User { Id = 2, Email = "gersencelebi@gmail.com", Password = "FenerliErsen@1907", Name = "G. Ersen Çelebi", Role = "Administrator", IsActive = true, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 8, 1, 0, 0, 0), DateTimeKind.Utc) },
+                new User { Id = 3, Email = "tuana@uno-dmc.cz", Password = "medCezir@1993", Name = "Tuana", Role = "Administrator", IsActive = true, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 8, 12, 0, 0, 0), DateTimeKind.Utc) },
+                new User { Id = 4, Email = "deniz.evren@uno-dmc.cz", Password = "FenerliDeniz@1907", Name = "Deniz Evren", Role = "Administrator", IsActive = true, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 8, 12, 0, 0, 0), DateTimeKind.Utc) }
+            );
         }
     }
 }

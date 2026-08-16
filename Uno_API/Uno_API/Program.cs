@@ -88,6 +88,29 @@ if (initializeDatabaseOnStartup)
 
                 UPDATE ServiceCategories SET Name = 'Invoiced Fee' WHERE Id = 8;
                 UPDATE ServiceCategories SET IsActive = 0 WHERE Id = 7;
+
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
+                BEGIN
+                    CREATE TABLE [Users] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [Email] nvarchar(255) NOT NULL,
+                        [Password] nvarchar(255) NOT NULL,
+                        [Name] nvarchar(255) NOT NULL,
+                        [Role] nvarchar(100) NOT NULL DEFAULT 'Administrator',
+                        [IsActive] bit NOT NULL DEFAULT 1,
+                        [CreatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(),
+                        CONSTRAINT [PK_Users] PRIMARY KEY ([Id])
+                    );
+                END
+
+                IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'evren@uno-dmc.cz')
+                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('evren@uno-dmc.cz', 'FenerliDerya@1907', 'Evren', 'Administrator', 1, GETUTCDATE());
+                IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'gersencelebi@gmail.com')
+                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('gersencelebi@gmail.com', 'FenerliErsen@1907', 'G. Ersen Çelebi', 'Administrator', 1, GETUTCDATE());
+                IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'tuana@uno-dmc.cz')
+                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('tuana@uno-dmc.cz', 'medCezir@1993', 'Tuana', 'Administrator', 1, GETUTCDATE());
+                IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'deniz.evren@uno-dmc.cz')
+                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('deniz.evren@uno-dmc.cz', 'FenerliDeniz@1907', 'Deniz Evren', 'Administrator', 1, GETUTCDATE());
             ");
         } catch (Exception ex) {
             Console.WriteLine("Error executing DB patch: " + ex.Message);
