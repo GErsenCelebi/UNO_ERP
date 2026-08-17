@@ -1,7 +1,8 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History } from 'lucide-react';
+import AuditHistoryTab from '@/components/AuditHistoryTab';
 import { DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -371,6 +372,7 @@ export default function ProjectDetailPage() {
         {tabBtn('tours', 'Tours', MapPin)}
         {tabBtn('dashboard', 'Dashboard', LayoutDashboard)}
         {tabBtn('finance', 'Finance', LineChart)}
+        {tabBtn('history', 'Audit History', History)}
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -705,6 +707,13 @@ export default function ProjectDetailPage() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ──── AUDIT HISTORY TAB ──── */}
+        {activeTab === 'history' && (
+          <div className="p-6 max-w-4xl mx-auto">
+            <AuditHistoryTab entityName="Project" entityId={project.id} />
           </div>
         )}
       </div>
