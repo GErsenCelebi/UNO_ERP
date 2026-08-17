@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, X, LayoutTemplate, Users, CalendarDays, DollarSign, Loader2, FolderOpen, ChevronDown, ArrowRight, Map, Briefcase } from 'lucide-react';
+import Can from '@/components/Can';
 
 const API = '/api';
 
@@ -199,12 +200,14 @@ export default function ProjectsPage() {
     <>
       <header className="h-10 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-20">
         <div className="flex items-center gap-6">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all hover:-translate-y-0.5 text-xs"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1" /> New Project
-          </button>
+          <Can perform="edit-projects">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all hover:-translate-y-0.5 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> New Project
+            </button>
+          </Can>
           
           {/* Page Title */}
           <div className="flex items-center">
