@@ -701,13 +701,15 @@ export default function TourDetailPage() {
     setIsInvoiceEditing(true);
   };
 
-  const renderServiceTable = (svcs: TourService[], isExtra: boolean) => {
+  const renderServiceTable = (svcs: TourService[], isExtra: boolean, subtotalLabel?: string) => {
     const groups: Record<string, TourService[]> = {};
     svcs.forEach(svc => {
       const catName = getCategoryName(svc);
       if (!groups[catName]) groups[catName] = [];
       groups[catName].push(svc);
     });
+
+    const totalSub = svcs.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0);
 
     return (
       <div className="overflow-x-auto">
@@ -768,6 +770,19 @@ export default function TourDetailPage() {
               })
             )}
           </tbody>
+          {svcs.length > 0 && (
+            <tfoot className="border-t-2 border-slate-200 bg-slate-50/80">
+              <tr>
+                <td colSpan={5} className="px-6 py-2.5 text-right text-xs uppercase tracking-wider text-slate-600 font-bold">
+                  {subtotalLabel || 'SubTotal'}
+                </td>
+                <td className={`px-6 py-2.5 text-right font-black text-sm ${isExtra ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  €{totalSub.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     );
@@ -1034,17 +1049,41 @@ export default function TourDetailPage() {
               </div>
               <div className="p-6 space-y-8">
                 <div>
-                  <h3 className="font-bold text-slate-700 mb-3 flex items-center text-sm uppercase tracking-wider"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>Base Services</h3>
-                  {renderServiceTable(revenueBuckets.base, true)}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>Base Services
+                    </h3>
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                      Base Services SubTotal:
+                      <span className="text-sm font-extrabold">€{revenueBuckets.base.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </span>
+                  </div>
+                  {renderServiceTable(revenueBuckets.base, true, 'Base Services SubTotal')}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-700 mb-3 flex items-center text-sm uppercase tracking-wider"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services</h3>
-                  {renderServiceTable(revenueBuckets.operational, true)}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services
+                    </h3>
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                      Operational Services SubTotal:
+                      <span className="text-sm font-extrabold">€{revenueBuckets.operational.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </span>
+                  </div>
+                  {renderServiceTable(revenueBuckets.operational, true, 'Operational Services SubTotal')}
                 </div>
                 {revenueBuckets.other.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-slate-700 mb-3 flex items-center text-sm uppercase tracking-wider"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span>Other Services</h3>
-                    {renderServiceTable(revenueBuckets.other, true)}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span>Other Services
+                      </h3>
+                      <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                        Other Services SubTotal:
+                        <span className="text-sm font-extrabold">€{revenueBuckets.other.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </span>
+                    </div>
+                    {renderServiceTable(revenueBuckets.other, true, 'Other Services SubTotal')}
                   </div>
                 )}
               </div>
@@ -1070,17 +1109,41 @@ export default function TourDetailPage() {
               </div>
               <div className="p-6 space-y-8">
                 <div>
-                  <h3 className="font-bold text-slate-700 mb-3 flex items-center text-sm uppercase tracking-wider"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>Base Services</h3>
-                  {renderServiceTable(costBuckets.base, false)}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>Base Services
+                    </h3>
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                      Base Services SubTotal:
+                      <span className="text-sm font-extrabold">€{costBuckets.base.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </span>
+                  </div>
+                  {renderServiceTable(costBuckets.base, false, 'Base Services SubTotal')}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-700 mb-3 flex items-center text-sm uppercase tracking-wider"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services</h3>
-                  {renderServiceTable(costBuckets.operational, false)}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services
+                    </h3>
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                      Operational Services SubTotal:
+                      <span className="text-sm font-extrabold">€{costBuckets.operational.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </span>
+                  </div>
+                  {renderServiceTable(costBuckets.operational, false, 'Operational Services SubTotal')}
                 </div>
                 {costBuckets.other.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-slate-700 mb-3 flex items-center text-sm uppercase tracking-wider"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span>Other Services</h3>
-                    {renderServiceTable(costBuckets.other, false)}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span>Other Services
+                      </h3>
+                      <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                        Other Services SubTotal:
+                        <span className="text-sm font-extrabold">€{costBuckets.other.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </span>
+                    </div>
+                    {renderServiceTable(costBuckets.other, false, 'Other Services SubTotal')}
                   </div>
                 )}
               </div>

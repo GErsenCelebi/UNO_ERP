@@ -108,9 +108,76 @@ if (initializeDatabaseOnStartup)
                 IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'gersencelebi@gmail.com')
                     INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('gersencelebi@gmail.com', 'FenerliErsen@1907', 'G. Ersen Çelebi', 'Administrator', 1, GETUTCDATE());
                 IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'tuana@uno-dmc.cz')
-                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('tuana@uno-dmc.cz', 'medCezir@1993', 'Tuana', 'Administrator', 1, GETUTCDATE());
+                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('tuana@uno-dmc.cz', 'medCezir@1993', 'Tuana', 'TourAdmin', 1, GETUTCDATE());
                 IF NOT EXISTS (SELECT * FROM Users WHERE Email = 'deniz.evren@uno-dmc.cz')
-                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('deniz.evren@uno-dmc.cz', 'FenerliDeniz@1907', 'Deniz Evren', 'Administrator', 1, GETUTCDATE());
+                    INSERT INTO Users (Email, Password, Name, Role, IsActive, CreatedAt) VALUES ('deniz.evren@uno-dmc.cz', 'FenerliDeniz@1907', 'Deniz Evren', 'Manager', 1, GETUTCDATE());
+
+                UPDATE Users SET Role = 'Administrator' WHERE Email = 'gersencelebi@gmail.com';
+                UPDATE Users SET Role = 'TourAdmin' WHERE Email = 'tuana@uno-dmc.cz';
+                UPDATE Users SET Role = 'Manager' WHERE Email = 'deniz.evren@uno-dmc.cz';
+
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs')
+                BEGIN
+                    CREATE TABLE [AuditLogs] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [UserId] int NULL,
+                        [UserName] nvarchar(255) NOT NULL DEFAULT '',
+                        [UserEmail] nvarchar(255) NOT NULL DEFAULT '',
+                        [UserRole] nvarchar(100) NOT NULL DEFAULT '',
+                        [Action] nvarchar(50) NOT NULL DEFAULT '',
+                        [EntityName] nvarchar(100) NOT NULL DEFAULT '',
+                        [EntityId] nvarchar(100) NOT NULL DEFAULT '',
+                        [Summary] nvarchar(max) NOT NULL DEFAULT '',
+                        [OldValuesJson] nvarchar(max) NULL,
+                        [NewValuesJson] nvarchar(max) NULL,
+                        [Timestamp] datetime2 NOT NULL DEFAULT GETUTCDATE(),
+                        CONSTRAINT [PK_AuditLogs] PRIMARY KEY ([Id])
+                    );
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RolePermissions')
+                BEGIN
+                    CREATE TABLE [RolePermissions] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [RoleName] nvarchar(100) NOT NULL,
+                        [ScreenKey] nvarchar(100) NOT NULL,
+                        [CanView] bit NOT NULL DEFAULT 1,
+                        [CanEntry] bit NOT NULL DEFAULT 0,
+                        [CanUpdate] bit NOT NULL DEFAULT 0,
+                        [CanDelete] bit NOT NULL DEFAULT 0,
+                        CONSTRAINT [PK_RolePermissions] PRIMARY KEY ([Id])
+                    );
+
+                    -- Administrator (All permissions)
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Project', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Tour', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Project Overview', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Project Dashboard', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Project Finance', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Master Data', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Audit Logs', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'User Accounts', 1, 1, 1, 1);
+
+                    -- TourAdmin (As per user example: Tour View/Entry/Update/Delete enabled, Project View & Update enabled)
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Project', 1, 0, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Tour', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Project Overview', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Project Dashboard', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Project Finance', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Master Data', 1, 1, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Audit Logs', 0, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'User Accounts', 0, 0, 0, 0);
+
+                    -- Manager (Project Entry/Update enabled, Finance View/Entry/Update enabled)
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Project', 1, 1, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Tour', 1, 0, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Project Overview', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Project Dashboard', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Project Finance', 1, 1, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Master Data', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Audit Logs', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'User Accounts', 0, 0, 0, 0);
+                END
             ");
         } catch (Exception ex) {
             Console.WriteLine("Error executing DB patch: " + ex.Message);
