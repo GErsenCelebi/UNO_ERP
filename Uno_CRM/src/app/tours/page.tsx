@@ -1,7 +1,9 @@
 "use client"
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check } from 'lucide-react';
+import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check, History } from 'lucide-react';
+import AuditHistoryTab from '@/components/AuditHistoryTab';
+import Can from '@/components/Can';
 
 const API = '/api';
 
@@ -300,12 +302,14 @@ export default function ToursKanbanPage() {
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 shrink-0 sticky top-0 z-20">
         <div className="h-14 flex items-center justify-between px-6 border-b border-slate-100">
           <div className="flex items-center gap-6">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all hover:-translate-y-0.5 text-xs"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" /> New Tour
-            </button>
+            <Can perform="edit-tours">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all hover:-translate-y-0.5 text-xs"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" /> New Tour
+              </button>
+            </Can>
             
             <div className="flex items-center">
               <h1 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">

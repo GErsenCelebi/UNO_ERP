@@ -22,15 +22,43 @@ export const ALLOWED_USERS = [
     email: 'tuana@uno-dmc.cz',
     password: 'medCezir@1993',
     name: 'Tuana',
-    role: 'Administrator'
+    role: 'TourAdmin'
   },
   {
     email: 'deniz.evren@uno-dmc.cz',
     password: 'FenerliDeniz@1907',
     name: 'Deniz Evren',
-    role: 'Administrator'
+    role: 'Manager'
   }
 ];
+
+// RBAC Permissions System Helpers
+export type UserRole = 'Administrator' | 'TourAdmin' | 'Manager';
+
+export function canEditProjects(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator' || role === 'Manager';
+}
+
+export function canEditTours(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator' || role === 'TourAdmin';
+}
+
+export function canEditMasterData(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator';
+}
+
+export function canViewAuditLogs(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator' || role === 'Manager';
+}
+
+export function canManageUsers(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator';
+}
 
 const AUTH_KEY = 'uno_erp_user_session';
 
