@@ -592,24 +592,50 @@ export default function TourDetailPage() {
   const revenueServices = services.filter(s => isServiceRevenue(s));
   const costServices = services.filter(s => !isServiceRevenue(s));
 
+  // Excursion sales calculation for Guide Commission
+  const totalExcursionSales = revenueServices
+    .filter(s => getCategoryName(s).toLowerCase() === 'excursion')
+    .reduce((sum, s) => sum + (s.totalAmount || (s.quantity || 1) * s.unitPrice || 0), 0);
+
+  const guideCommissionRate = tour?.guideCommission !== undefined && tour?.guideCommission !== null 
+    ? Number(tour.guideCommission) 
+    : 10;
+
+  const guideCommissionAmount = (totalExcursionSales * guideCommissionRate) / 100;
+
+  const guideCommissionService: TourService = {
+    id: -999,
+    tourId: parseInt(tourId),
+    serviceCategoryId: getCategoryId('Guide') || 4,
+    description: `Guide Commission (${guideCommissionRate}% on €${totalExcursionSales.toLocaleString()} Excursions)`,
+    quantity: 1,
+    unitPrice: guideCommissionAmount,
+    totalAmount: guideCommissionAmount,
+    isRevenue: false
+  };
+
+  const effectiveCostServices = guideCommissionAmount > 0 
+    ? [...costServices, guideCommissionService] 
+    : costServices;
+
   const getServiceBuckets = (svcList: TourService[]) => {
-    const base = svcList.filter(s => serviceCategories.find(c => c.id === s.serviceCategoryId)?.isBase);
+    const base = svcList.filter(s => serviceCategories.find(c => c.id === s.serviceCategoryId)?.isBase && s.id !== -999);
     const operational = svcList.filter(s => {
       const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
-      return cat?.isOperational && !cat?.isBase;
+      return (cat?.isOperational && !cat?.isBase) || s.id === -999;
     });
     const other = svcList.filter(s => {
       const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
-      return !cat?.isBase && !cat?.isOperational;
+      return !cat?.isBase && !cat?.isOperational && s.id !== -999;
     });
     return { base, operational, other };
   };
 
   const revenueBuckets = getServiceBuckets(revenueServices);
-  const costBuckets = getServiceBuckets(costServices);
+  const costBuckets = getServiceBuckets(effectiveCostServices);
 
   const totalSales = revenueServices.reduce((s, svc) => s + (svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0), 0);
-  const totalServiceCost = costServices.reduce((s, svc) => s + (svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0), 0);
+  const totalServiceCost = effectiveCostServices.reduce((s, svc) => s + (svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0), 0);
   const totalRevenue = totalSales;
   const profit = totalRevenue - totalServiceCost;
   const costPerPax = tour ? Math.round(totalServiceCost / Math.max(tour.pax || 1, 1)) : 0;
@@ -943,6 +969,19 @@ export default function TourDetailPage() {
                         ))}
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Guide Commission (%)</label>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        min="0" 
+                        max="100" 
+                        value={editData.guideCommission !== undefined ? editData.guideCommission : 10} 
+                        onChange={e => setEditData({ ...editData, guideCommission: parseFloat(e.target.value) || 0 })} 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-bold text-purple-700" 
+                        placeholder="10 %" 
+                      />
+                    </div>
                   </div>
 
                   <div className="pt-2 flex gap-3">
@@ -983,6 +1022,10 @@ export default function TourDetailPage() {
                         <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex-1">
                           <p className="text-xs text-emerald-600 mb-1">Base Fee</p>
                           <p className="text-sm font-bold text-emerald-700">€{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}</p>
+                        </div>
+                        <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 flex-1">
+                          <p className="text-xs text-purple-600 mb-1">Guide Commission</p>
+                          <p className="text-sm font-bold text-purple-700">{tour.guideCommission !== undefined ? tour.guideCommission : 10}% (€{guideCommissionAmount.toLocaleString()})</p>
                         </div>
                         <div className="bg-sky-50 border border-sky-100 rounded-lg p-3 flex-1">
                           <p className="text-xs text-sky-600 mb-1">Dynamic Total</p>

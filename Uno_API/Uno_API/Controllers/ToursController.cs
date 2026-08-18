@@ -47,6 +47,7 @@ namespace Uno_API.Controllers
                 t.Infants,
                 BaseFee = t.BaseFee > 0 ? t.BaseFee : 250m,
                 t.TotalFee,
+                GuideCommission = t.GuideCommission > 0 ? t.GuideCommission : 10m,
                 t.TourStatusId,
                 t.ProjectId,
                 t.ArrivalFlight,
@@ -106,6 +107,7 @@ namespace Uno_API.Controllers
 
             // Compute BaseFee
             tour.BaseFee = (tour.Adults * tour.AdultRate) + (tour.Children * tour.ChildRate) + (tour.Infants * tour.InfantRate);
+            if (tour.GuideCommission <= 0) tour.GuideCommission = 10.00m;
 
             _context.Tours.Add(tour);
             await _context.SaveChangesAsync();
@@ -137,6 +139,7 @@ namespace Uno_API.Controllers
             if (tour.Children > 0) existingTour.Children = tour.Children;
             if (tour.Infants > 0) existingTour.Infants = tour.Infants;
             if (tour.AdultRate > 0) existingTour.AdultRate = tour.AdultRate;
+            if (tour.GuideCommission >= 0) existingTour.GuideCommission = tour.GuideCommission > 0 ? tour.GuideCommission : 10.00m;
             if (tour.ChildRate > 0) existingTour.ChildRate = tour.ChildRate;
             if (tour.InfantRate > 0) existingTour.InfantRate = tour.InfantRate;
             if (!string.IsNullOrEmpty(tour.ArrivalFlight)) existingTour.ArrivalFlight = tour.ArrivalFlight;
