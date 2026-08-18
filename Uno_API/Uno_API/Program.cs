@@ -178,6 +178,11 @@ if (initializeDatabaseOnStartup)
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Audit Logs', 1, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'User Accounts', 0, 0, 0, 0);
                 END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Tours]') AND name = 'GuideCommission')
+                BEGIN
+                    ALTER TABLE [Tours] ADD [GuideCommission] decimal(18,2) NOT NULL DEFAULT 10.00;
+                END
             ");
         } catch (Exception ex) {
             Console.WriteLine("Error executing DB patch: " + ex.Message);
