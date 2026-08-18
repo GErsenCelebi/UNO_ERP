@@ -3,6 +3,7 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import AIChatDrawer from '@/components/AIChatDrawer';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,11 +14,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 relative">
       <Sidebar />
       <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col relative z-10 print:block print:h-auto print:overflow-visible print:bg-white">
         {children}
       </main>
+      <AIChatDrawer />
     </div>
   );
 }
