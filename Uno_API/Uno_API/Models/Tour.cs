@@ -34,6 +34,8 @@ namespace Uno_API.Models
 
         [System.ComponentModel.DataAnnotations.Schema.Column(TypeName = "decimal(18,2)")]
         public decimal GuideCommission { get; set; } = 10.00m;
+
+        public bool AccountingClosed { get; set; } = false;
         [System.Text.Json.Serialization.JsonIgnore]
         public Project? Project { get; set; }
         public TourStatus? TourStatus { get; set; }

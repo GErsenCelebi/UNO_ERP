@@ -34,6 +34,7 @@ namespace Uno_API.Data
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<RolePermission> RolePermissions { get; set; } = null!;
+        public DbSet<TourStatusCheckpoint> TourStatusCheckpoints { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check, History } from 'lucide-react';
 import AuditHistoryTab from '@/components/AuditHistoryTab';
 import Can from '@/components/Can';
+import SLAWarningBanner from '@/components/SLAWarningBanner';
 
 const API = '/api';
 

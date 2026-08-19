@@ -183,6 +183,60 @@ if (initializeDatabaseOnStartup)
                 BEGIN
                     ALTER TABLE [Tours] ADD [GuideCommission] decimal(18,2) NOT NULL DEFAULT 10.00;
                 END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Tours]') AND name = 'AccountingClosed')
+                BEGIN
+                    ALTER TABLE [Tours] ADD [AccountingClosed] bit NOT NULL DEFAULT 0;
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TourStatusCheckpoints')
+                BEGIN
+                    CREATE TABLE [TourStatusCheckpoints] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [TargetStatusId] int NOT NULL,
+                        [CheckpointKey] nvarchar(100) NOT NULL,
+                        [Name] nvarchar(200) NOT NULL,
+                        [Description] nvarchar(500) NOT NULL,
+                        [IsMandatory] bit NOT NULL DEFAULT 1,
+                        [WarningThresholdDays] int NULL,
+                        CONSTRAINT [PK_TourStatusCheckpoints] PRIMARY KEY ([Id])
+                    );
+
+                    -- Seed Checkpoint Metadata Rules
+                    -- Gate 1 -> Proposal (TargetStatusId = 2)
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (2, 'PROJECT_DEFINED', 'Project & Destination Defined', 'Valid B2B Project Code and Destination Cities configured', 1, NULL);
+
+                    -- Gate 2 -> Confirmed (TargetStatusId = 3)
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (3, 'HOTEL_RESERVATIONS_CONFIRMED', 'Hotel Reservations Confirmed', '100% of city stop hotels confirmed with vouchers', 1, 7);
+
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (3, 'GUIDE_ASSIGNED_CONFIRMED', 'Guide Assignment Confirmed', 'Primary tour guide assigned, language matched & contract locked', 1, 3);
+
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (3, 'TRANSPORT_CONFIRMED', 'Transportation & Coach Locked', 'Transport company & driver assigned with adequate seating capacity', 1, 7);
+
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (3, 'CLIENT_DEPOSIT_CONFIRMED', 'Client Contract & Deposit Received', 'Client contract signed and initial deposit payment received', 1, 7);
+
+                    -- Gate 3 -> In Progress (TargetStatusId = 4)
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (4, 'ARRIVAL_DATE_REACHED', 'Arrival Date Reached', 'Current date >= ArrivalDate', 1, NULL);
+
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (4, 'FLIGHT_MANIFEST_VERIFIED', 'Flight & Passenger List Verified', 'Arrival flight details & passenger list verified', 1, 1);
+
+                    -- Gate 4 -> Completed (TargetStatusId = 5)
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (5, 'RETURN_DATE_REACHED', 'Return Date Reached', 'Current date >= EndDate (Passengers departed)', 1, NULL);
+
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (5, 'REVENUE_EXPENSE_RECONCILED', '100% Costs & Revenue Reconciled', 'All supplier invoices and client sales entered & verified', 1, 7);
+
+                    INSERT INTO TourStatusCheckpoints (TargetStatusId, CheckpointKey, Name, Description, IsMandatory, WarningThresholdDays) 
+                    VALUES (5, 'ACCOUNTING_CLOSED', 'Accounting Audit Closed', 'Financial audit locked by Accounting Administrator', 1, 7);
+                END
             ");
         } catch (Exception ex) {
             Console.WriteLine("Error executing DB patch: " + ex.Message);
