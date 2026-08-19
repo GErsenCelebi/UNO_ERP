@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search } from 'lucide-react';
 
+import TourCheckpointWidget from '@/components/TourCheckpointWidget';
+
 const API = '/api';
 
 interface Tour {
@@ -859,6 +861,7 @@ export default function TourDetailPage() {
         {/* ──── TOUR INFO TAB ──── */}
         {activeTab === 'info' && (
           <div className="p-6 max-w-3xl mx-auto">
+            <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
                 <div>
