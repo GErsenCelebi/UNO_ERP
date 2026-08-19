@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, ShieldAlert, CheckCircle2, XCircle, ArrowRight, AlertTriangle, Loader2 } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, CheckCircle2, XCircle, ArrowRight, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface Checkpoint {
   id: number;
@@ -28,6 +28,7 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
   const [data, setData] = useState<EvaluationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // Collapsible: closed by default
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const fetchCheckpoints = async () => {
@@ -48,7 +49,8 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
     fetchCheckpoints();
   }, [tourId]);
 
-  const handleAutoAdvance = async () => {
+  const handleAutoAdvance = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!data || !data.canAdvance) return;
     try {
       setAdvancing(true);
@@ -72,8 +74,8 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center justify-center text-xs text-slate-400 gap-2">
-        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+      <div className="mt-4 bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex items-center justify-center text-xs text-slate-400 gap-2">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
         Evaluating transition checkpoints...
       </div>
     );
@@ -85,46 +87,53 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
   const targetName = STATUS_NAMES[data.targetStatusId] || `Status #${data.targetStatusId}`;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-      {/* Header */}
-      <div className="bg-slate-900 text-white p-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
+    <div className="mt-4 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Collapsible Bar Header */}
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-800 transition-colors select-none"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
           {data.canAdvance ? (
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
               <ShieldAlert className="w-4 h-4 text-amber-400" />
             </div>
           )}
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white">Status Gate Readiness</h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${data.canAdvance ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-slate-950'}`}>
-                {data.canAdvance ? 'GATE READY' : `${data.missingMandatoryCount} BLOCKED`}
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Current: <strong className="text-slate-200">{data.currentStatusName}</strong> ➔ Target Gate: <strong className="text-blue-400">{targetName}</strong>
-            </p>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="text-xs font-bold text-white shrink-0">Status Gate Readiness</h3>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${data.canAdvance ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-slate-950'}`}>
+              {data.canAdvance ? 'GATE READY' : `${data.missingMandatoryCount} BLOCKED`}
+            </span>
+            <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
+              Current: <strong className="text-slate-200">{data.currentStatusName}</strong> ➔ Target: <strong className="text-blue-400">{targetName}</strong>
+            </span>
           </div>
         </div>
 
-        {data.currentStatusId < 5 && (
-          <button
-            onClick={handleAutoAdvance}
-            disabled={!data.canAdvance || advancing}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-              data.canAdvance
-                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md cursor-pointer'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-            }`}
-          >
-            {advancing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
-            Advance to {targetName}
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {data.currentStatusId < 5 && (
+            <button
+              onClick={handleAutoAdvance}
+              disabled={!data.canAdvance || advancing}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                data.canAdvance
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+              }`}
+            >
+              {advancing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+              Advance to {targetName}
+            </button>
+          )}
+
+          <div className="p-1 text-slate-400 hover:text-white transition-colors">
+            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </div>
       </div>
 
       {message && (
@@ -133,38 +142,40 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
         </div>
       )}
 
-      {/* Checkpoints Checklist */}
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        {data.checkpoints.map(chk => (
-          <div
-            key={chk.id || chk.checkpointKey}
-            className={`p-3 rounded-xl border flex items-start gap-2.5 transition-colors ${
-              chk.isSatisfied
-                ? 'bg-emerald-50/50 border-emerald-200/60'
-                : chk.isMandatory
-                ? 'bg-rose-50/40 border-rose-200/60'
-                : 'bg-amber-50/40 border-amber-200/60'
-            }`}
-          >
-            {chk.isSatisfied ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            ) : (
-              <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className={`text-xs font-bold truncate ${chk.isSatisfied ? 'text-emerald-900' : 'text-slate-800'}`}>
-                  {chk.name}
-                </span>
-                {chk.isMandatory && !chk.isSatisfied && (
-                  <span className="text-[9px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">REQUIRED</span>
-                )}
+      {/* Expandable Checkpoints Checklist Grid */}
+      {isOpen && (
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50/50 border-t border-slate-100">
+          {data.checkpoints.map(chk => (
+            <div
+              key={chk.id || chk.checkpointKey}
+              className={`p-3 rounded-xl border flex items-start gap-2.5 transition-colors ${
+                chk.isSatisfied
+                  ? 'bg-white border-emerald-200/80 shadow-2xs'
+                  : chk.isMandatory
+                  ? 'bg-rose-50/50 border-rose-200/80'
+                  : 'bg-amber-50/50 border-amber-200/80'
+              }`}
+            >
+              {chk.isSatisfied ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className={`text-xs font-bold truncate ${chk.isSatisfied ? 'text-slate-800' : 'text-slate-900'}`}>
+                    {chk.name}
+                  </span>
+                  {chk.isMandatory && !chk.isSatisfied && (
+                    <span className="text-[9px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">REQUIRED</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">{chk.reason}</p>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">{chk.reason}</p>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

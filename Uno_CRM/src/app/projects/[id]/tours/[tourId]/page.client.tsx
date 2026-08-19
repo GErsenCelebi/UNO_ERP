@@ -861,7 +861,6 @@ export default function TourDetailPage() {
         {/* ──── TOUR INFO TAB ──── */}
         {activeTab === 'info' && (
           <div className="p-6 max-w-3xl mx-auto">
-            <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
                 <div>
@@ -1068,6 +1067,7 @@ export default function TourDetailPage() {
                 </div>
               )}
             </div>
+            <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
           </div>
         )}
 
