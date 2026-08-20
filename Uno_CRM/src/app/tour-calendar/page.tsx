@@ -8,6 +8,7 @@ const API = '/api';
 
 interface TourEvent {
   tourId: number;
+  projectId?: number;
   tourCode: string;
   destination: string;
   arrivalDate: string;
@@ -236,7 +237,7 @@ export default function TourCalendarPage() {
         className={`relative group px-1.5 py-1 text-[10px] rounded border ${style.bg} ${style.border} ${style.text} cursor-pointer truncate shadow-sm font-medium hover:shadow hover:z-10 hover:-translate-y-px transition-all my-0.5`}
         onMouseEnter={() => setHoveredEvent(event)}
         onMouseLeave={() => setHoveredEvent(null)}
-        onClick={() => router.push(`/projects/0/tours/${event.tourId}`)}
+        onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)}
       >
         <div className="flex items-center justify-between gap-1">
           <span className="truncate flex-1 font-bold" style={{ color: getTourColor(event.tourCode) }}>
@@ -373,7 +374,7 @@ export default function TourCalendarPage() {
               {dayEvents.map(event => {
                 const style = STATUS_COLORS[event.statusName] || STATUS_COLORS['Draft'];
                 return (
-                  <div key={event.tourId} onClick={() => router.push(`/projects/0/tours/${event.tourId}`)} className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow`}>
+                  <div key={event.tourId} onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)} className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow`}>
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="font-bold text-lg text-slate-800" style={{ color: getTourColor(event.tourCode) }}>{event.tourCode}</h3>

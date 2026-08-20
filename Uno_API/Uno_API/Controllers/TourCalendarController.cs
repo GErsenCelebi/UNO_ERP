@@ -140,6 +140,7 @@ namespace Uno_API.Controllers
                 result.Add(new TourCalendarEventDTO
                 {
                     TourId = tour.Id,
+                    ProjectId = tour.ProjectId,
                     TourCode = tour.TourCode ?? string.Empty,
                     Destination = tour.Destination ?? string.Empty,
                     ArrivalDate = tour.ArrivalDate,

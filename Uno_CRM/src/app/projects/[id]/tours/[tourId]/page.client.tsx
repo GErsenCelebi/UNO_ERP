@@ -1004,7 +1004,20 @@ export default function TourDetailPage() {
     <div className="flex flex-col h-full bg-slate-50 w-full print:block print:h-auto print:bg-white">
       {/* Header */}
       <header className="print:hidden h-16 bg-white border-b border-slate-200 flex items-center px-6 shrink-0 shadow-sm z-10">
-        <button onClick={() => router.push(`/projects/${projectId}`)} className="mr-4 p-2 hover:bg-slate-100 rounded-full transition-colors">
+        <button 
+          onClick={() => {
+            const targetProj = (tour?.projectId && tour.projectId > 0) 
+              ? tour.projectId 
+              : (projectId && projectId !== '0' ? projectId : null);
+            if (targetProj) {
+              router.push(`/projects/${targetProj}`);
+            } else {
+              router.push('/tour-calendar');
+            }
+          }} 
+          className="mr-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+          title="Back to Project"
+        >
           <ArrowLeft className="w-5 h-5 text-slate-600" />
         </button>
         <div className="flex-1">

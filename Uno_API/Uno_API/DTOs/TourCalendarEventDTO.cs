@@ -6,6 +6,7 @@ namespace Uno_API.DTOs
     public class TourCalendarEventDTO
     {
         public int TourId { get; set; }
+        public int ProjectId { get; set; }
         public string TourCode { get; set; } = string.Empty;
         public string Destination { get; set; } = string.Empty;
         public DateTime ArrivalDate { get; set; }
