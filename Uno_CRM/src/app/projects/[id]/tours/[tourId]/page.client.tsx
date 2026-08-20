@@ -202,6 +202,7 @@ export default function TourDetailPage() {
     description: '', quantity: 1, unitPrice: 0, serviceCategoryId: 0,
     hotelId: null, driverId: null, guideId: null, excursionId: null, transportCompanyId: null,
     roomType: 'Double', roomCount: 1, singleCount: 0, doubleCount: 0, twinCount: 0, tripleCount: 0,
+    singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0,
     flightNo: '', serviceDate: '', fromAirport: '', toAirport: ''
   });
 
@@ -432,19 +433,19 @@ export default function TourDetailPage() {
         if (q <= 0) return alert('Check-out date must be after check-in date.');
 
         if (newService.singleCount > 0) {
-            const hPrice = hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0;
+            const hPrice = newService.singleRate !== undefined && newService.singleRate > 0 ? newService.singleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0);
             payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: 'Single', roomCount: newService.singleCount, quantity: newService.singleCount * q, unitPrice: hPrice, totalAmount: hPrice * newService.singleCount * q });
         }
         if (newService.doubleCount > 0) {
-            const hPrice = hotels.find((h: any) => h.id === newService.hotelId)?.doubleRate || 0;
+            const hPrice = newService.doubleRate !== undefined && newService.doubleRate > 0 ? newService.doubleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.doubleRate || 0);
             payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: 'Double', roomCount: newService.doubleCount, quantity: newService.doubleCount * q, unitPrice: hPrice, totalAmount: hPrice * newService.doubleCount * q });
         }
         if (newService.twinCount > 0) {
-            const hPrice = hotels.find((h: any) => h.id === newService.hotelId)?.twinRate || 0;
+            const hPrice = newService.twinRate !== undefined && newService.twinRate > 0 ? newService.twinRate : (hotels.find((h: any) => h.id === newService.hotelId)?.twinRate || 0);
             payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: 'Twin', roomCount: newService.twinCount, quantity: newService.twinCount * q, unitPrice: hPrice, totalAmount: hPrice * newService.twinCount * q });
         }
         if (newService.tripleCount > 0) {
-            const hPrice = hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0;
+            const hPrice = newService.tripleRate !== undefined && newService.tripleRate > 0 ? newService.tripleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0);
             payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: 'Triple', roomCount: newService.tripleCount, quantity: newService.tripleCount * q, unitPrice: hPrice, totalAmount: hPrice * newService.tripleCount * q });
         }
         if (payloads.length === 0) return alert('Please enter at least one room type quantity');
@@ -1441,30 +1442,85 @@ export default function TourDetailPage() {
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Select Hotel</label>
                     <select required value={newService.hotelId || ''} onChange={e => {
                       const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
-                      setNewService({ ...newService, hotelId: h?.id || null, description: h?.name || '', unitPrice: h?.doubleRate || 0 });
-                    }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
+                      setNewService({ 
+                        ...newService, 
+                        hotelId: h?.id || null, 
+                        description: h?.name || '', 
+                        unitPrice: h?.doubleRate || 0,
+                        singleRate: h?.singleRate || 0,
+                        doubleRate: h?.doubleRate || 0,
+                        twinRate: h?.twinRate || 0,
+                        tripleRate: h?.tripleRate || 0
+                      });
+                    }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium">
                       <option value="">Select a Hotel...</option>
                       {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location}</option>)}
                     </select>
                   </div>
                   
                   {!editingServiceId ? (
-                    <div className="grid grid-cols-4 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Single</label>
-                        <input type="number" min="0" value={newService.singleCount} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Double</label>
-                        <input type="number" min="0" value={newService.doubleCount} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Twin</label>
-                        <input type="number" min="0" value={newService.twinCount} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">Triple</label>
-                        <input type="number" min="0" value={newService.tripleCount} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Room Allocation & Nightly Rates (€)</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        {/* Single */}
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <span className="text-xs font-bold text-slate-800 block">Single</span>
+                          <div className="space-y-1">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                              <input type="number" min="0" value={newService.singleCount} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                              <input type="number" step="0.01" value={newService.singleRate || ''} onChange={e => setNewService({ ...newService, singleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="100" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Double */}
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <span className="text-xs font-bold text-slate-800 block">Double</span>
+                          <div className="space-y-1">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                              <input type="number" min="0" value={newService.doubleCount} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                              <input type="number" step="0.01" value={newService.doubleRate || ''} onChange={e => setNewService({ ...newService, doubleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Twin */}
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <span className="text-xs font-bold text-slate-800 block">Twin</span>
+                          <div className="space-y-1">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                              <input type="number" min="0" value={newService.twinCount} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                              <input type="number" step="0.01" value={newService.twinRate || ''} onChange={e => setNewService({ ...newService, twinRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Triple */}
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <span className="text-xs font-bold text-slate-800 block">Triple</span>
+                          <div className="space-y-1">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                              <input type="number" min="0" value={newService.tripleCount} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                              <input type="number" step="0.01" value={newService.tripleRate || ''} onChange={e => setNewService({ ...newService, tripleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="180" />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -1506,21 +1562,21 @@ export default function TourDetailPage() {
                   </div>
 
                   {!editingServiceId && newService.hotelId && (
-                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl space-y-2 mt-4">
+                    <div className="bg-indigo-50/80 border border-indigo-100 p-4 rounded-xl space-y-2 mt-4">
                       <h4 className="text-sm font-bold text-indigo-900 mb-2">Live Room Distribution Preview</h4>
                       <div className="space-y-1 text-sm text-indigo-800">
-                        {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0})</span> <span>€{(newService.singleCount * (hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
-                        {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{hotels.find((h: any) => h.id === newService.hotelId)?.doubleRate || 0})</span> <span>€{(newService.doubleCount * (hotels.find((h: any) => h.id === newService.hotelId)?.doubleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
-                        {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{hotels.find((h: any) => h.id === newService.hotelId)?.twinRate || 0})</span> <span>€{(newService.twinCount * (hotels.find((h: any) => h.id === newService.hotelId)?.twinRate || 0) * newService.quantity).toLocaleString()}</span></div>}
-                        {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0})</span> <span>€{(newService.tripleCount * (hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
+                        {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{newService.singleRate || 0})</span> <span>€{(newService.singleCount * (newService.singleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
+                        {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{newService.doubleRate || 0})</span> <span>€{(newService.doubleCount * (newService.doubleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
+                        {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{newService.twinRate || 0})</span> <span>€{(newService.twinCount * (newService.twinRate || 0) * newService.quantity).toLocaleString()}</span></div>}
+                        {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{newService.tripleRate || 0})</span> <span>€{(newService.tripleCount * (newService.tripleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
                       </div>
                       <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-indigo-900">
                         <span>Total ({newService.quantity} Nights)</span>
                         <span>€{(
-                          (newService.singleCount * (hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0) * newService.quantity) +
-                          (newService.doubleCount * (hotels.find((h: any) => h.id === newService.hotelId)?.doubleRate || 0) * newService.quantity) +
-                          (newService.twinCount * (hotels.find((h: any) => h.id === newService.hotelId)?.twinRate || 0) * newService.quantity) +
-                          (newService.tripleCount * (hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0) * newService.quantity)
+                          (newService.singleCount * (newService.singleRate || 0) * newService.quantity) +
+                          (newService.doubleCount * (newService.doubleRate || 0) * newService.quantity) +
+                          (newService.twinCount * (newService.twinRate || 0) * newService.quantity) +
+                          (newService.tripleCount * (newService.tripleRate || 0) * newService.quantity)
                         ).toLocaleString()}</span>
                       </div>
                     </div>
