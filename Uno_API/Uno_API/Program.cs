@@ -155,6 +155,7 @@ if (initializeDatabaseOnStartup)
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Project Dashboard', 1, 1, 1, 1);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Project Finance', 1, 1, 1, 1);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Master Data', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'AI Knowledge Base', 1, 1, 1, 1);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'Audit Logs', 1, 1, 1, 1);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'User Accounts', 1, 1, 1, 1);
 
@@ -165,6 +166,7 @@ if (initializeDatabaseOnStartup)
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Project Dashboard', 1, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Project Finance', 1, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Master Data', 1, 1, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'AI Knowledge Base', 1, 1, 1, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'Audit Logs', 0, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'User Accounts', 0, 0, 0, 0);
 
@@ -175,8 +177,17 @@ if (initializeDatabaseOnStartup)
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Project Dashboard', 1, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Project Finance', 1, 1, 1, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Master Data', 1, 0, 0, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'AI Knowledge Base', 1, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'Audit Logs', 1, 0, 0, 0);
                     INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'User Accounts', 0, 0, 0, 0);
+                END
+
+                -- Backfill missing AI Knowledge Base permissions for existing databases
+                IF NOT EXISTS (SELECT * FROM RolePermissions WHERE ScreenKey = 'AI Knowledge Base')
+                BEGIN
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Administrator', 'AI Knowledge Base', 1, 1, 1, 1);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('TourAdmin', 'AI Knowledge Base', 1, 1, 1, 0);
+                    INSERT INTO RolePermissions (RoleName, ScreenKey, CanView, CanEntry, CanUpdate, CanDelete) VALUES ('Manager', 'AI Knowledge Base', 1, 0, 0, 0);
                 END
 
                 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Tours]') AND name = 'GuideCommission')

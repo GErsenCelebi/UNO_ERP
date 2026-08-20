@@ -57,6 +57,7 @@ const SCREENS = [
   { key: 'Project Dashboard', label: 'Project Dashboard', description: 'Analytical charts & KPIs' },
   { key: 'Project Finance', label: 'Project Finance', description: 'Revenue, costs, margin & invoices' },
   { key: 'Master Data', label: 'Master Data', description: 'Hotels, Guides, Drivers, Transport' },
+  { key: 'AI Knowledge Base', label: 'AI Knowledge Base', description: 'Documentation repository indexer, SOPs & AI training data' },
   { key: 'Audit Logs', label: 'Audit Logs', description: 'System history & change tracking' },
   { key: 'User Accounts', label: 'User Accounts', description: 'Account management & security' },
 ];
