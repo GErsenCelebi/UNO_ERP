@@ -1251,103 +1251,41 @@ export default function TourDetailPage() {
                   </div>
                   {renderServiceTable(costBuckets.operational, false, 'Operational Services SubTotal')}
 
-                  {/* Expandable Accommodation Subsection */}
-                  <div className="mt-4 border border-blue-200 rounded-2xl bg-blue-50/30 overflow-hidden shadow-sm">
-                    <button 
-                      type="button"
-                      onClick={() => setIsAccommodationExpanded(!isAccommodationExpanded)} 
-                      className="w-full p-4 bg-gradient-to-r from-blue-50 to-indigo-50/60 hover:from-blue-100/70 hover:to-indigo-100/70 transition-all flex items-center justify-between font-bold text-slate-800 text-sm border-b border-blue-100"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-blue-600" />
-                        <span>Staff Accommodation</span>
-                        <span className="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
-                          {costBuckets.operational.filter(s => s.hotelId || s.roomType).length} Stays
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500">
-                          Total Accommodation: <strong className="text-blue-700">€{costBuckets.operational.filter(s => s.hotelId || s.roomType).reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                        </span>
-                        {isAccommodationExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
-                      </div>
-                    </button>
+                  {/* Expandable Staff Accommodation Subsection */}
+                  {(() => {
+                    const staffServices = costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.roomType === 'Driver Room' || s.includeGuideRoom || s.includeDriverRoom);
+                    const staffTotal = staffServices.reduce((sum, s) => {
+                      if (s.roomType === 'Guide Room' || s.roomType === 'Driver Room') return sum + (s.totalAmount || 0);
+                      let sub = 0;
+                      if (s.includeGuideRoom) sub += (s.guideTotal || (s.guideNights ? s.guideNights * (s.guideRate || 0) : 0));
+                      if (s.includeDriverRoom) sub += (s.driverTotal || (s.driverNights ? s.driverNights * (s.driverRate || 0) : 0));
+                      return sum + sub;
+                    }, 0);
 
-                    {isAccommodationExpanded && (
-                      <div className="p-4 space-y-4 bg-white/80">
-                        {/* 1. Passenger Rooms */}
-                        <div className="space-y-2">
-                          <h5 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-indigo-500" /> Passenger Rooms Allocation
-                          </h5>
-                          {(() => {
-                            const passengerServices = costBuckets.operational.filter(s => s.hotelId && s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room');
-                            if (passengerServices.length === 0) return <p className="text-xs text-slate-400 italic">No passenger room bookings added.</p>;
+                    return (
+                      <div className="mt-4 border border-amber-200 rounded-2xl bg-amber-50/20 overflow-hidden shadow-sm">
+                        <button 
+                          type="button"
+                          onClick={() => setIsAccommodationExpanded(!isAccommodationExpanded)} 
+                          className="w-full p-4 bg-gradient-to-r from-amber-50 to-orange-50/60 hover:from-amber-100/70 hover:to-orange-100/70 transition-all flex items-center justify-between font-bold text-slate-800 text-sm border-b border-amber-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-amber-600" />
+                            <span className="text-amber-950 font-extrabold">Staff Accommodation (Guide & Driver Stays)</span>
+                            <span className="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                              {staffServices.length} Staff Stays
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-slate-600">
+                              Total Staff Accommodation: <strong className="text-amber-800 font-extrabold">€{staffTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                            </span>
+                            {isAccommodationExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                          </div>
+                        </button>
 
-                            // Group by hotelId
-                            const hotelGroups: { [key: number]: typeof passengerServices } = {};
-                            passengerServices.forEach(s => {
-                              const key = s.hotelId || 0;
-                              if (!hotelGroups[key]) hotelGroups[key] = [];
-                              hotelGroups[key].push(s);
-                            });
-
-                            return (
-                              <div className="space-y-3">
-                                {Object.entries(hotelGroups).map(([hIdStr, items]) => {
-                                  const hId = parseInt(hIdStr);
-                                  const h = hotels.find(x => x.id === hId);
-                                  const first = items[0];
-                                  const stayNights = (first.roomCount && first.roomCount > 0) ? Math.round(first.quantity / first.roomCount) : (first.quantity || 1);
-                                  const hotelTotal = items.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
-
-                                  return (
-                                    <div key={hId} className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
-                                      <div className="p-3 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-                                        <div className="flex items-center gap-2">
-                                          <Building2 className="w-4 h-4 text-blue-600" />
-                                          <span className="font-bold text-slate-800 text-sm">{h?.name || first.description || 'Hotel'}</span>
-                                          {h?.location && <span className="text-slate-400 font-medium">({h.location})</span>}
-                                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-bold text-[11px]">
-                                            {stayNights} Nights
-                                          </span>
-                                          {first.startDate && first.endDate && (
-                                            <span className="text-slate-400 font-medium text-[11px]">
-                                              ({new Date(first.startDate).toLocaleDateString()} → {new Date(first.endDate).toLocaleDateString()})
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="font-extrabold text-blue-700 text-xs">
-                                          Hotel Stay Total: €{hotelTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </div>
-                                      </div>
-
-                                      <div className="divide-y divide-slate-100 p-2.5 space-y-1">
-                                        {items.map(s => {
-                                          const rNights = (s.roomCount && s.roomCount > 0) ? Math.round(s.quantity / s.roomCount) : (s.quantity || 1);
-                                          return (
-                                            <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 text-xs py-1 px-2 hover:bg-slate-50/80 rounded-lg">
-                                              <div className="flex items-center gap-2">
-                                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-bold text-xs">
-                                                  {s.roomType}
-                                                </span>
-                                                <span className="font-semibold text-slate-700">{s.roomCount || 1} Rooms</span>
-                                                <span className="text-slate-400">× {rNights} Nights</span>
-                                              </div>
-                                              <div className="font-semibold text-slate-600">
-                                                €{(s.unitPrice || 0).toLocaleString()} / night × {s.roomCount || 1} rooms × {rNights} nights = <span className="font-bold text-blue-600">€{(s.totalAmount || 0).toLocaleString()}</span>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
-                        </div>
+                        {isAccommodationExpanded && (
+                          <div className="p-4 space-y-4 bg-white/90">
 
                         {/* 2. Guide Accommodation */}
                         <div className="space-y-2">
@@ -1413,7 +1351,9 @@ export default function TourDetailPage() {
                       </div>
                     )}
                   </div>
-                </div>
+                );
+              })()}
+            </div>
                 {costBuckets.other.length > 0 && (
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
