@@ -687,15 +687,13 @@ export default function TourDetailPage() {
     isRevenue: false
   };
 
-  const effectiveCostServices = guideCommissionAmount > 0 
-    ? [...costServices, guideCommissionService] 
-    : costServices;
+  const effectiveCostServices = [...costServices, guideCommissionService];
 
   const getServiceBuckets = (svcList: TourService[]) => {
-    const base = svcList.filter(s => serviceCategories.find(c => c.id === s.serviceCategoryId)?.isBase && s.id !== -999);
+    const base = svcList.filter(s => (serviceCategories.find(c => c.id === s.serviceCategoryId)?.isBase) || s.id === -999);
     const operational = svcList.filter(s => {
       const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
-      return (cat?.isOperational && !cat?.isBase) || s.id === -999;
+      return cat?.isOperational && !cat?.isBase && s.id !== -999;
     });
     const other = svcList.filter(s => {
       const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
@@ -861,8 +859,32 @@ export default function TourDetailPage() {
                         <td className="px-6 py-3 text-right">€{Number(svc.unitPrice).toFixed(2)}</td>
                         <td className="px-6 py-3 font-semibold text-slate-800 text-right">€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1)).toLocaleString()}</td>
                         <td className="px-6 py-3 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); openEditServiceModal(svc); }} className="text-slate-400 hover:text-blue-500 transition-colors mr-2"><Edit className="w-4 h-4" /></button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteService(svc.id); }} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          {svc.id === -999 ? (
+                            <button 
+                              type="button"
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                const newRateStr = prompt('Enter Guide Commission Percentage (%):', String(guideCommissionRate));
+                                if (newRateStr !== null && !isNaN(parseFloat(newRateStr))) {
+                                  const newRate = parseFloat(newRateStr);
+                                  fetch(`${API}/tours/${tourId}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ ...tour, guideCommission: newRate }),
+                                  }).then(res => { if (res.ok) fetchAll(); });
+                                }
+                              }} 
+                              className="text-purple-600 hover:text-purple-800 transition-colors font-semibold text-xs flex items-center gap-1 ml-auto"
+                              title="Edit Guide Commission Percentage"
+                            >
+                              <Edit className="w-4 h-4" /> Edit %
+                            </button>
+                          ) : (
+                            <>
+                              <button onClick={(e) => { e.stopPropagation(); openEditServiceModal(svc); }} className="text-slate-400 hover:text-blue-500 transition-colors mr-2"><Edit className="w-4 h-4" /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteService(svc.id); }} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
