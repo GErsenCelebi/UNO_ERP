@@ -869,58 +869,201 @@ export default function MasterDataPage() {
 
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h2 className="text-lg font-bold text-slate-800">{editingItem ? `Edit ${currentConfig.title}` : `Add New ${currentConfig.title}`}</h2>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className={`bg-white rounded-2xl shadow-2xl w-full ${currentConfig.fields.length > 4 ? 'max-w-3xl' : 'max-w-md'} max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100`}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                  {React.createElement(currentConfig.icon, { className: "w-5 h-5" })}
+                </div>
+                <h2 className="text-lg font-bold text-slate-800">{editingItem ? `Edit ${currentConfig.title}` : `Add New ${currentConfig.title}`}</h2>
+              </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {currentConfig.fields.map(f => (
-                <div key={f.key}>
-                  <label htmlFor={f.key} className="block text-xs font-semibold text-slate-600 mb-1.5">{f.label}</label>
-                  {f.type === 'select' ? (
-                    <select
-                      id={f.key}
-                      required={(f as any).required !== false}
-                      value={formData[f.key] === null || formData[f.key] === undefined ? '' : formData[f.key]}
-                      onChange={e => setFormData({...formData, [f.key]: e.target.value === "" ? null : Number(e.target.value)})}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    >
-                      <option value="" disabled={(f as any).required !== false} hidden={(f as any).required !== false}>
-                        {(f as any).required === false ? 'None' : 'Select an option'}
-                      </option>
-                      {(selectOptions[f.key] || []).map(opt => (
-                        <option key={opt.id} value={opt.id}>{opt[(f as any).optionLabel || 'name']}</option>
-                      ))}
-                    </select>
-                  ) : f.type === 'boolean' ? (
-                    <input 
-                      id={f.key}
-                      type="checkbox"
-                      checked={!!formData[f.key]}
-                      onChange={e => setFormData({...formData, [f.key]: e.target.checked})}
-                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  ) : (
-                      <input 
-                        id={f.key}
-                        required={f.type !== 'image'} 
-                        type={f.type === 'number' ? 'number' : 'text'} 
-                        value={formData[f.key] || ''} 
-                        onChange={e => setFormData({...formData, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})} 
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" 
-                      />
-                  )}
+
+            {/* Scrollable Form Body */}
+            <form id="master-data-modal-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-6">
+              {activeTab === 'hotels' ? (
+                <>
+                  {/* Hotel General Information */}
+                  <div>
+                    <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 flex items-center gap-1.5 border-b border-blue-50 pb-1">
+                      <MapPin className="w-3.5 h-3.5" /> General Hotel Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label htmlFor="name" className="block text-xs font-semibold text-slate-700 mb-1">Hotel Name *</label>
+                        <input id="name" required type="text" value={formData['name'] || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800" placeholder="e.g. Grand Hotel Prague" />
+                      </div>
+                      <div>
+                        <label htmlFor="location" className="block text-xs font-semibold text-slate-700 mb-1">Location / City *</label>
+                        <input id="location" required type="text" value={formData['location'] || ''} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. Prague" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="starRating" className="block text-xs font-semibold text-slate-700 mb-1">Star Rating</label>
+                          <input id="starRating" type="number" min="1" max="5" value={formData['starRating'] || ''} onChange={e => setFormData({...formData, starRating: Number(e.target.value)})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="4" />
+                        </div>
+                        <div>
+                          <label htmlFor="pricingBasis" className="block text-xs font-semibold text-slate-700 mb-1">Pricing Basis</label>
+                          <select id="pricingBasis" value={formData['pricingBasis'] || 'Pax'} onChange={e => setFormData({...formData, pricingBasis: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                            <option value="Pax">Per Pax</option>
+                            <option value="Room">Per Room</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Person Details */}
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1">
+                      <Phone className="w-3.5 h-3.5" /> Contact Details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="contactName" className="block text-xs font-semibold text-slate-700 mb-1">Contact Name</label>
+                        <input id="contactName" type="text" value={formData['contactName'] || ''} onChange={e => setFormData({...formData, contactName: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. John Smith" />
+                      </div>
+                      <div>
+                        <label htmlFor="contactRole" className="block text-xs font-semibold text-slate-700 mb-1">Contact Role</label>
+                        <input id="contactRole" type="text" value={formData['contactRole'] || ''} onChange={e => setFormData({...formData, contactRole: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. Contracting Manager" />
+                      </div>
+                      <div>
+                        <label htmlFor="phone" className="block text-xs font-semibold text-slate-700 mb-1">Phone</label>
+                        <input id="phone" type="text" value={formData['phone'] || ''} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="+420 123 456 789" />
+                      </div>
+                      <div>
+                        <label htmlFor="email" className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                        <input id="email" type="email" value={formData['email'] || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="reservations@hotel.com" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Room & Pax Rates */}
+                  <div>
+                    <h3 className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-1.5 border-b border-emerald-50 pb-1">
+                      <DollarSign className="w-3.5 h-3.5" /> Room & Pax Nightly Rates (€)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-emerald-50/30 p-4 rounded-xl border border-emerald-100/60">
+                      {/* Single */}
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-2">
+                        <span className="text-xs font-bold text-slate-800">Single Room</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Room (€)</label>
+                            <input type="number" step="0.01" value={formData['singleRoomRate'] || ''} onChange={e => setFormData({...formData, singleRoomRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="100" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Pax (€)</label>
+                            <input type="number" step="0.01" value={formData['singlePaxRate'] || ''} onChange={e => setFormData({...formData, singlePaxRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="100" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Double */}
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-2">
+                        <span className="text-xs font-bold text-slate-800">Double Room</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Room (€)</label>
+                            <input type="number" step="0.01" value={formData['doubleRoomRate'] || ''} onChange={e => setFormData({...formData, doubleRoomRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="140" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Pax (€)</label>
+                            <input type="number" step="0.01" value={formData['doublePaxRate'] || ''} onChange={e => setFormData({...formData, doublePaxRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="70" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Twin */}
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-2">
+                        <span className="text-xs font-bold text-slate-800">Twin Room</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Room (€)</label>
+                            <input type="number" step="0.01" value={formData['twinRoomRate'] || ''} onChange={e => setFormData({...formData, twinRoomRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="140" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Pax (€)</label>
+                            <input type="number" step="0.01" value={formData['twinPaxRate'] || ''} onChange={e => setFormData({...formData, twinPaxRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="70" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Triple */}
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 space-y-2">
+                        <span className="text-xs font-bold text-slate-800">Triple Room</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Room (€)</label>
+                            <input type="number" step="0.01" value={formData['tripleRoomRate'] || ''} onChange={e => setFormData({...formData, tripleRoomRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="180" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Pax (€)</label>
+                            <input type="number" step="0.01" value={formData['triplePaxRate'] || ''} onChange={e => setFormData({...formData, triplePaxRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs" placeholder="60" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Dynamic Multi-column Grid for Generic Master Data Forms */
+                <div className={`grid grid-cols-1 ${currentConfig.fields.length > 4 ? 'md:grid-cols-2 gap-x-6 gap-y-4' : 'gap-4'}`}>
+                  {currentConfig.fields.map(f => (
+                    <div key={f.key} className={f.key === 'name' || f.key === 'avatarUrl' ? 'md:col-span-2' : ''}>
+                      <label htmlFor={f.key} className="block text-xs font-semibold text-slate-700 mb-1.5">{f.label}</label>
+                      {f.type === 'select' ? (
+                        <select
+                          id={f.key}
+                          required={(f as any).required !== false}
+                          value={formData[f.key] === null || formData[f.key] === undefined ? '' : formData[f.key]}
+                          onChange={e => setFormData({...formData, [f.key]: e.target.value === "" ? null : Number(e.target.value)})}
+                          className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="" disabled={(f as any).required !== false} hidden={(f as any).required !== false}>
+                            {(f as any).required === false ? 'None' : 'Select an option'}
+                          </option>
+                          {(selectOptions[f.key] || []).map(opt => (
+                            <option key={opt.id} value={opt.id}>{opt[(f as any).optionLabel || 'name']}</option>
+                          ))}
+                        </select>
+                      ) : f.type === 'boolean' ? (
+                        <div className="flex items-center gap-2 pt-2">
+                          <input 
+                            id={f.key}
+                            type="checkbox"
+                            checked={!!formData[f.key]}
+                            onChange={e => setFormData({...formData, [f.key]: e.target.checked})}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-600 font-medium">Enable {f.label}</span>
+                        </div>
+                      ) : (
+                        <input 
+                          id={f.key}
+                          required={f.type !== 'image' && (f as any).required !== false} 
+                          type={f.type === 'number' ? 'number' : 'text'} 
+                          value={formData[f.key] || ''} 
+                          onChange={e => setFormData({...formData, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})} 
+                          className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" 
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <div className="pt-4 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 font-medium text-sm hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-colors">{editingItem ? 'Save Changes' : 'Create Record'}</button>
-              </div>
+              )}
             </form>
+
+            {/* Sticky Action Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex justify-end space-x-3 shrink-0">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 text-slate-600 font-semibold text-xs hover:bg-slate-200/60 rounded-xl transition-colors">Cancel</button>
+              <button type="submit" form="master-data-modal-form" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all">{editingItem ? 'Save Changes' : 'Create Record'}</button>
+            </div>
           </div>
         </div>
       )}
