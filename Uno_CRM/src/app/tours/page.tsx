@@ -332,6 +332,7 @@ export default function ToursKanbanPage() {
               placeholder="Search tours..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
+              suppressHydrationWarning
               className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-full focus:ring-1 focus:ring-blue-500 text-xs transition-all outline-none"
             />
           </div>

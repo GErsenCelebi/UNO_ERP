@@ -1541,46 +1541,51 @@ export default function TourDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">Check-in Date</label>
-                      <input required type="date" value={newService.startDate} onChange={e => {
+                      <input required type="date" value={newService.startDate || ''} onChange={e => {
                         const newStart = e.target.value;
-                        const n = Math.max(1, Math.ceil((new Date(newService.endDate).getTime() - new Date(newStart).getTime()) / (1000 * 3600 * 24)));
+                        const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
+                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
                         setNewService({ ...newService, startDate: newStart, quantity: n });
-                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" suppressHydrationWarning />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">Check-out Date</label>
-                      <input required type="date" value={newService.endDate} onChange={e => {
+                      <input required type="date" value={newService.endDate || ''} onChange={e => {
                         const newEnd = e.target.value;
-                        const n = Math.max(1, Math.ceil((new Date(newEnd).getTime() - new Date(newService.startDate).getTime()) / (1000 * 3600 * 24)));
+                        const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
+                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
                         setNewService({ ...newService, endDate: newEnd, quantity: n });
-                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" suppressHydrationWarning />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Total Nights</label>
-                    <input required type="number" readOnly value={newService.quantity} className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 font-semibold" />
+                    <input required type="number" readOnly value={isNaN(newService.quantity) || !newService.quantity ? 1 : newService.quantity} className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 font-semibold" suppressHydrationWarning />
                   </div>
 
-                  {!editingServiceId && newService.hotelId && (
-                    <div className="bg-indigo-50/80 border border-indigo-100 p-4 rounded-xl space-y-2 mt-4">
-                      <h4 className="text-sm font-bold text-indigo-900 mb-2">Live Room Distribution Preview</h4>
-                      <div className="space-y-1 text-sm text-indigo-800">
-                        {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{newService.singleRate || 0})</span> <span>€{(newService.singleCount * (newService.singleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
-                        {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{newService.doubleRate || 0})</span> <span>€{(newService.doubleCount * (newService.doubleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
-                        {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{newService.twinRate || 0})</span> <span>€{(newService.twinCount * (newService.twinRate || 0) * newService.quantity).toLocaleString()}</span></div>}
-                        {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{newService.tripleRate || 0})</span> <span>€{(newService.tripleCount * (newService.tripleRate || 0) * newService.quantity).toLocaleString()}</span></div>}
+                  {!editingServiceId && newService.hotelId && (() => {
+                    const safeQty = isNaN(newService.quantity) || !newService.quantity ? 0 : newService.quantity;
+                    return (
+                      <div className="bg-indigo-50/80 border border-indigo-100 p-4 rounded-xl space-y-2 mt-4">
+                        <h4 className="text-sm font-bold text-indigo-900 mb-2">Live Room Distribution Preview</h4>
+                        <div className="space-y-1 text-sm text-indigo-800">
+                          {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{newService.singleRate || 0})</span> <span>€{(newService.singleCount * (newService.singleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                          {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{newService.doubleRate || 0})</span> <span>€{(newService.doubleCount * (newService.doubleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                          {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{newService.twinRate || 0})</span> <span>€{(newService.twinCount * (newService.twinRate || 0) * safeQty).toLocaleString()}</span></div>}
+                          {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{newService.tripleRate || 0})</span> <span>€{(newService.tripleCount * (newService.tripleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                        </div>
+                        <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-indigo-900">
+                          <span>Total ({safeQty} Nights)</span>
+                          <span>€{(
+                            (newService.singleCount * (newService.singleRate || 0) * safeQty) +
+                            (newService.doubleCount * (newService.doubleRate || 0) * safeQty) +
+                            (newService.twinCount * (newService.twinRate || 0) * safeQty) +
+                            (newService.tripleCount * (newService.tripleRate || 0) * safeQty)
+                          ).toLocaleString()}</span>
+                        </div>
                       </div>
-                      <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-indigo-900">
-                        <span>Total ({newService.quantity} Nights)</span>
-                        <span>€{(
-                          (newService.singleCount * (newService.singleRate || 0) * newService.quantity) +
-                          (newService.doubleCount * (newService.doubleRate || 0) * newService.quantity) +
-                          (newService.twinCount * (newService.twinRate || 0) * newService.quantity) +
-                          (newService.tripleCount * (newService.tripleRate || 0) * newService.quantity)
-                        ).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </>
               )}
 
