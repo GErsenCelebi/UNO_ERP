@@ -376,7 +376,10 @@ export default function TourDetailPage() {
       isRevenue: isRevenue,
       pax: tour?.pax || 0, children: tour?.children || 0, infants: tour?.infants || 0,
       hotelId: null, driverId: null, guideId: null, guideIds: [], excursionId: null, transportCompanyId: null,
-      roomType: 'Double', roomCount: 1, singleCount: 0, doubleCount: 0, twinCount: 0, tripleCount: 0,
+      roomType: 'Double', roomCount: 1, singleCount: 0, doubleCount: 0, twinCount: 0, tripleCount: 0, dblEbCount: 0,
+      singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0, dblEbRate: 0,
+      includeGuideRoom: false, guideStartDate: '', guideEndDate: '', guideRate: 0,
+      includeDriverRoom: false, driverStartDate: '', driverEndDate: '', driverRate: 0,
       flightNo: '', serviceDate: '', startDate: type === 'Hotel' ? '' : (tour?.arrivalDate?.split('T')[0] || ''), endDate: type === 'Hotel' ? '' : (tour?.endDate?.split('T')[0] || ''), fromAirport: '', toAirport: '',
       guideAssignments: [{
         id: Date.now(),
@@ -1610,214 +1613,284 @@ export default function TourDetailPage() {
       {/* ──── ADD SERVICE MODAL ──── */}
       {isServiceModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-slate-800">{editingServiceId ? 'Edit' : 'Add'} {serviceType} Service</h2>
-              <button onClick={() => setIsServiceModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
+          <div className={`bg-white rounded-2xl w-full ${serviceType === 'Hotel' ? 'max-w-4xl' : 'max-w-xl'} shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
+              <h2 className="text-lg font-bold text-slate-800">{editingServiceId ? 'Edit' : 'Add'} {serviceType} Service</h2>
+              <button onClick={() => setIsServiceModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleAddService} className="p-6 space-y-4">
+            <form onSubmit={handleAddService} className="p-5 space-y-3.5">
 
               {/* Hotel */}
               {serviceType === 'Hotel' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Select Hotel</label>
-                    <select required value={newService.hotelId || ''} onChange={e => {
-                      const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
-                      setNewService({ 
-                        ...newService, 
-                        hotelId: h?.id || null, 
-                        description: h?.name || '', 
-                        unitPrice: h?.doubleRate || 0,
-                        singleRate: h?.singleRate || 0,
-                        doubleRate: h?.doubleRate || 0,
-                        twinRate: h?.twinRate || 0,
-                        tripleRate: h?.tripleRate || 0,
-                        dblEbRate: h?.dblEbRate || 0,
-                        guideRate: h?.singleRate || 0,
-                        driverRate: h?.singleRate || 0
-                      });
-                    }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium">
-                      <option value="">Select a Hotel...</option>
-                      {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location}</option>)}
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Select Hotel</label>
+                      <select required value={newService.hotelId || ''} onChange={e => {
+                        const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
+                        setNewService({ 
+                          ...newService, 
+                          hotelId: h?.id || null, 
+                          description: h?.name || '', 
+                          unitPrice: h?.doubleRate || 0,
+                          singleRate: h?.singleRate || 0,
+                          doubleRate: h?.doubleRate || 0,
+                          twinRate: h?.twinRate || 0,
+                          tripleRate: h?.tripleRate || 0,
+                          dblEbRate: h?.dblEbRate || 0,
+                          guideRate: h?.singleRate || 0,
+                          driverRate: h?.singleRate || 0
+                        });
+                      }} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select a Hotel...</option>
+                        {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Check-in Date</label>
+                      <input required type="date" value={newService.startDate || ''} onChange={e => {
+                        const newStart = e.target.value;
+                        const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
+                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
+                        setNewService({ ...newService, startDate: newStart, quantity: n });
+                      }} className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium" suppressHydrationWarning />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Check-out Date ({isNaN(newService.quantity) || !newService.quantity ? 1 : newService.quantity} Nights)</label>
+                      <input required type="date" value={newService.endDate || ''} onChange={e => {
+                        const newEnd = e.target.value;
+                        const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
+                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
+                        setNewService({ ...newService, endDate: newEnd, quantity: n });
+                      }} className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium" suppressHydrationWarning />
+                    </div>
                   </div>
                   
                   {!editingServiceId ? (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Passenger Room Allocation & Nightly Rates (€)</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Passenger Room Allocation & Nightly Rates (€)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                           {/* Single */}
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
                             <span className="text-xs font-bold text-slate-800 block">Single</span>
-                            <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                                <input type="number" min="0" value={newService.singleCount} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rooms</label>
+                                <input type="number" min="0" value={newService.singleCount || 0} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                                <input type="number" step="0.01" value={newService.singleRate || ''} onChange={e => setNewService({ ...newService, singleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="100" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <input type="number" step="0.01" value={newService.singleRate || ''} onChange={e => setNewService({ ...newService, singleRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="100" />
                               </div>
                             </div>
                           </div>
 
                           {/* Double */}
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
                             <span className="text-xs font-bold text-slate-800 block">Double</span>
-                            <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                                <input type="number" min="0" value={newService.doubleCount} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rooms</label>
+                                <input type="number" min="0" value={newService.doubleCount || 0} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                                <input type="number" step="0.01" value={newService.doubleRate || ''} onChange={e => setNewService({ ...newService, doubleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <input type="number" step="0.01" value={newService.doubleRate || ''} onChange={e => setNewService({ ...newService, doubleRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
                               </div>
                             </div>
                           </div>
 
                           {/* Twin */}
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
                             <span className="text-xs font-bold text-slate-800 block">Twin</span>
-                            <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                                <input type="number" min="0" value={newService.twinCount} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rooms</label>
+                                <input type="number" min="0" value={newService.twinCount || 0} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                                <input type="number" step="0.01" value={newService.twinRate || ''} onChange={e => setNewService({ ...newService, twinRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <input type="number" step="0.01" value={newService.twinRate || ''} onChange={e => setNewService({ ...newService, twinRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
                               </div>
                             </div>
                           </div>
 
                           {/* Triple */}
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                          <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
                             <span className="text-xs font-bold text-slate-800 block">Triple</span>
-                            <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                                <input type="number" min="0" value={newService.tripleCount} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rooms</label>
+                                <input type="number" min="0" value={newService.tripleCount || 0} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                                <input type="number" step="0.01" value={newService.tripleRate || ''} onChange={e => setNewService({ ...newService, tripleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="180" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <input type="number" step="0.01" value={newService.tripleRate || ''} onChange={e => setNewService({ ...newService, tripleRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="180" />
                               </div>
                             </div>
                           </div>
 
                           {/* DBL + EB */}
-                          <div className="bg-white p-2.5 rounded-lg border border-purple-200 shadow-2xs space-y-1.5 ring-1 ring-purple-100">
+                          <div className="bg-white p-2 rounded-lg border border-purple-200 shadow-2xs space-y-1 ring-1 ring-purple-100">
                             <span className="text-xs font-bold text-purple-900 block truncate" title="Double + Extra Bed">DBL + EB</span>
-                            <div className="space-y-1">
+                            <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                                <input type="number" min="0" value={newService.dblEbCount} onChange={e => setNewService({ ...newService, dblEbCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-slate-800" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rooms</label>
+                                <input type="number" min="0" value={newService.dblEbCount || 0} onChange={e => setNewService({ ...newService, dblEbCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                                <input type="number" step="0.01" value={newService.dblEbRate || ''} onChange={e => setNewService({ ...newService, dblEbRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-purple-700" placeholder="170" />
+                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <input type="number" step="0.01" value={newService.dblEbRate || ''} onChange={e => setNewService({ ...newService, dblEbRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-purple-700" placeholder="170" />
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Staff Accommodation Section */}
-                      <div className="space-y-3 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/80">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation (Guide & Driver Stay Dates & Rates)
-                          </span>
-                          <span className="text-[10px] text-amber-700 italic">Adjust dates for hometown stays</span>
+                      {/* 2-Column Side-by-Side Grid: Staff Accommodation (Left) & Live Preview (Right) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Staff Accommodation */}
+                        <div className="space-y-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation
+                            </span>
+                            <span className="text-[9px] text-amber-700 italic">Adjust dates</span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {/* Guide Accommodation */}
+                            <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  checked={!!newService.includeGuideRoom} 
+                                  onChange={e => {
+                                    const checked = e.target.checked;
+                                    setNewService({ 
+                                      ...newService, 
+                                      includeGuideRoom: checked,
+                                      guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
+                                      guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
+                                      guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
+                                    });
+                                  }} 
+                                  className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
+                                />
+                                <span className="text-xs font-bold text-slate-800">Include Guide Room</span>
+                              </label>
+
+                              {!!newService.includeGuideRoom && (
+                                <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
+                                      <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
+                                      <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[9px] font-semibold text-slate-500">Guide Rate (€/night)</label>
+                                    <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Driver Accommodation */}
+                            <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  checked={!!newService.includeDriverRoom} 
+                                  onChange={e => {
+                                    const checked = e.target.checked;
+                                    setNewService({ 
+                                      ...newService, 
+                                      includeDriverRoom: checked,
+                                      driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
+                                      driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
+                                      driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
+                                    });
+                                  }} 
+                                  className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
+                                />
+                                <span className="text-xs font-bold text-slate-800">Include Driver Room</span>
+                              </label>
+
+                              {!!newService.includeDriverRoom && (
+                                <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
+                                      <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
+                                      <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[9px] font-semibold text-slate-500">Driver Rate (€/night)</label>
+                                    <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {/* Guide Accommodation */}
-                          <div className="bg-white p-3 rounded-lg border border-amber-200 shadow-2xs space-y-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                checked={newService.includeGuideRoom} 
-                                onChange={e => {
-                                  const checked = e.target.checked;
-                                  setNewService({ 
-                                    ...newService, 
-                                    includeGuideRoom: checked,
-                                    guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
-                                    guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
-                                    guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
-                                  });
-                                }} 
-                                className="w-4 h-4 text-amber-600 rounded border-slate-300" 
-                              />
-                              <span className="text-xs font-bold text-slate-800">Include Guide Accommodation</span>
-                            </label>
+                        {/* Live Preview Column */}
+                        <div>
+                          {!editingServiceId && newService.hotelId && (() => {
+                            const safeQty = isNaN(newService.quantity) || !newService.quantity ? 0 : newService.quantity;
+                            const gNights = !!newService.includeGuideRoom && newService.guideStartDate && newService.guideEndDate
+                              ? Math.max(1, Math.ceil((new Date(newService.guideEndDate).getTime() - new Date(newService.guideStartDate).getTime()) / (1000 * 3600 * 24)))
+                              : 0;
+                            const dNights = !!newService.includeDriverRoom && newService.driverStartDate && newService.driverEndDate
+                              ? Math.max(1, Math.ceil((new Date(newService.driverEndDate).getTime() - new Date(newService.driverStartDate).getTime()) / (1000 * 3600 * 24)))
+                              : 0;
 
-                            {newService.includeGuideRoom && (
-                              <div className="space-y-2 pt-1 border-t border-slate-100">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <label className="block text-[10px] font-semibold text-slate-500">Check-in</label>
-                                    <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] font-semibold text-slate-500">Check-out</label>
-                                    <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                            const gTotal = gNights * (newService.guideRate || 0);
+                            const dTotal = dNights * (newService.driverRate || 0);
+
+                            const passengerTotal = (
+                              (newService.singleCount * (newService.singleRate || 0) * safeQty) +
+                              (newService.doubleCount * (newService.doubleRate || 0) * safeQty) +
+                              (newService.twinCount * (newService.twinRate || 0) * safeQty) +
+                              (newService.tripleCount * (newService.tripleRate || 0) * safeQty) +
+                              (newService.dblEbCount * (newService.dblEbRate || 0) * safeQty)
+                            );
+
+                            return (
+                              <div className="bg-indigo-50/80 border border-indigo-100 p-3 rounded-xl space-y-1.5 h-full flex flex-col justify-between">
+                                <div>
+                                  <h4 className="text-xs font-bold text-indigo-900 mb-1.5">Live Package Cost Summary</h4>
+                                  <div className="space-y-1 text-xs text-indigo-800">
+                                    {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{newService.singleRate || 0})</span> <span>€{(newService.singleCount * (newService.singleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                                    {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{newService.doubleRate || 0})</span> <span>€{(newService.doubleCount * (newService.doubleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                                    {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{newService.twinRate || 0})</span> <span>€{(newService.twinCount * (newService.twinRate || 0) * safeQty).toLocaleString()}</span></div>}
+                                    {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{newService.tripleRate || 0})</span> <span>€{(newService.tripleCount * (newService.tripleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                                    {newService.dblEbCount > 0 && <div className="flex justify-between"><span>DBL+EB ({newService.dblEbCount} × €{newService.dblEbRate || 0})</span> <span>€{(newService.dblEbCount * (newService.dblEbRate || 0) * safeQty).toLocaleString()}</span></div>}
+                                    {gNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Guide Room ({gNights}N × €{newService.guideRate || 0})</span> <span>€{gTotal.toLocaleString()}</span></div>}
+                                    {dNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Driver Room ({dNights}N × €{newService.driverRate || 0})</span> <span>€{dTotal.toLocaleString()}</span></div>}
                                   </div>
                                 </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold text-slate-500">Guide Nightly Rate (€/night)</label>
-                                  <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
+                                <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-xs text-indigo-900">
+                                  <span>Total Package Cost</span>
+                                  <span>€{(passengerTotal + gTotal + dTotal).toLocaleString()}</span>
                                 </div>
                               </div>
-                            )}
-                          </div>
-
-                          {/* Driver Accommodation */}
-                          <div className="bg-white p-3 rounded-lg border border-amber-200 shadow-2xs space-y-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                checked={newService.includeDriverRoom} 
-                                onChange={e => {
-                                  const checked = e.target.checked;
-                                  setNewService({ 
-                                    ...newService, 
-                                    includeDriverRoom: checked,
-                                    driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
-                                    driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
-                                    driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
-                                  });
-                                }} 
-                                className="w-4 h-4 text-amber-600 rounded border-slate-300" 
-                              />
-                              <span className="text-xs font-bold text-slate-800">Include Driver Accommodation</span>
-                            </label>
-
-                            {newService.includeDriverRoom && (
-                              <div className="space-y-2 pt-1 border-t border-slate-100">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <label className="block text-[10px] font-semibold text-slate-500">Check-in</label>
-                                    <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] font-semibold text-slate-500">Check-out</label>
-                                    <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold text-slate-500">Driver Nightly Rate (€/night)</label>
-                                  <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1825,81 +1898,16 @@ export default function TourDetailPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">Room Type</label>
-                        <select value={newService.roomType} onChange={e => setNewService({ ...newService, roomType: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
+                        <select value={newService.roomType} onChange={e => setNewService({ ...newService, roomType: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
                           {ROOM_TYPES.map(rt => <option key={rt} value={rt}>{rt}</option>)}
                         </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">Rooms</label>
-                        <input required type="number" min="1" value={newService.roomCount} onChange={e => setNewService({ ...newService, roomCount: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                        <input required type="number" min="1" value={newService.roomCount} onChange={e => setNewService({ ...newService, roomCount: parseInt(e.target.value) })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                       </div>
                     </div>
                   )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Passenger Check-in Date</label>
-                      <input required type="date" value={newService.startDate || ''} onChange={e => {
-                        const newStart = e.target.value;
-                        const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
-                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
-                        setNewService({ ...newService, startDate: newStart, quantity: n });
-                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" suppressHydrationWarning />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Passenger Check-out Date</label>
-                      <input required type="date" value={newService.endDate || ''} onChange={e => {
-                        const newEnd = e.target.value;
-                        const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
-                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
-                        setNewService({ ...newService, endDate: newEnd, quantity: n });
-                      }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" suppressHydrationWarning />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Passenger Stay Nights</label>
-                    <input required type="number" readOnly value={isNaN(newService.quantity) || !newService.quantity ? 1 : newService.quantity} className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 font-semibold" suppressHydrationWarning />
-                  </div>
-
-                  {!editingServiceId && newService.hotelId && (() => {
-                    const safeQty = isNaN(newService.quantity) || !newService.quantity ? 0 : newService.quantity;
-                    const gNights = newService.includeGuideRoom && newService.guideStartDate && newService.guideEndDate
-                      ? Math.max(1, Math.ceil((new Date(newService.guideEndDate).getTime() - new Date(newService.guideStartDate).getTime()) / (1000 * 3600 * 24)))
-                      : 0;
-                    const dNights = newService.includeDriverRoom && newService.driverStartDate && newService.driverEndDate
-                      ? Math.max(1, Math.ceil((new Date(newService.driverEndDate).getTime() - new Date(newService.driverStartDate).getTime()) / (1000 * 3600 * 24)))
-                      : 0;
-
-                    const gTotal = gNights * (newService.guideRate || 0);
-                    const dTotal = dNights * (newService.driverRate || 0);
-
-                    const passengerTotal = (
-                      (newService.singleCount * (newService.singleRate || 0) * safeQty) +
-                      (newService.doubleCount * (newService.doubleRate || 0) * safeQty) +
-                      (newService.twinCount * (newService.twinRate || 0) * safeQty) +
-                      (newService.tripleCount * (newService.tripleRate || 0) * safeQty) +
-                      (newService.dblEbCount * (newService.dblEbRate || 0) * safeQty)
-                    );
-
-                    return (
-                      <div className="bg-indigo-50/80 border border-indigo-100 p-4 rounded-xl space-y-2 mt-4">
-                        <h4 className="text-sm font-bold text-indigo-900 mb-2">Live Room & Staff Accommodation Preview</h4>
-                        <div className="space-y-1 text-sm text-indigo-800">
-                          {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{newService.singleRate || 0})</span> <span>€{(newService.singleCount * (newService.singleRate || 0) * safeQty).toLocaleString()}</span></div>}
-                          {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{newService.doubleRate || 0})</span> <span>€{(newService.doubleCount * (newService.doubleRate || 0) * safeQty).toLocaleString()}</span></div>}
-                          {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{newService.twinRate || 0})</span> <span>€{(newService.twinCount * (newService.twinRate || 0) * safeQty).toLocaleString()}</span></div>}
-                          {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{newService.tripleRate || 0})</span> <span>€{(newService.tripleCount * (newService.tripleRate || 0) * safeQty).toLocaleString()}</span></div>}
-                          {newService.dblEbCount > 0 && <div className="flex justify-between"><span>Double + Extra Bed ({newService.dblEbCount} × €{newService.dblEbRate || 0})</span> <span>€{(newService.dblEbCount * (newService.dblEbRate || 0) * safeQty).toLocaleString()}</span></div>}
-                          {gNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Guide Room ({gNights} Nights × €{newService.guideRate || 0})</span> <span>€{gTotal.toLocaleString()}</span></div>}
-                          {dNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Driver Room ({dNights} Nights × €{newService.driverRate || 0})</span> <span>€{dTotal.toLocaleString()}</span></div>}
-                        </div>
-                        <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-indigo-900">
-                          <span>Total Hotel Service Package Cost</span>
-                          <span>€{(passengerTotal + gTotal + dTotal).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </>
               )}
 
