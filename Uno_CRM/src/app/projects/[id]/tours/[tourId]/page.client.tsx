@@ -933,8 +933,10 @@ export default function TourDetailPage() {
                         </td>
                         <td className="px-6 py-3 font-medium text-slate-700">{getServiceDescription(svc)}</td>
                         <td className="px-6 py-3 text-slate-500">{getServiceDetails(svc)}</td>
-                        <td className="px-6 py-3 text-center" title={svc.hotelId && svc.roomCount ? `${svc.roomCount} Rooms × ${Math.round((svc.quantity || 1) / svc.roomCount)} Nights` : undefined}>
-                          {svc.hotelId && svc.roomCount ? `${Math.round((svc.quantity || 1) / svc.roomCount)} N` : svc.quantity}
+                        <td className="px-6 py-3 text-center" title={svc.hotelId && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax' ? `${svc.roomCount} Rooms × ${Math.round((svc.quantity || 1) / svc.roomCount)} Nights` : undefined}>
+                          {svc.hotelId && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax' 
+                            ? `${Math.round((svc.quantity || 1) / svc.roomCount)} N` 
+                            : (svc.hotelId ? `${svc.quantity || 1} N` : svc.quantity)}
                         </td>
                         <td className="px-6 py-3 text-right">€{Number(svc.unitPrice).toFixed(2)}</td>
                         <td className="px-6 py-3 font-semibold text-slate-800 text-right">€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1)).toLocaleString()}</td>
