@@ -1,11 +1,11 @@
 "use client"
 import React, { useEffect, useState, FormEvent, useRef, useCallback } from 'react';
-import { Search, Bell, LayoutDashboard, Briefcase, Users, CalendarDays, LineChart, Settings, Plus, X, Trash2, Edit2, Database, MapPin, Star, Phone, FileText, Truck, Clock, DollarSign, BarChart3, TrendingUp, Target, Activity, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, Loader2, LayoutTemplate } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Briefcase, Users, CalendarDays, LineChart, Settings, Plus, X, Trash2, Edit2, Database, MapPin, Star, Phone, FileText, Truck, Clock, DollarSign, BarChart3, TrendingUp, Target, Activity, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, Loader2, LayoutTemplate, Sparkles, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const API = '/api';
 
-type TabType = 'projectStatuses' | 'clients' | 'excelImport' | 'hotels' | 'guides' | 'transports' | 'drivers' | 'vendors' | 'excursions' | 'tourStatuses' | 'serviceCategories' | 'kpis';
+type TabType = 'projectStatuses' | 'clients' | 'excelImport' | 'hotels' | 'guides' | 'transports' | 'drivers' | 'vendors' | 'excursions' | 'tourStatuses' | 'serviceCategories' | 'aiKnowledge' | 'kpis';
 
 interface GenericData {
   id: number;
@@ -23,6 +23,7 @@ const TAB_CONFIG: Record<string, { title: string; icon: any; endpoint: string; f
   excursions: { title: 'Excursions', icon: Clock, endpoint: 'Excursions', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'type', label: 'Type', type: 'text' }, { key: 'price', label: 'Cost (€)', type: 'number' }, { key: 'salePrice', label: 'Sale (€)', type: 'number' }, { key: 'tourCode', label: 'Tour Code', type: 'text', required: false }, { key: 'vendorId', label: 'Vendor', type: 'select', optionsEndpoint: 'Vendors', optionLabel: 'name', required: false }] },
   tourStatuses: { title: 'Tour Statuses', icon: Clock, endpoint: 'TourStatuses', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'orderIndex', label: 'Order Index', type: 'number' }] },
   serviceCategories: { title: 'Service Categories', icon: Database, endpoint: 'ServiceCategories', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'classification', label: 'Classification', type: 'text' }, { key: 'isBase', label: 'Is Base', type: 'boolean' }, { key: 'isRevenue', label: 'Is Revenue', type: 'boolean' }, { key: 'isOperational', label: 'Is Operational', type: 'boolean' }, { key: 'isCost', label: 'Is Cost', type: 'boolean' }, { key: 'isExpandable', label: 'Is Expandable', type: 'boolean' }] },
+  aiKnowledge: { title: 'AI Knowledge Base', icon: Sparkles, endpoint: 'AiKnowledgeItems', fields: [{ key: 'category', label: 'Category', type: 'text' }, { key: 'sourceFile', label: 'Source File', type: 'text' }, { key: 'questionPattern', label: 'Question Pattern', type: 'text' }, { key: 'keywords', label: 'Keywords', type: 'text' }, { key: 'answerMarkdown', label: 'Answer Markdown', type: 'text' }, { key: 'targetUrl', label: 'Target URL', type: 'text' }, { key: 'actionLabel', label: 'Action Label', type: 'text' }] },
   excelImport: { title: 'Excel Import', icon: FileSpreadsheet, endpoint: '', fields: [] },
   kpis: { title: 'KPIs', icon: BarChart3, endpoint: '', fields: [] },
 };
@@ -37,6 +38,7 @@ interface SectionDef {
 const SECTIONS: SectionDef[] = [
   { label: 'Project Data', icon: LayoutTemplate, gradient: 'from-blue-500 to-indigo-600', tabs: ['projectStatuses', 'clients', 'excelImport'] },
   { label: 'Tours Data', icon: Briefcase, gradient: 'from-emerald-500 to-teal-600', tabs: ['hotels', 'guides', 'transports', 'drivers', 'vendors', 'excursions', 'tourStatuses', 'serviceCategories'] },
+  { label: 'AI Knowledge & SOPs', icon: Sparkles, gradient: 'from-amber-500 to-orange-600', tabs: ['aiKnowledge'] },
   { label: 'Reports & KPIs', icon: BarChart3, gradient: 'from-violet-500 to-purple-600', tabs: ['kpis'] },
 ];
 
@@ -714,6 +716,28 @@ export default function MasterDataPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    {activeTab === 'aiKnowledge' && (
+                      <button 
+                        onClick={async () => {
+                          setLoading(true);
+                          try {
+                            const res = await fetch(`${getApiUrl()}/aiknowledgeitems/sync-repository`, { method: 'POST' });
+                            if (res.ok) {
+                              const resultData = await res.json();
+                              alert(`Successfully synced Documentation Repository!\nProcessed ${resultData.totalFilesProcessed} markdown files and ingested ${resultData.totalKnowledgeItemsIngested} knowledge items into AppDB.`);
+                              fetchTabItems('aiKnowledge');
+                            }
+                          } catch (err) {
+                            alert('Failed to sync documentation repository.');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        className="flex items-center px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Sync Documentation Repository
+                      </button>
+                    )}
                     <button onClick={() => openModal()} className="flex items-center px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs">
                       <Plus className="w-4 h-4 mr-1.5" /> Add {currentConfig.title}
                     </button>

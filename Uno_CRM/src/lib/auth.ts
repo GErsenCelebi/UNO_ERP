@@ -62,9 +62,11 @@ export function canManageUsers(role?: string): boolean {
 
 const AUTH_KEY = 'uno_erp_user_session';
 
+import { getApiUrl } from '@/lib/apiConfig';
+
 export async function authenticateUserAsync(emailInput: string, passwordInput: string): Promise<{ success: boolean; user?: UserSession; error?: string }> {
   try {
-    const res = await fetch('http://localhost:8001/api/auth/login', {
+    const res = await fetch(`${getApiUrl()}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: emailInput, password: passwordInput })

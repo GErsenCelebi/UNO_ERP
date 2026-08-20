@@ -50,7 +50,55 @@ namespace Uno_API.Controllers
             var response = new AIChatResponse();
             var links = new List<QuickActionLink>();
 
-            // 1. Governance Rules Questions
+            // 1. Dynamic AppDB AI Knowledge Base Search (Trained from Workspace .md User Manuals)
+            var terms = q.Split(new[] { ' ', '?', ',', '.', '!' }, StringSplitOptions.RemoveEmptyEntries);
+            var activeItems = await _context.AiKnowledgeItems.Where(k => k.IsActive).ToListAsync();
+
+            AiKnowledgeItem? bestMatch = null;
+            int maxMatchCount = 0;
+
+            foreach (var item in activeItems)
+            {
+                int score = 0;
+                var kwList = item.Keywords.ToLower().Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+                var pattern = item.QuestionPattern.ToLower();
+
+                foreach (var term in terms)
+                {
+                    if (term.Length < 3) continue;
+                    if (kwList.Any(k => k.Contains(term))) score += 4;
+                    if (pattern.Contains(term)) score += 3;
+                    if (item.AnswerMarkdown.ToLower().Contains(term)) score += 1;
+                }
+
+                if (score > maxMatchCount && score >= 4)
+                {
+                    maxMatchCount = score;
+                    bestMatch = item;
+                }
+            }
+
+            if (bestMatch != null)
+            {
+                response.Answer = bestMatch.AnswerMarkdown;
+                if (!string.IsNullOrEmpty(bestMatch.TargetUrl))
+                {
+                    links.Add(new QuickActionLink { Label = bestMatch.ActionLabel ?? "Open Link", Path = bestMatch.TargetUrl });
+                }
+                response.Mode = "AppDB-Repository-Knowledge";
+                response.RecommendedLinks = links;
+                response.SuggestedPills = new List<string>
+                {
+                    "How to add a user?",
+                    "What is Rule 4?",
+                    "Summarize active tours",
+                    "Tour status transition criteria",
+                    "How to configure role access?"
+                };
+                return Ok(response);
+            }
+
+            // 2. Fallback Governance Rules Questions
             if (q.Contains("rule 4") || q.Contains("separate money") || q.Contains("cash handover") || q.Contains("expense deduction"))
             {
                 response.Answer = "**Governance Rule 4: SEPARATE MONEY FLOWS**\n\n" +
@@ -80,7 +128,7 @@ namespace Uno_API.Controllers
                     "While local subcontractors (hotels, drivers, guides) deliver services, UNO (as destination Operator) remains fully accountable for quality and passenger welfare.";
             }
 
-            // 2. How-To Navigation & User Guide Questions
+            // 3. How-To Navigation & User Guide Questions
             else if (q.Contains("add user") || q.Contains("create user") || q.Contains("new user") || q.Contains("add account"))
             {
                 response.Answer = "**How to Add a New User Account**:\n\n" +
@@ -117,7 +165,7 @@ namespace Uno_API.Controllers
                 links.Add(new QuickActionLink { Label = "View System Audit Logs", Path = "/audit-logs" });
             }
 
-            // 3. Live AppDB Queries & Data Intelligence
+            // 4. Live AppDB Queries & Data Intelligence
             else if (q.Contains("tour") || q.Contains("active tour") || q.Contains("how many tour") || q.Contains("summarize tour"))
             {
                 var tourCount = await _context.Tours.CountAsync();

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Uno_API.Data;
 
@@ -11,9 +12,11 @@ using Uno_API.Data;
 namespace Uno_API.Migrations
 {
     [DbContext(typeof(UnoDbContext))]
-    partial class UnoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820165206_AddAiKnowledgeItemsTable")]
+    partial class AddAiKnowledgeItemsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

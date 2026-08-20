@@ -1,3 +1,4 @@
+import { getApiUrl } from '@/lib/apiConfig';
 import { TourCalendarEvent, TourCalendarFilters } from './types';
 
 export async function fetchTourCalendarEvents(filters: TourCalendarFilters): Promise<TourCalendarEvent[]> {
@@ -12,7 +13,7 @@ export async function fetchTourCalendarEvents(filters: TourCalendarFilters): Pro
       params.append('GuideId', filters.guideId);
     }
     
-    const API = 'http://localhost:8001/api';
+    const API = getApiUrl();
     const response = await fetch(`${API}/TourCalendar?${params.toString()}`);
     if (!response.ok) throw new Error('Failed to fetch calendar events');
     const data = await response.json();

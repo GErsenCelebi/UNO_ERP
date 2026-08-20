@@ -22,6 +22,8 @@ interface AuditHistoryTabProps {
   entityId?: string | number;
 }
 
+import { getApiUrl } from '@/lib/apiConfig';
+
 export default function AuditHistoryTab({ entityName, entityId }: AuditHistoryTabProps) {
   const [logs, setLogs] = useState<AuditLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function AuditHistoryTab({ entityName, entityId }: AuditHistoryTa
     async function fetchAuditLogs() {
       setLoading(true);
       try {
-        let url = `http://localhost:8001/api/auditlogs?entityName=${encodeURIComponent(entityName)}`;
+        let url = `${getApiUrl()}/auditlogs?entityName=${encodeURIComponent(entityName)}`;
         if (entityId) {
           url += `&entityId=${encodeURIComponent(String(entityId))}`;
         }

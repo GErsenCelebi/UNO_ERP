@@ -26,7 +26,9 @@ import {
   Lock
 } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
+import { getApiUrl } from '@/lib/apiConfig';
+
+const API = getApiUrl();
 
 interface UserAccount {
   id: number;

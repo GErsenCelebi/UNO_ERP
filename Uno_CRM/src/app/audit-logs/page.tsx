@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { History, Search, Filter, Shield, User, Clock, CheckCircle2, RefreshCw, Calendar } from 'lucide-react';
 import { getCurrentUser, canViewAuditLogs } from '@/lib/auth';
+import { getApiUrl } from '@/lib/apiConfig';
 
 interface AuditLogRecord {
   id: number;
@@ -26,7 +27,7 @@ export default function AuditLogsPage() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8001/api/auditlogs?limit=200');
+      const res = await fetch(`${getApiUrl()}/auditlogs?limit=200`);
       if (res.ok) {
         const data = await res.json();
         setLogs(data);
