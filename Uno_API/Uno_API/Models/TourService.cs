@@ -28,12 +28,37 @@ namespace Uno_API.Models
         public int? ExcursionId { get; set; }
         public int? TransportCompanyId { get; set; }
 
-        // Hotel-specific
+        // Hotel-specific room allocation
         public string? RoomType { get; set; }
         public int? RoomCount { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public int? TotalNights { get; set; }
+
+        // Additional Room Types & Rates
+        public int? DblEbCount { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? DblEbRate { get; set; }
+
+        // Staff Accommodation: Guide
+        public bool? IncludeGuideRoom { get; set; }
+        public DateTime? GuideStartDate { get; set; }
+        public DateTime? GuideEndDate { get; set; }
+        public int? GuideNights { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? GuideRate { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? GuideTotal { get; set; }
+
+        // Staff Accommodation: Driver
+        public bool? IncludeDriverRoom { get; set; }
+        public DateTime? DriverStartDate { get; set; }
+        public DateTime? DriverEndDate { get; set; }
+        public int? DriverNights { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? DriverRate { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? DriverTotal { get; set; }
 
         public bool? IsRevenue { get; set; }
 

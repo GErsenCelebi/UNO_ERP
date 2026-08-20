@@ -12,6 +12,7 @@ namespace Uno_API.Models
         public string? ContactRole { get; set; } = string.Empty;
         public string? Email { get; set; } = string.Empty;
         public string? Phone { get; set; } = string.Empty;
+
         // Rate Fields
         public decimal SingleRoomRate { get; set; }
         public decimal SinglePaxRate { get; set; }
@@ -21,6 +22,11 @@ namespace Uno_API.Models
         public decimal TwinPaxRate { get; set; }
         public decimal TripleRoomRate { get; set; }
         public decimal TriplePaxRate { get; set; }
+
+        // 5th Room Type: Double + Extra Bed (DBL+EB)
+        public decimal DblEbRoomRate { get; set; }
+        public decimal DblEbPaxRate { get; set; }
+
         public string? PricingBasis { get; set; } = "Pax";
 
         // Backwards compatibility properties (Pax Rate)
@@ -43,6 +49,11 @@ namespace Uno_API.Models
         { 
             get => TriplePaxRate > 0 ? TriplePaxRate : (TripleRoomRate > 0 ? TripleRoomRate / 3 : 0); 
             set { TriplePaxRate = value; TripleRoomRate = value * 3; } 
+        }
+        public decimal DblEbRate 
+        { 
+            get => DblEbPaxRate > 0 ? DblEbPaxRate : (DblEbRoomRate > 0 ? DblEbRoomRate / 2.5m : 0); 
+            set { DblEbPaxRate = value; DblEbRoomRate = value * 2.5m; } 
         }
     }
 }

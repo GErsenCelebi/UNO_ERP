@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 
@@ -75,15 +75,15 @@ export default function TourDetailPage() {
   const params = useParams();
   const router = useRouter();
 
-  let projectId = params?.id as string;
-  let tourId = params?.tourId as string;
+  let projectId = (params?.id as string) || '';
+  let tourId = (params?.tourId as string) || '';
 
   if (typeof window !== 'undefined') {
     const parts = window.location.pathname.split('/').filter(Boolean);
     const projIdx = parts.indexOf('projects');
     const tourIdx = parts.indexOf('tours');
     if (projIdx !== -1 && parts[projIdx + 1]) projectId = parts[projIdx + 1];
-    if (tourIdx !== -1 && parts[tourIdx + 1]) tourId = parts[tourIdx + 1];
+    if (tourIdx !== -1 && parts[tourIdx + 1] && parts[tourIdx + 1] !== 'tours') tourId = parts[tourIdx + 1];
   }
 
   const [activeTab, setActiveTab] = useState('info');
@@ -198,11 +198,15 @@ export default function TourDetailPage() {
     }
   };
 
+  const [isAccommodationExpanded, setIsAccommodationExpanded] = useState<boolean>(true);
+
   const [newService, setNewService] = useState<any>({
     description: '', quantity: 1, unitPrice: 0, serviceCategoryId: 0,
     hotelId: null, driverId: null, guideId: null, excursionId: null, transportCompanyId: null,
-    roomType: 'Double', roomCount: 1, singleCount: 0, doubleCount: 0, twinCount: 0, tripleCount: 0,
-    singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0,
+    roomType: 'Double', roomCount: 1, singleCount: 0, doubleCount: 0, twinCount: 0, tripleCount: 0, dblEbCount: 0,
+    singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0, dblEbRate: 0,
+    includeGuideRoom: false, guideStartDate: '', guideEndDate: '', guideRate: 0,
+    includeDriverRoom: false, driverStartDate: '', driverEndDate: '', driverRate: 0,
     flightNo: '', serviceDate: '', fromAirport: '', toAirport: ''
   });
 
@@ -448,7 +452,70 @@ export default function TourDetailPage() {
             const hPrice = newService.tripleRate !== undefined && newService.tripleRate > 0 ? newService.tripleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0);
             payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: 'Triple', roomCount: newService.tripleCount, quantity: newService.tripleCount * q, unitPrice: hPrice, totalAmount: hPrice * newService.tripleCount * q });
         }
-        if (payloads.length === 0) return alert('Please enter at least one room type quantity');
+        if (newService.dblEbCount > 0) {
+            const hPrice = newService.dblEbRate !== undefined && newService.dblEbRate > 0 ? newService.dblEbRate : (hotels.find((h: any) => h.id === newService.hotelId)?.dblEbRate || 0);
+            payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: 'Double + Extra Bed (DBL+EB)', roomCount: newService.dblEbCount, quantity: newService.dblEbCount * q, unitPrice: hPrice, totalAmount: hPrice * newService.dblEbCount * q });
+        }
+
+        // Staff Accommodation: Guide
+        if (newService.includeGuideRoom && newService.guideStartDate && newService.guideEndDate) {
+            const gStart = new Date(newService.guideStartDate);
+            const gEnd = new Date(newService.guideEndDate);
+            const diffG = gEnd.getTime() - gStart.getTime();
+            const gNights = !isNaN(diffG) ? Math.max(1, Math.ceil(diffG / (1000 * 3600 * 24))) : 1;
+            const gRate = newService.guideRate !== undefined && newService.guideRate > 0 ? newService.guideRate : (hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0);
+            const gTotal = gNights * gRate;
+            payloads.push({
+              ...basePayload,
+              hotelId: newService.hotelId,
+              guideId: tour?.assignedGuideId || newService.guideId || null,
+              roomType: 'Guide Room',
+              roomCount: 1,
+              quantity: gNights,
+              unitPrice: gRate,
+              totalAmount: gTotal,
+              startDate: newService.guideStartDate,
+              endDate: newService.guideEndDate,
+              totalNights: gNights,
+              includeGuideRoom: true,
+              guideStartDate: newService.guideStartDate,
+              guideEndDate: newService.guideEndDate,
+              guideNights: gNights,
+              guideRate: gRate,
+              guideTotal: gTotal
+            });
+        }
+
+        // Staff Accommodation: Driver
+        if (newService.includeDriverRoom && newService.driverStartDate && newService.driverEndDate) {
+            const dStart = new Date(newService.driverStartDate);
+            const dEnd = new Date(newService.driverEndDate);
+            const diffD = dEnd.getTime() - dStart.getTime();
+            const dNights = !isNaN(diffD) ? Math.max(1, Math.ceil(diffD / (1000 * 3600 * 24))) : 1;
+            const dRate = newService.driverRate !== undefined && newService.driverRate > 0 ? newService.driverRate : (hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0);
+            const dTotal = dNights * dRate;
+            payloads.push({
+              ...basePayload,
+              hotelId: newService.hotelId,
+              driverId: tour?.assignedDriverId || newService.driverId || null,
+              roomType: 'Driver Room',
+              roomCount: 1,
+              quantity: dNights,
+              unitPrice: dRate,
+              totalAmount: dTotal,
+              startDate: newService.driverStartDate,
+              endDate: newService.driverEndDate,
+              totalNights: dNights,
+              includeDriverRoom: true,
+              driverStartDate: newService.driverStartDate,
+              driverEndDate: newService.driverEndDate,
+              driverNights: dNights,
+              driverRate: dRate,
+              driverTotal: dTotal
+            });
+        }
+
+        if (payloads.length === 0) return alert('Please enter at least one room type quantity or staff accommodation selection');
       } else if (serviceType === 'Hotel' && editingServiceId) {
         payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: newService.roomType, roomCount: newService.roomCount, totalAmount: basePayload.unitPrice * newService.roomCount * newService.quantity });
       } else if (serviceType === 'Guide' && !editingServiceId) {
@@ -1178,6 +1245,123 @@ export default function TourDetailPage() {
                     </span>
                   </div>
                   {renderServiceTable(costBuckets.operational, false, 'Operational Services SubTotal')}
+
+                  {/* Expandable Accommodation Subsection */}
+                  <div className="mt-4 border border-blue-200 rounded-2xl bg-blue-50/30 overflow-hidden shadow-sm">
+                    <button 
+                      type="button"
+                      onClick={() => setIsAccommodationExpanded(!isAccommodationExpanded)} 
+                      className="w-full p-4 bg-gradient-to-r from-blue-50 to-indigo-50/60 hover:from-blue-100/70 hover:to-indigo-100/70 transition-all flex items-center justify-between font-bold text-slate-800 text-sm border-b border-blue-100"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-blue-600" />
+                        <span>Accommodation & Staff Hotel Stays Breakdown</span>
+                        <span className="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                          {costBuckets.operational.filter(s => s.hotelId || s.roomType).length} Stays
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500">
+                          Total Accommodation: <strong className="text-blue-700">€{costBuckets.operational.filter(s => s.hotelId || s.roomType).reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                        </span>
+                        {isAccommodationExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                      </div>
+                    </button>
+
+                    {isAccommodationExpanded && (
+                      <div className="p-4 space-y-4 bg-white/80">
+                        {/* 1. Passenger Rooms */}
+                        <div className="space-y-2">
+                          <h5 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-indigo-500" /> Passenger Rooms Allocation
+                          </h5>
+                          {costBuckets.operational.filter(s => s.hotelId && s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room').length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">No passenger room bookings added.</p>
+                          ) : (
+                            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                              {costBuckets.operational.filter(s => s.hotelId && s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room').map(s => {
+                                const h = hotels.find(x => x.id === s.hotelId);
+                                return (
+                                  <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 hover:bg-slate-50 text-xs">
+                                    <div>
+                                      <span className="font-bold text-slate-800">{h?.name || s.description || 'Hotel'}</span>
+                                      <span className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-semibold">{s.roomType} ({s.roomCount || 1} Rooms)</span>
+                                      <span className="ml-2 text-slate-400">Nights: {s.quantity || 1}</span>
+                                    </div>
+                                    <div className="font-bold text-slate-700">
+                                      €{(s.unitPrice || 0).toLocaleString()} / night × {s.quantity || 1} = <span className="text-blue-600">€{(s.totalAmount || 0).toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Guide Accommodation */}
+                        <div className="space-y-2">
+                          <h5 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation & Hometown Stays
+                          </h5>
+                          {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">No guide accommodation entries.</p>
+                          ) : (
+                            <div className="divide-y divide-amber-100 border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
+                              {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).map(s => {
+                                const h = hotels.find(x => x.id === s.hotelId);
+                                const g = guides.find(x => x.id === s.guideId) || guides.find(x => x.id === tour?.assignedGuideId);
+                                return (
+                                  <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div>
+                                      <span className="font-bold text-amber-900">Guide: {g?.name || 'Assigned Tour Guide'}</span>
+                                      <span className="ml-2 text-amber-700 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
+                                      {s.startDate && s.endDate && (
+                                        <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                      )}
+                                    </div>
+                                    <div className="font-bold text-amber-900">
+                                      {s.guideNights || s.quantity || 1} Nights @ €{s.guideRate || s.unitPrice || 0}/night = <span className="text-amber-700">€{(s.guideTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Driver Accommodation */}
+                        <div className="space-y-2">
+                          <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation & Hometown Stays
+                          </h5>
+                          {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">No driver accommodation entries.</p>
+                          ) : (
+                            <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+                              {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).map(s => {
+                                const h = hotels.find(x => x.id === s.hotelId);
+                                const d = drivers.find(x => x.id === s.driverId) || drivers.find(x => x.id === tour?.assignedDriverId);
+                                return (
+                                  <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div>
+                                      <span className="font-bold text-slate-800">Driver: {d?.name || 'Assigned Tour Driver'}</span>
+                                      <span className="ml-2 text-slate-600 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
+                                      {s.startDate && s.endDate && (
+                                        <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                      )}
+                                    </div>
+                                    <div className="font-bold text-slate-800">
+                                      {s.driverNights || s.quantity || 1} Nights @ €{s.driverRate || s.unitPrice || 0}/night = <span className="text-blue-700">€{(s.driverTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {costBuckets.other.length > 0 && (
                   <div>
@@ -1450,7 +1634,10 @@ export default function TourDetailPage() {
                         singleRate: h?.singleRate || 0,
                         doubleRate: h?.doubleRate || 0,
                         twinRate: h?.twinRate || 0,
-                        tripleRate: h?.tripleRate || 0
+                        tripleRate: h?.tripleRate || 0,
+                        dblEbRate: h?.dblEbRate || 0,
+                        guideRate: h?.singleRate || 0,
+                        driverRate: h?.singleRate || 0
                       });
                     }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium">
                       <option value="">Select a Hotel...</option>
@@ -1459,66 +1646,177 @@ export default function TourDetailPage() {
                   </div>
                   
                   {!editingServiceId ? (
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Room Allocation & Nightly Rates (€)</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        {/* Single */}
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
-                          <span className="text-xs font-bold text-slate-800 block">Single</span>
-                          <div className="space-y-1">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                              <input type="number" min="0" value={newService.singleCount} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Passenger Room Allocation & Nightly Rates (€)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          {/* Single */}
+                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                            <span className="text-xs font-bold text-slate-800 block">Single</span>
+                            <div className="space-y-1">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                                <input type="number" min="0" value={newService.singleCount} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                                <input type="number" step="0.01" value={newService.singleRate || ''} onChange={e => setNewService({ ...newService, singleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="100" />
+                              </div>
                             </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                              <input type="number" step="0.01" value={newService.singleRate || ''} onChange={e => setNewService({ ...newService, singleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="100" />
+                          </div>
+
+                          {/* Double */}
+                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                            <span className="text-xs font-bold text-slate-800 block">Double</span>
+                            <div className="space-y-1">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                                <input type="number" min="0" value={newService.doubleCount} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                                <input type="number" step="0.01" value={newService.doubleRate || ''} onChange={e => setNewService({ ...newService, doubleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Twin */}
+                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                            <span className="text-xs font-bold text-slate-800 block">Twin</span>
+                            <div className="space-y-1">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                                <input type="number" min="0" value={newService.twinCount} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                                <input type="number" step="0.01" value={newService.twinRate || ''} onChange={e => setNewService({ ...newService, twinRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Triple */}
+                          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+                            <span className="text-xs font-bold text-slate-800 block">Triple</span>
+                            <div className="space-y-1">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                                <input type="number" min="0" value={newService.tripleCount} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                                <input type="number" step="0.01" value={newService.tripleRate || ''} onChange={e => setNewService({ ...newService, tripleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="180" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* DBL + EB */}
+                          <div className="bg-white p-2.5 rounded-lg border border-purple-200 shadow-2xs space-y-1.5 ring-1 ring-purple-100">
+                            <span className="text-xs font-bold text-purple-900 block truncate" title="Double + Extra Bed">DBL + EB</span>
+                            <div className="space-y-1">
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
+                                <input type="number" min="0" value={newService.dblEbCount} onChange={e => setNewService({ ...newService, dblEbCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-slate-800" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
+                                <input type="number" step="0.01" value={newService.dblEbRate || ''} onChange={e => setNewService({ ...newService, dblEbRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-purple-700" placeholder="170" />
+                              </div>
                             </div>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Double */}
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
-                          <span className="text-xs font-bold text-slate-800 block">Double</span>
-                          <div className="space-y-1">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                              <input type="number" min="0" value={newService.doubleCount} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                              <input type="number" step="0.01" value={newService.doubleRate || ''} onChange={e => setNewService({ ...newService, doubleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
-                            </div>
-                          </div>
+                      {/* Staff Accommodation Section */}
+                      <div className="space-y-3 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation (Guide & Driver Stay Dates & Rates)
+                          </span>
+                          <span className="text-[10px] text-amber-700 italic">Adjust dates for hometown stays</span>
                         </div>
 
-                        {/* Twin */}
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
-                          <span className="text-xs font-bold text-slate-800 block">Twin</span>
-                          <div className="space-y-1">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                              <input type="number" min="0" value={newService.twinCount} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                              <input type="number" step="0.01" value={newService.twinRate || ''} onChange={e => setNewService({ ...newService, twinRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
-                            </div>
-                          </div>
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Guide Accommodation */}
+                          <div className="bg-white p-3 rounded-lg border border-amber-200 shadow-2xs space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={newService.includeGuideRoom} 
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  setNewService({ 
+                                    ...newService, 
+                                    includeGuideRoom: checked,
+                                    guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
+                                    guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
+                                    guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
+                                  });
+                                }} 
+                                className="w-4 h-4 text-amber-600 rounded border-slate-300" 
+                              />
+                              <span className="text-xs font-bold text-slate-800">Include Guide Accommodation</span>
+                            </label>
 
-                        {/* Triple */}
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
-                          <span className="text-xs font-bold text-slate-800 block">Triple</span>
-                          <div className="space-y-1">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rooms</label>
-                              <input type="number" min="0" value={newService.tripleCount} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-slate-500">Rate (€/night)</label>
-                              <input type="number" step="0.01" value={newService.tripleRate || ''} onChange={e => setNewService({ ...newService, tripleRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="180" />
-                            </div>
+                            {newService.includeGuideRoom && (
+                              <div className="space-y-2 pt-1 border-t border-slate-100">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500">Check-in</label>
+                                    <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500">Check-out</label>
+                                    <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500">Guide Nightly Rate (€/night)</label>
+                                  <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Driver Accommodation */}
+                          <div className="bg-white p-3 rounded-lg border border-amber-200 shadow-2xs space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={newService.includeDriverRoom} 
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  setNewService({ 
+                                    ...newService, 
+                                    includeDriverRoom: checked,
+                                    driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
+                                    driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
+                                    driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
+                                  });
+                                }} 
+                                className="w-4 h-4 text-amber-600 rounded border-slate-300" 
+                              />
+                              <span className="text-xs font-bold text-slate-800">Include Driver Accommodation</span>
+                            </label>
+
+                            {newService.includeDriverRoom && (
+                              <div className="space-y-2 pt-1 border-t border-slate-100">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500">Check-in</label>
+                                    <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500">Check-out</label>
+                                    <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500">Driver Nightly Rate (€/night)</label>
+                                  <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1540,7 +1838,7 @@ export default function TourDetailPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Check-in Date</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Passenger Check-in Date</label>
                       <input required type="date" value={newService.startDate || ''} onChange={e => {
                         const newStart = e.target.value;
                         const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
@@ -1549,7 +1847,7 @@ export default function TourDetailPage() {
                       }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" suppressHydrationWarning />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Check-out Date</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Passenger Check-out Date</label>
                       <input required type="date" value={newService.endDate || ''} onChange={e => {
                         const newEnd = e.target.value;
                         const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
@@ -1559,29 +1857,45 @@ export default function TourDetailPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Total Nights</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Passenger Stay Nights</label>
                     <input required type="number" readOnly value={isNaN(newService.quantity) || !newService.quantity ? 1 : newService.quantity} className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-600 font-semibold" suppressHydrationWarning />
                   </div>
 
                   {!editingServiceId && newService.hotelId && (() => {
                     const safeQty = isNaN(newService.quantity) || !newService.quantity ? 0 : newService.quantity;
+                    const gNights = newService.includeGuideRoom && newService.guideStartDate && newService.guideEndDate
+                      ? Math.max(1, Math.ceil((new Date(newService.guideEndDate).getTime() - new Date(newService.guideStartDate).getTime()) / (1000 * 3600 * 24)))
+                      : 0;
+                    const dNights = newService.includeDriverRoom && newService.driverStartDate && newService.driverEndDate
+                      ? Math.max(1, Math.ceil((new Date(newService.driverEndDate).getTime() - new Date(newService.driverStartDate).getTime()) / (1000 * 3600 * 24)))
+                      : 0;
+
+                    const gTotal = gNights * (newService.guideRate || 0);
+                    const dTotal = dNights * (newService.driverRate || 0);
+
+                    const passengerTotal = (
+                      (newService.singleCount * (newService.singleRate || 0) * safeQty) +
+                      (newService.doubleCount * (newService.doubleRate || 0) * safeQty) +
+                      (newService.twinCount * (newService.twinRate || 0) * safeQty) +
+                      (newService.tripleCount * (newService.tripleRate || 0) * safeQty) +
+                      (newService.dblEbCount * (newService.dblEbRate || 0) * safeQty)
+                    );
+
                     return (
                       <div className="bg-indigo-50/80 border border-indigo-100 p-4 rounded-xl space-y-2 mt-4">
-                        <h4 className="text-sm font-bold text-indigo-900 mb-2">Live Room Distribution Preview</h4>
+                        <h4 className="text-sm font-bold text-indigo-900 mb-2">Live Room & Staff Accommodation Preview</h4>
                         <div className="space-y-1 text-sm text-indigo-800">
                           {newService.singleCount > 0 && <div className="flex justify-between"><span>Single ({newService.singleCount} × €{newService.singleRate || 0})</span> <span>€{(newService.singleCount * (newService.singleRate || 0) * safeQty).toLocaleString()}</span></div>}
                           {newService.doubleCount > 0 && <div className="flex justify-between"><span>Double ({newService.doubleCount} × €{newService.doubleRate || 0})</span> <span>€{(newService.doubleCount * (newService.doubleRate || 0) * safeQty).toLocaleString()}</span></div>}
                           {newService.twinCount > 0 && <div className="flex justify-between"><span>Twin ({newService.twinCount} × €{newService.twinRate || 0})</span> <span>€{(newService.twinCount * (newService.twinRate || 0) * safeQty).toLocaleString()}</span></div>}
                           {newService.tripleCount > 0 && <div className="flex justify-between"><span>Triple ({newService.tripleCount} × €{newService.tripleRate || 0})</span> <span>€{(newService.tripleCount * (newService.tripleRate || 0) * safeQty).toLocaleString()}</span></div>}
+                          {newService.dblEbCount > 0 && <div className="flex justify-between"><span>Double + Extra Bed ({newService.dblEbCount} × €{newService.dblEbRate || 0})</span> <span>€{(newService.dblEbCount * (newService.dblEbRate || 0) * safeQty).toLocaleString()}</span></div>}
+                          {gNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Guide Room ({gNights} Nights × €{newService.guideRate || 0})</span> <span>€{gTotal.toLocaleString()}</span></div>}
+                          {dNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Driver Room ({dNights} Nights × €{newService.driverRate || 0})</span> <span>€{dTotal.toLocaleString()}</span></div>}
                         </div>
                         <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-indigo-900">
-                          <span>Total ({safeQty} Nights)</span>
-                          <span>€{(
-                            (newService.singleCount * (newService.singleRate || 0) * safeQty) +
-                            (newService.doubleCount * (newService.doubleRate || 0) * safeQty) +
-                            (newService.twinCount * (newService.twinRate || 0) * safeQty) +
-                            (newService.tripleCount * (newService.tripleRate || 0) * safeQty)
-                          ).toLocaleString()}</span>
+                          <span>Total Hotel Service Package Cost</span>
+                          <span>€{(passengerTotal + gTotal + dTotal).toLocaleString()}</span>
                         </div>
                       </div>
                     );

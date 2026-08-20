@@ -49,6 +49,8 @@ namespace Uno_API.Data
             modelBuilder.Entity<Hotel>().Property(x => x.DoubleRate).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Hotel>().Property(x => x.TwinRate).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Hotel>().Property(x => x.TripleRate).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Hotel>().Property(x => x.DblEbRoomRate).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Hotel>().Property(x => x.DblEbPaxRate).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Project>().Property(x => x.ApproxBudget).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<TourService>().Property(x => x.Quantity).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<TransportCompany>().Property(x => x.DailyRate).HasColumnType("decimal(18,2)");
