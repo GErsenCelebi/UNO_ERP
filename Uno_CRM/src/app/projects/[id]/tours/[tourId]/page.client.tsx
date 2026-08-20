@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 
@@ -2417,12 +2417,19 @@ export default function TourDetailPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <a 
-                            href={`${API}/tours/${tourId}/attachments/${att.id}/download`} 
+                            href={`${API}/tours/${tourId}/attachments/${att.id}/view`} 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors"
                           >
-                            <ExternalLink className="w-3.5 h-3.5" /> View / Download
+                            <Eye className="w-3.5 h-3.5" /> View
+                          </a>
+                          <a 
+                            href={`${API}/tours/${tourId}/attachments/${att.id}/download`} 
+                            download={att.fileName}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download
                           </a>
                           <button 
                             type="button"

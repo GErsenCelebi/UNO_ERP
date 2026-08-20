@@ -72,23 +72,33 @@ namespace Uno_API.Controllers
             return Ok(attachment);
         }
 
+        // GET: api/tours/5/attachments/10/view
+        [HttpGet("{id}/view")]
+        public async Task<IActionResult> ViewAttachment(int tourId, int id)
+        {
+            var attachment = await _context.TourAttachments.FirstOrDefaultAsync(a => a.Id == id && a.TourId == tourId);
+            if (attachment == null) return NotFound();
+
+            var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+            var fullPath = Path.Combine(webRoot, attachment.FilePath.TrimStart('/'));
+            if (!System.IO.File.Exists(fullPath)) return NotFound("File not found on server.");
+
+            var contentType = string.IsNullOrEmpty(attachment.FileType) ? "application/octet-stream" : attachment.FileType;
+            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+            Response.Headers.Append("Content-Disposition", $"inline; filename=\"{attachment.FileName}\"");
+            return File(bytes, contentType);
+        }
+
         // GET: api/tours/5/attachments/10/download
         [HttpGet("{id}/download")]
         public async Task<IActionResult> DownloadAttachment(int tourId, int id)
         {
             var attachment = await _context.TourAttachments.FirstOrDefaultAsync(a => a.Id == id && a.TourId == tourId);
-            if (attachment == null)
-            {
-                return NotFound();
-            }
+            if (attachment == null) return NotFound();
 
             var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
             var fullPath = Path.Combine(webRoot, attachment.FilePath.TrimStart('/'));
-
-            if (!System.IO.File.Exists(fullPath))
-            {
-                return NotFound("File not found on server.");
-            }
+            if (!System.IO.File.Exists(fullPath)) return NotFound("File not found on server.");
 
             var contentType = string.IsNullOrEmpty(attachment.FileType) ? "application/octet-stream" : attachment.FileType;
             var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
