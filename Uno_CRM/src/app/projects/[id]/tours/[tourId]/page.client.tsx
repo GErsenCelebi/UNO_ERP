@@ -855,7 +855,9 @@ export default function TourDetailPage() {
                         </td>
                         <td className="px-6 py-3 font-medium text-slate-700">{getServiceDescription(svc)}</td>
                         <td className="px-6 py-3 text-slate-500">{getServiceDetails(svc)}</td>
-                        <td className="px-6 py-3 text-center">{svc.quantity}</td>
+                        <td className="px-6 py-3 text-center" title={svc.hotelId && svc.roomCount ? `${svc.roomCount} Rooms × ${Math.round((svc.quantity || 1) / svc.roomCount)} Nights` : undefined}>
+                          {svc.hotelId && svc.roomCount ? `${Math.round((svc.quantity || 1) / svc.roomCount)} N` : svc.quantity}
+                        </td>
                         <td className="px-6 py-3 text-right">€{Number(svc.unitPrice).toFixed(2)}</td>
                         <td className="px-6 py-3 font-semibold text-slate-800 text-right">€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1)).toLocaleString()}</td>
                         <td className="px-6 py-3 text-right">
@@ -1278,27 +1280,73 @@ export default function TourDetailPage() {
                           <h5 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                             <MapPin className="w-3.5 h-3.5 text-indigo-500" /> Passenger Rooms Allocation
                           </h5>
-                          {costBuckets.operational.filter(s => s.hotelId && s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room').length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">No passenger room bookings added.</p>
-                          ) : (
-                            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                              {costBuckets.operational.filter(s => s.hotelId && s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room').map(s => {
-                                const h = hotels.find(x => x.id === s.hotelId);
-                                return (
-                                  <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 hover:bg-slate-50 text-xs">
-                                    <div>
-                                      <span className="font-bold text-slate-800">{h?.name || s.description || 'Hotel'}</span>
-                                      <span className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-semibold">{s.roomType} ({s.roomCount || 1} Rooms)</span>
-                                      <span className="ml-2 text-slate-400">Nights: {s.quantity || 1}</span>
+                          {(() => {
+                            const passengerServices = costBuckets.operational.filter(s => s.hotelId && s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room');
+                            if (passengerServices.length === 0) return <p className="text-xs text-slate-400 italic">No passenger room bookings added.</p>;
+
+                            // Group by hotelId
+                            const hotelGroups: { [key: number]: typeof passengerServices } = {};
+                            passengerServices.forEach(s => {
+                              const key = s.hotelId || 0;
+                              if (!hotelGroups[key]) hotelGroups[key] = [];
+                              hotelGroups[key].push(s);
+                            });
+
+                            return (
+                              <div className="space-y-3">
+                                {Object.entries(hotelGroups).map(([hIdStr, items]) => {
+                                  const hId = parseInt(hIdStr);
+                                  const h = hotels.find(x => x.id === hId);
+                                  const first = items[0];
+                                  const stayNights = (first.roomCount && first.roomCount > 0) ? Math.round(first.quantity / first.roomCount) : (first.quantity || 1);
+                                  const hotelTotal = items.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+
+                                  return (
+                                    <div key={hId} className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                                      <div className="p-3 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div className="flex items-center gap-2">
+                                          <Building2 className="w-4 h-4 text-blue-600" />
+                                          <span className="font-bold text-slate-800 text-sm">{h?.name || first.description || 'Hotel'}</span>
+                                          {h?.location && <span className="text-slate-400 font-medium">({h.location})</span>}
+                                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-bold text-[11px]">
+                                            {stayNights} Nights
+                                          </span>
+                                          {first.startDate && first.endDate && (
+                                            <span className="text-slate-400 font-medium text-[11px]">
+                                              ({new Date(first.startDate).toLocaleDateString()} → {new Date(first.endDate).toLocaleDateString()})
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="font-extrabold text-blue-700 text-xs">
+                                          Hotel Stay Total: €{hotelTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                      </div>
+
+                                      <div className="divide-y divide-slate-100 p-2.5 space-y-1">
+                                        {items.map(s => {
+                                          const rNights = (s.roomCount && s.roomCount > 0) ? Math.round(s.quantity / s.roomCount) : (s.quantity || 1);
+                                          return (
+                                            <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 text-xs py-1 px-2 hover:bg-slate-50/80 rounded-lg">
+                                              <div className="flex items-center gap-2">
+                                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-bold text-xs">
+                                                  {s.roomType}
+                                                </span>
+                                                <span className="font-semibold text-slate-700">{s.roomCount || 1} Rooms</span>
+                                                <span className="text-slate-400">× {rNights} Nights</span>
+                                              </div>
+                                              <div className="font-semibold text-slate-600">
+                                                €{(s.unitPrice || 0).toLocaleString()} / night × {s.roomCount || 1} rooms × {rNights} nights = <span className="font-bold text-blue-600">€{(s.totalAmount || 0).toLocaleString()}</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                    <div className="font-bold text-slate-700">
-                                      €{(s.unitPrice || 0).toLocaleString()} / night × {s.quantity || 1} = <span className="text-blue-600">€{(s.totalAmount || 0).toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* 2. Guide Accommodation */}
