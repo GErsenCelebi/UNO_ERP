@@ -1320,7 +1320,7 @@ export default function TourDetailPage() {
                               {/* 2. Guide Accommodation */}
                               <div className="space-y-2">
                                 <h5 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
-                                  <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation & Hometown Stays
+                                  <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation
                                 </h5>
                                 {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).length === 0 ? (
                                   <p className="text-xs text-slate-400 italic">No guide accommodation entries.</p>
@@ -1351,7 +1351,7 @@ export default function TourDetailPage() {
                               {/* 3. Driver Accommodation */}
                               <div className="space-y-2">
                                 <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                  <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation & Hometown Stays
+                                  <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation
                                 </h5>
                                 {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).length === 0 ? (
                                   <p className="text-xs text-slate-400 italic">No driver accommodation entries.</p>
