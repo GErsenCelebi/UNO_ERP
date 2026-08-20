@@ -214,6 +214,7 @@ export default function TourDetailPage() {
     singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0, dblEbRate: 0,
     includeGuideRoom: false, guideStartDate: '', guideEndDate: '', guideRate: 0,
     includeDriverRoom: false, driverStartDate: '', driverEndDate: '', driverRate: 0,
+    includeHotelTax: false, hotelTaxRate: 2.50,
     flightNo: '', serviceDate: '', fromAirport: '', toAirport: ''
   });
 
@@ -435,6 +436,7 @@ export default function TourDetailPage() {
       singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0, dblEbRate: 0,
       includeGuideRoom: false, guideStartDate: '', guideEndDate: '', guideRate: 0,
       includeDriverRoom: false, driverStartDate: '', driverEndDate: '', driverRate: 0,
+      includeHotelTax: false, hotelTaxRate: 2.50,
       flightNo: '', serviceDate: '', startDate: type === 'Hotel' ? '' : (tour?.arrivalDate?.split('T')[0] || ''), endDate: type === 'Hotel' ? '' : (tour?.endDate?.split('T')[0] || ''), fromAirport: '', toAirport: '',
       guideAssignments: [{
         id: Date.now(),
@@ -491,7 +493,10 @@ export default function TourDetailPage() {
 
       if (serviceType === 'Hotel' && !editingServiceId) {
         if (!newService.startDate || !newService.endDate) return alert('Please enter check-in and check-out dates.');
-        const q = Number(newService.quantity) || 0;
+        const calculatedNights = newService.startDate && newService.endDate
+          ? Math.max(1, Math.ceil((new Date(newService.endDate).getTime() - new Date(newService.startDate).getTime()) / (1000 * 3600 * 24)))
+          : 0;
+        const q = (Number(newService.quantity) > 0 ? Number(newService.quantity) : calculatedNights);
         if (q <= 0) return alert('Check-out date must be after check-in date.');
 
         if (newService.singleCount > 0) {
@@ -573,7 +578,25 @@ export default function TourDetailPage() {
             });
         }
 
-        if (payloads.length === 0) return alert('Please enter at least one room type quantity or staff accommodation selection');
+        // Hotel Tax / City Tax
+        if (newService.includeHotelTax && (newService.hotelTaxRate || 0) > 0) {
+            const taxRate = newService.hotelTaxRate || 0;
+            const totalPax = tour?.pax || 1;
+            const nightlyTaxUnit = taxRate * totalPax;
+            const taxTotal = nightlyTaxUnit * q;
+            payloads.push({
+              ...basePayload,
+              hotelId: newService.hotelId,
+              roomType: 'City Tax',
+              roomCount: totalPax,
+              quantity: q,
+              unitPrice: nightlyTaxUnit,
+              totalAmount: taxTotal,
+              description: `Hotel Tax (€${taxRate}/pax/night)`
+            });
+        }
+
+        if (payloads.length === 0) return alert('Please enter at least one room type quantity, staff accommodation, or hotel tax selection');
       } else if (serviceType === 'Hotel' && editingServiceId) {
         payloads.push({ ...basePayload, hotelId: newService.hotelId, roomType: newService.roomType, roomCount: newService.roomCount, totalAmount: basePayload.unitPrice * newService.roomCount * newService.quantity });
       } else if (serviceType === 'Guide' && !editingServiceId) {
@@ -1836,95 +1859,157 @@ export default function TourDetailPage() {
                         </div>
                       </div>
 
-                      {/* 2-Column Side-by-Side Grid: Staff Accommodation (Left) & Live Preview (Right) */}
+                      {/* 2-Column Side-by-Side Grid: Staff Accommodation & Hotel Tax (Left) | Live Preview (Right) */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* Staff Accommodation */}
-                        <div className="space-y-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation
-                            </span>
-                            <span className="text-[9px] text-amber-700 italic">Adjust dates</span>
-                          </div>
-
-                          <div className="space-y-2">
-                            {/* Guide Accommodation */}
-                            <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input 
-                                  type="checkbox" 
-                                  checked={!!newService.includeGuideRoom} 
-                                  onChange={e => {
-                                    const checked = e.target.checked;
-                                    setNewService({ 
-                                      ...newService, 
-                                      includeGuideRoom: checked,
-                                      guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
-                                      guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
-                                      guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
-                                    });
-                                  }} 
-                                  className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
-                                />
-                                <span className="text-xs font-bold text-slate-800">Include Guide Room</span>
-                              </label>
-
-                              {!!newService.includeGuideRoom && (
-                                <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
-                                      <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                    </div>
-                                    <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
-                                      <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-[9px] font-semibold text-slate-500">Guide Rate (€/night)</label>
-                                    <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
-                                  </div>
-                                </div>
-                              )}
+                        {/* Left Column: Staff Accommodation & Hotel Tax */}
+                        <div className="space-y-3">
+                          {/* Staff Accommodation */}
+                          <div className="space-y-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation
+                              </span>
+                              <span className="text-[9px] text-amber-700 italic">Adjust dates</span>
                             </div>
 
-                            {/* Driver Accommodation */}
-                            <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
+                            <div className="space-y-2">
+                              {/* Guide Accommodation */}
+                              <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={!!newService.includeGuideRoom} 
+                                    onChange={e => {
+                                      const checked = e.target.checked;
+                                      setNewService({ 
+                                        ...newService, 
+                                        includeGuideRoom: checked,
+                                        guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
+                                        guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
+                                        guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
+                                      });
+                                    }} 
+                                    className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
+                                  />
+                                  <span className="text-xs font-bold text-slate-800">Include Guide Room</span>
+                                </label>
+
+                                {!!newService.includeGuideRoom && (
+                                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div>
+                                        <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
+                                        <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
+                                        <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Guide Rate (€/night)</label>
+                                      <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Driver Accommodation */}
+                              <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={!!newService.includeDriverRoom} 
+                                    onChange={e => {
+                                      const checked = e.target.checked;
+                                      setNewService({ 
+                                        ...newService, 
+                                        includeDriverRoom: checked,
+                                        driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
+                                        driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
+                                        driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
+                                      });
+                                    }} 
+                                    className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
+                                  />
+                                  <span className="text-xs font-bold text-slate-800">Include Driver Room</span>
+                                </label>
+
+                                {!!newService.includeDriverRoom && (
+                                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      <div>
+                                        <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
+                                        <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
+                                        <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Driver Rate (€/night)</label>
+                                      <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Hotel / City Tax (Per Night Per Pax) */}
+                          <div className="space-y-2 bg-blue-50/60 p-3 rounded-xl border border-blue-200/80">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                                <Building2 className="w-3.5 h-3.5 text-blue-600" /> Hotel Tax (City Tax)
+                              </span>
+                              <span className="text-[9px] text-blue-700 italic">Per Pax / Night</span>
+                            </div>
+
+                            <div className="bg-white p-2.5 rounded-lg border border-blue-200 shadow-2xs space-y-1.5">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input 
                                   type="checkbox" 
-                                  checked={!!newService.includeDriverRoom} 
+                                  checked={!!newService.includeHotelTax} 
                                   onChange={e => {
                                     const checked = e.target.checked;
                                     setNewService({ 
                                       ...newService, 
-                                      includeDriverRoom: checked,
-                                      driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
-                                      driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
-                                      driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
+                                      includeHotelTax: checked,
+                                      hotelTaxRate: checked ? (newService.hotelTaxRate || 2.50) : 0
                                     });
                                   }} 
-                                  className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
+                                  className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300" 
                                 />
-                                <span className="text-xs font-bold text-slate-800">Include Driver Room</span>
+                                <span className="text-xs font-bold text-slate-800">Include Hotel / City Tax</span>
                               </label>
 
-                              {!!newService.includeDriverRoom && (
+                              {!!newService.includeHotelTax && (
                                 <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
-                                      <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                    </div>
-                                    <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
-                                      <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                    </div>
-                                  </div>
                                   <div>
-                                    <label className="block text-[9px] font-semibold text-slate-500">Driver Rate (€/night)</label>
-                                    <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
+                                    <label className="block text-[9px] font-semibold text-slate-500">Tax Rate (€ / pax / night)</label>
+                                    <input 
+                                      type="number" 
+                                      step="0.10" 
+                                      value={newService.hotelTaxRate || ''} 
+                                      onChange={e => setNewService({ ...newService, hotelTaxRate: parseFloat(e.target.value) || 0 })} 
+                                      className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                      placeholder="2.50" 
+                                    />
+                                  </div>
+                                  <div className="p-2 bg-blue-50/50 rounded-md text-[10px] text-blue-900 font-medium space-y-0.5 border border-blue-100">
+                                    <div className="flex justify-between">
+                                      <span>Total Pax:</span>
+                                      <span className="font-bold">{tour?.pax || 0} Pax</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Nightly Tax ({tour?.pax || 0} × €{newService.hotelTaxRate || 0}):</span>
+                                      <span className="font-bold">€{((tour?.pax || 0) * (newService.hotelTaxRate || 0)).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-0.5 border-t border-blue-200/60 font-bold text-blue-950">
+                                      <span>Total Stay Tax ({newService.quantity || 1} N):</span>
+                                      <span>€{((tour?.pax || 0) * (newService.hotelTaxRate || 0) * (newService.quantity || 1)).toFixed(2)}</span>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -1933,7 +2018,7 @@ export default function TourDetailPage() {
                         </div>
 
                         {/* Live Preview Column */}
-                        <div>
+                        <div className="md:col-span-1">
                           {!editingServiceId && newService.hotelId && (() => {
                             const safeQty = isNaN(newService.quantity) || !newService.quantity ? 0 : newService.quantity;
                             const gNights = !!newService.includeGuideRoom && newService.guideStartDate && newService.guideEndDate
@@ -1945,6 +2030,7 @@ export default function TourDetailPage() {
 
                             const gTotal = gNights * (newService.guideRate || 0);
                             const dTotal = dNights * (newService.driverRate || 0);
+                            const taxTotal = newService.includeHotelTax ? (newService.hotelTaxRate || 0) * (tour?.pax || 0) * safeQty : 0;
 
                             const passengerTotal = (
                               (newService.singleCount * (newService.singleRate || 0) * safeQty) +
@@ -1966,11 +2052,12 @@ export default function TourDetailPage() {
                                     {newService.dblEbCount > 0 && <div className="flex justify-between"><span>DBL+EB ({newService.dblEbCount} × €{newService.dblEbRate || 0})</span> <span>€{(newService.dblEbCount * (newService.dblEbRate || 0) * safeQty).toLocaleString()}</span></div>}
                                     {gNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Guide Room ({gNights}N × €{newService.guideRate || 0})</span> <span>€{gTotal.toLocaleString()}</span></div>}
                                     {dNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Driver Room ({dNights}N × €{newService.driverRate || 0})</span> <span>€{dTotal.toLocaleString()}</span></div>}
+                                    {newService.includeHotelTax && (newService.hotelTaxRate || 0) > 0 && <div className="flex justify-between text-blue-800 font-medium"><span>Hotel Tax ({tour?.pax || 0} Pax × {safeQty}N × €{newService.hotelTaxRate})</span> <span>€{taxTotal.toLocaleString()}</span></div>}
                                   </div>
                                 </div>
                                 <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-xs text-indigo-900">
                                   <span>Total Package Cost</span>
-                                  <span>€{(passengerTotal + gTotal + dTotal).toLocaleString()}</span>
+                                  <span>€{(passengerTotal + gTotal + dTotal + taxTotal).toLocaleString()}</span>
                                 </div>
                               </div>
                             );
