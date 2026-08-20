@@ -871,11 +871,11 @@ export default function TourDetailPage() {
               })
             )}
           </tbody>
-          {svcs.length > 0 && (
+          {svcs.length > 0 && subtotalLabel && (
             <tfoot className="border-t-2 border-slate-200 bg-slate-50/80">
               <tr>
                 <td colSpan={5} className="px-6 py-2.5 text-right text-xs uppercase tracking-wider text-slate-600 font-bold">
-                  {subtotalLabel || 'SubTotal'}
+                  {subtotalLabel}
                 </td>
                 <td className={`px-6 py-2.5 text-right font-black text-sm ${isExtra ? 'text-emerald-700' : 'text-rose-700'}`}>
                   €{totalSub.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1240,18 +1240,6 @@ export default function TourDetailPage() {
                   {renderServiceTable(costBuckets.base, false, 'Base Services SubTotal')}
                 </div>
                 <div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services
-                    </h3>
-                    <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
-                      Operational Services SubTotal:
-                      <span className="text-sm font-extrabold">€{costBuckets.operational.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </span>
-                  </div>
-                  {renderServiceTable(costBuckets.operational, false, 'Operational Services SubTotal')}
-
-                  {/* Expandable Staff Accommodation Subsection */}
                   {(() => {
                     const staffServices = costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.roomType === 'Driver Room' || s.includeGuideRoom || s.includeDriverRoom);
                     const staffTotal = staffServices.reduce((sum, s) => {
@@ -1262,98 +1250,127 @@ export default function TourDetailPage() {
                       return sum + sub;
                     }, 0);
 
+                    const passengerAndOtherTotal = costBuckets.operational
+                      .filter(s => s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room')
+                      .reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0);
+
+                    const opGrandTotal = passengerAndOtherTotal + staffTotal;
+
                     return (
-                      <div className="mt-4 border border-amber-200 rounded-2xl bg-amber-50/20 overflow-hidden shadow-sm">
-                        <button 
-                          type="button"
-                          onClick={() => setIsAccommodationExpanded(!isAccommodationExpanded)} 
-                          className="w-full p-4 bg-gradient-to-r from-amber-50 to-orange-50/60 hover:from-amber-100/70 hover:to-orange-100/70 transition-all flex items-center justify-between font-bold text-slate-800 text-sm border-b border-amber-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-amber-600" />
-                            <span className="text-amber-950 font-extrabold">Staff Accommodation (Guide & Driver Stays)</span>
-                            <span className="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
-                              {staffServices.length} Staff Stays
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-slate-600">
-                              Total Staff Accommodation: <strong className="text-amber-800 font-extrabold">€{staffTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                            </span>
-                            {isAccommodationExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
-                          </div>
-                        </button>
+                      <>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                          <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services
+                          </h3>
+                          <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                            Operational Services SubTotal:
+                            <span className="text-sm font-extrabold">€{opGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </span>
+                        </div>
 
-                        {isAccommodationExpanded && (
-                          <div className="p-4 space-y-4 bg-white/90">
+                        {/* Main Operational Services Table (without inline subtotal tfoot) */}
+                        {renderServiceTable(costBuckets.operational.filter(s => s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room'), false)}
 
-                        {/* 2. Guide Accommodation */}
-                        <div className="space-y-2">
-                          <h5 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation & Hometown Stays
-                          </h5>
-                          {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">No guide accommodation entries.</p>
-                          ) : (
-                            <div className="divide-y divide-amber-100 border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
-                              {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).map(s => {
-                                const h = hotels.find(x => x.id === s.hotelId);
-                                const g = guides.find(x => x.id === s.guideId) || guides.find(x => x.id === tour?.assignedGuideId);
-                                return (
-                                  <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                                    <div>
-                                      <span className="font-bold text-amber-900">Guide: {g?.name || 'Assigned Tour Guide'}</span>
-                                      <span className="ml-2 text-amber-700 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
-                                      {s.startDate && s.endDate && (
-                                        <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
-                                      )}
-                                    </div>
-                                    <div className="font-bold text-amber-900">
-                                      {s.guideNights || s.quantity || 1} Nights @ €{s.guideRate || s.unitPrice || 0}/night = <span className="text-amber-700">€{(s.guideTotal || s.totalAmount || 0).toLocaleString()}</span>
-                                    </div>
+                        {/* Expandable Staff Accommodation Subsection */}
+                        <div className="mt-4 border border-amber-200 rounded-2xl bg-amber-50/20 overflow-hidden shadow-sm">
+                          <button 
+                            type="button"
+                            onClick={() => setIsAccommodationExpanded(!isAccommodationExpanded)} 
+                            className="w-full p-4 bg-gradient-to-r from-amber-50 to-orange-50/60 hover:from-amber-100/70 hover:to-orange-100/70 transition-all flex items-center justify-between font-bold text-slate-800 text-sm border-b border-amber-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Users className="w-4 h-4 text-amber-600" />
+                              <span className="text-amber-950 font-extrabold">Staff Accommodation (Guide & Driver Stays)</span>
+                              <span className="bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                                {staffServices.length} Staff Stays
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-slate-600">
+                                Total Staff Accommodation: <strong className="text-amber-800 font-extrabold">€{staffTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                              </span>
+                              {isAccommodationExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                            </div>
+                          </button>
+
+                          {isAccommodationExpanded && (
+                            <div className="p-4 space-y-4 bg-white/90">
+                              {/* 2. Guide Accommodation */}
+                              <div className="space-y-2">
+                                <h5 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation & Hometown Stays
+                                </h5>
+                                {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).length === 0 ? (
+                                  <p className="text-xs text-slate-400 italic">No guide accommodation entries.</p>
+                                ) : (
+                                  <div className="divide-y divide-amber-100 border border-amber-200 rounded-xl overflow-hidden bg-amber-50/30">
+                                    {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).map(s => {
+                                      const h = hotels.find(x => x.id === s.hotelId);
+                                      const g = guides.find(x => x.id === s.guideId) || guides.find(x => x.id === tour?.assignedGuideId);
+                                      return (
+                                        <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                          <div>
+                                            <span className="font-bold text-amber-900">Guide: {g?.name || 'Assigned Tour Guide'}</span>
+                                            <span className="ml-2 text-amber-700 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
+                                            {s.startDate && s.endDate && (
+                                              <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                            )}
+                                          </div>
+                                          <div className="font-bold text-amber-900">
+                                            {s.guideNights || s.quantity || 1} Nights @ €{s.guideRate || s.unitPrice || 0}/night = <span className="text-amber-700">€{(s.guideTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                );
-                              })}
+                                )}
+                              </div>
+
+                              {/* 3. Driver Accommodation */}
+                              <div className="space-y-2">
+                                <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation & Hometown Stays
+                                </h5>
+                                {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).length === 0 ? (
+                                  <p className="text-xs text-slate-400 italic">No driver accommodation entries.</p>
+                                ) : (
+                                  <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+                                    {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).map(s => {
+                                      const h = hotels.find(x => x.id === s.hotelId);
+                                      const d = drivers.find(x => x.id === s.driverId) || drivers.find(x => x.id === tour?.assignedDriverId);
+                                      return (
+                                        <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                          <div>
+                                            <span className="font-bold text-slate-800">Driver: {d?.name || 'Assigned Tour Driver'}</span>
+                                            <span className="ml-2 text-slate-600 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
+                                            {s.startDate && s.endDate && (
+                                              <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                            )}
+                                          </div>
+                                          <div className="font-bold text-slate-800">
+                                            {s.driverNights || s.quantity || 1} Nights @ €{s.driverRate || s.unitPrice || 0}/night = <span className="text-blue-700">€{(s.driverTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
 
-                        {/* 3. Driver Accommodation */}
-                        <div className="space-y-2">
-                          <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                            <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation & Hometown Stays
-                          </h5>
-                          {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">No driver accommodation entries.</p>
-                          ) : (
-                            <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
-                              {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).map(s => {
-                                const h = hotels.find(x => x.id === s.hotelId);
-                                const d = drivers.find(x => x.id === s.driverId) || drivers.find(x => x.id === tour?.assignedDriverId);
-                                return (
-                                  <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-                                    <div>
-                                      <span className="font-bold text-slate-800">Driver: {d?.name || 'Assigned Tour Driver'}</span>
-                                      <span className="ml-2 text-slate-600 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
-                                      {s.startDate && s.endDate && (
-                                        <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
-                                      )}
-                                    </div>
-                                    <div className="font-bold text-slate-800">
-                                      {s.driverNights || s.quantity || 1} Nights @ €{s.driverRate || s.unitPrice || 0}/night = <span className="text-blue-700">€{(s.driverTotal || s.totalAmount || 0).toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                        {/* Operational Services SubTotal Bar Below Staff Accommodation */}
+                        <div className="mt-3 p-3.5 bg-slate-100/90 border-2 border-slate-200/80 rounded-xl flex items-center justify-between font-bold text-xs uppercase tracking-wider text-slate-700 shadow-2xs">
+                          <span>Operational Services SubTotal</span>
+                          <span className="text-rose-700 font-black text-sm">
+                            €{opGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
+                      </>
+                    );
+                  })()}
+                </div>
                 {costBuckets.other.length > 0 && (
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
