@@ -50,6 +50,21 @@ if (initializeDatabaseOnStartup)
                 BEGIN
                     ALTER TABLE [Tours] DROP CONSTRAINT [FK_Tours_Guides_GuideId];
                 END
+
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TourAttachments')
+                BEGIN
+                    CREATE TABLE [TourAttachments] (
+                        [Id] int IDENTITY(1,1) NOT NULL,
+                        [TourId] int NOT NULL,
+                        [FileName] nvarchar(255) NOT NULL,
+                        [FilePath] nvarchar(500) NOT NULL,
+                        [FileType] nvarchar(100) NULL,
+                        [FileSize] bigint NOT NULL DEFAULT 0,
+                        [Description] nvarchar(500) NULL,
+                        [UploadedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(),
+                        CONSTRAINT [PK_TourAttachments] PRIMARY KEY ([Id])
+                    );
+                END
                 
                 IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Tours_GuideId')
                 BEGIN

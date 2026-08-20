@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 
@@ -114,6 +114,13 @@ export default function TourDetailPage() {
   const [isInvoiceEditing, setIsInvoiceEditing] = useState(false);
   const [editingInvoiceData, setEditingInvoiceData] = useState<any>(null);
 
+  // Tour Invoice Attachments
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileDescription, setFileDescription] = useState('');
+
   // Add service modal
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceType, setServiceType] = useState('Hotel');
@@ -214,10 +221,56 @@ export default function TourDetailPage() {
     if (tourId) fetchAll();
   }, [tourId]);
 
+  const fetchAttachments = async () => {
+    try {
+      const res = await fetch(`${API}/tours/${tourId}/attachments`);
+      if (res.ok) setAttachments(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
+  const handleUploadAttachment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      if (fileDescription) formData.append('description', fileDescription);
+
+      const res = await fetch(`${API}/tours/${tourId}/attachments`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        setSelectedFile(null);
+        setFileDescription('');
+        setIsAttachModalOpen(false);
+        await fetchAttachments();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this attached invoice file?')) return;
+    try {
+      const res = await fetch(`${API}/tours/${tourId}/attachments/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAttachments(prev => prev.filter(a => a.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [tourRes, svcRes, catRes, hotelRes, driverRes, guideRes, excRes, transRes, statusRes, invoiceRes, projRes] = await Promise.all([
+      const [tourRes, svcRes, catRes, hotelRes, driverRes, guideRes, excRes, transRes, statusRes, invoiceRes, projRes, attachRes] = await Promise.all([
         fetch(`${API}/tours/${tourId}`),
         fetch(`${API}/tourservices?tourId=${tourId}`).catch(() => null),
         fetch(`${API}/servicecategories`).catch(() => null),
@@ -229,6 +282,7 @@ export default function TourDetailPage() {
         fetch(`${API}/tourstatuses`).catch(() => null),
         fetch(`${API}/invoices?tourId=${tourId}`).catch(() => null),
         fetch(`${API}/projects`).catch(() => null),
+        fetch(`${API}/tours/${tourId}/attachments`).catch(() => null),
       ]);
 
       let loadedServices: any[] = [];
@@ -260,6 +314,7 @@ export default function TourDetailPage() {
       }
       if (invoiceRes?.ok) setInvoices(await invoiceRes.json());
       if (projRes?.ok) setProjects(await projRes.json());
+      if (attachRes?.ok) setAttachments(await attachRes.json());
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -2266,19 +2321,24 @@ export default function TourDetailPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-xl font-bold text-slate-800">Invoices</h2>
-                  <p className="text-sm text-slate-500 mt-1">Manage invoices for this tour</p>
+                  <p className="text-sm text-slate-500 mt-1">Manage generated invoices and supplier attachments for this tour</p>
                 </div>
-                <button onClick={handleCreateNewInvoice} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5">
-                  <Plus className="w-4 h-4" /> Create Invoice
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setIsAttachModalOpen(true)} className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors gap-1.5 border border-slate-200 shadow-2xs">
+                    <Paperclip className="w-4 h-4 text-slate-500" /> Attach Invoice File
+                  </button>
+                  <button onClick={handleCreateNewInvoice} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5 shadow-2xs">
+                    <Plus className="w-4 h-4" /> Create Invoice
+                  </button>
+                </div>
               </div>
 
               {invoices.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-                  <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-slate-800 mb-1">No invoices yet</h3>
-                  <p className="text-slate-500 text-sm mb-6">Create the first invoice for this tour.</p>
-                  <button onClick={handleCreateNewInvoice} className="inline-flex items-center px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
+                  <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h3 className="text-base font-medium text-slate-800 mb-1">No generated invoices yet</h3>
+                  <p className="text-slate-500 text-xs mb-4">Create an in-app invoice for this tour.</p>
+                  <button onClick={handleCreateNewInvoice} className="inline-flex items-center px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-medium transition-colors">
                     Create Invoice
                   </button>
                 </div>
@@ -2314,6 +2374,70 @@ export default function TourDetailPage() {
                   </table>
                 </div>
               )}
+
+              {/* Attached Invoice Files Subsection */}
+              <div className="pt-6 border-t border-slate-200">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                      <Paperclip className="w-4 h-4 text-blue-600" /> Attached Invoice Files & Receipts
+                    </h3>
+                    <p className="text-xs text-slate-500">External supplier invoices, excursion receipts, and documents attached to this tour</p>
+                  </div>
+                  <button onClick={() => setIsAttachModalOpen(true)} className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors gap-1">
+                    <Upload className="w-3.5 h-3.5" /> Upload File
+                  </button>
+                </div>
+
+                {attachments.length === 0 ? (
+                  <div className="bg-slate-50 rounded-xl border border-dashed border-slate-300 p-6 text-center">
+                    <Paperclip className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-slate-500 text-xs font-medium mb-2">No files attached to this tour yet.</p>
+                    <button onClick={() => setIsAttachModalOpen(true)} className="inline-flex items-center px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors">
+                      <Upload className="w-3.5 h-3.5 mr-1" /> Attach Invoice File
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
+                    {attachments.map(att => (
+                      <div key={att.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                            {att.fileName.endsWith('.pdf') ? 'PDF' : att.fileName.match(/\.(png|jpg|jpeg)$/i) ? 'IMG' : 'DOC'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                              {att.fileName}
+                            </p>
+                            {att.description && <p className="text-xs text-slate-500 mt-0.5">{att.description}</p>}
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              Uploaded: {new Date(att.uploadedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} • {(att.fileSize / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a 
+                            href={att.filePath} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> View / Download
+                          </a>
+                          <button 
+                            type="button"
+                            onClick={() => handleDeleteAttachment(att.id)} 
+                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                            title="Delete file"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm print:border-none print:shadow-none">
@@ -2540,6 +2664,66 @@ export default function TourDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Attach Invoice File Modal */}
+      {isAttachModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                <Paperclip className="w-5 h-5 text-blue-600" /> Attach Invoice File
+              </h3>
+              <button type="button" onClick={() => setIsAttachModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadAttachment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Select File (PDF, Image, Document)
+                </label>
+                <input 
+                  required
+                  type="file"
+                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                  className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-200 rounded-xl p-1.5"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  File Title / Notes (Optional)
+                </label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Excursion Receipt, Hotel Supplier Invoice"
+                  value={fileDescription}
+                  onChange={e => setFileDescription(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsAttachModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={uploadingFile || !selectedFile}
+                  className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload & Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
