@@ -1006,17 +1006,16 @@ export default function TourDetailPage() {
       <header className="print:hidden h-16 bg-white border-b border-slate-200 flex items-center px-6 shrink-0 shadow-sm z-10">
         <button 
           onClick={() => {
-            const targetProj = (tour?.projectId && tour.projectId > 0) 
-              ? tour.projectId 
-              : (projectId && projectId !== '0' ? projectId : null);
-            if (targetProj) {
-              router.push(`/projects/${targetProj}`);
+            if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
+              router.back();
+            } else if (tour?.projectId && tour.projectId > 0) {
+              router.push(`/projects/${tour.projectId}`);
             } else {
               router.push('/tour-calendar');
             }
           }} 
           className="mr-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
-          title="Back to Project"
+          title="Back"
         >
           <ArrowLeft className="w-5 h-5 text-slate-600" />
         </button>
