@@ -1,4 +1,4 @@
-﻿# Lessons Learned & Project Rules
+# Lessons Learned & Project Rules
 
 ## 1. Verify File Paths (Backend / API Generation)
 **Rule:** Whenever an agent (especially Backend or Fullstack agents) generates code files, they MUST verify that the files are saved in the correct target directory within the main solution (e.g., C:\Ersen\Projects_2025\Uno_ERP\Uno_API\Uno_API\Controllers).
@@ -14,3 +14,7 @@
 
 ## 4. End-to-End Test Automation Requirement
 **Rule:** All completed functionality must be verified by the E2E Testing Manager. If an E2E test fails and is confirmed as a true bug, the agent must drag the related GitHub issue back to "Incomplete" and raise a bug linked to the issue.
+
+## 5. E2E Test Suite Storage Location
+**Rule:** All Playwright and E2E automation test scripts created or updated during development MUST be saved directly in the repository under `tests/e2e/` (e.g., `C:\Ersen\Projects_2025\Uno_ERP\tests\e2e\`).
+**Reason:** This ensures the AI Chatbot, developers, and CI/CD pipelines can read, execute, and learn all application workflows and UI interactions directly from the repository codebase.
