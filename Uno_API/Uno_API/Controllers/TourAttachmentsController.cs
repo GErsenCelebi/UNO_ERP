@@ -72,6 +72,29 @@ namespace Uno_API.Controllers
             return Ok(attachment);
         }
 
+        // GET: api/tours/5/attachments/10/download
+        [HttpGet("{id}/download")]
+        public async Task<IActionResult> DownloadAttachment(int tourId, int id)
+        {
+            var attachment = await _context.TourAttachments.FirstOrDefaultAsync(a => a.Id == id && a.TourId == tourId);
+            if (attachment == null)
+            {
+                return NotFound();
+            }
+
+            var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+            var fullPath = Path.Combine(webRoot, attachment.FilePath.TrimStart('/'));
+
+            if (!System.IO.File.Exists(fullPath))
+            {
+                return NotFound("File not found on server.");
+            }
+
+            var contentType = string.IsNullOrEmpty(attachment.FileType) ? "application/octet-stream" : attachment.FileType;
+            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+            return File(bytes, contentType, attachment.FileName);
+        }
+
         // DELETE: api/tours/5/attachments/10
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAttachment(int tourId, int id)
