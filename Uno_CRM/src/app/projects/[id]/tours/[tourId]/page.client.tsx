@@ -833,6 +833,8 @@ export default function TourDetailPage() {
       }))
     ];
 
+    const initialTotalAmount = invoiceLines.reduce((sum, l) => sum + (l.totalAmount || 0), 0);
+
     setEditingInvoiceData({
       name: `Invoice for ${tour?.tourCode || 'Tour'}`,
       invoiceNo: `INV-${Date.now().toString().slice(-6)}`,
@@ -846,7 +848,7 @@ export default function TourDetailPage() {
       toAddress: '',
       isSimpleView: false,
       linesJson: JSON.stringify(invoiceLines),
-      totalAmount: totalSales, // Default to total sales, can be overridden
+      totalAmount: initialTotalAmount,
       currency: 'EUR'
     });
     setCurrentInvoice(null);
@@ -2580,7 +2582,20 @@ export default function TourDetailPage() {
                     )}
                     
                     {/* Total Amount always visible in edit mode */}
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-between items-center pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const lines = typeof editingInvoiceData.linesJson === 'string' 
+                            ? JSON.parse(editingInvoiceData.linesJson || '[]') 
+                            : (editingInvoiceData.linesJson || []);
+                          const sum = lines.reduce((acc: number, l: any) => acc + (l.totalAmount || 0), 0);
+                          setEditingInvoiceData({ ...editingInvoiceData, totalAmount: sum });
+                        }}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                      >
+                        ⚡ Auto-Sum From Line Items
+                      </button>
                       <div className="w-64">
                         <div className="flex justify-between items-center text-sm font-bold text-slate-800 bg-slate-100 px-4 py-2 rounded-lg border border-slate-200">
                           <span>Total Amount:</span>
