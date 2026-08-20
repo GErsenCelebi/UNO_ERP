@@ -29,6 +29,9 @@ namespace Uno_API.Services
         {
             var result = new FileRepositoryIndexerResult();
 
+            // Seed System Troubleshooting FAQs first
+            await IngestTroubleshootingFaqsAsync();
+
             // Root workspace directory and UserManuals directory
             var candidatePaths = new[]
             {
@@ -66,6 +69,69 @@ namespace Uno_API.Services
             }
 
             return result;
+        }
+
+        private async Task IngestTroubleshootingFaqsAsync()
+        {
+            var troubleshootingFaqs = new List<AiKnowledgeItem>
+            {
+                new AiKnowledgeItem
+                {
+                    SourceType = "SystemTroubleshooting",
+                    SourceFile = "troubleshooting_guide.md",
+                    Category = "Troubleshooting",
+                    QuestionPattern = "Why added hotel expenses don't show under Services tab?",
+                    Keywords = "hotel, expense, expenses, services, missing, service tab, not showing, can't see, visibility, service, tab, issue",
+                    AnswerMarkdown = "**Troubleshooting: Hotel Expenses Missing under Services Tab**\n\n" +
+                        "If you added a hotel or hotel expenses but cannot see them under the Tour Services tab, check the following:\n\n" +
+                        "1. **Tour-Level Service Entry vs. Master Data**: Creating a Hotel in *Master Data* only registers the supplier contract. To attach expenses to a tour, you must navigate to **[Projects > Tour Detail](/projects)** and click **+ Add Hotel Stay** under the **Services & Costing** tab.\n" +
+                        "2. **Category Filter**: Ensure the Service Category dropdown filter is set to **\"All Categories\"** or **\"Hotel Stays\"**.\n" +
+                        "3. **Tour Status Lockdown**: If the Tour status is marked as **\"Accounting Closed\"**, newly added service cost items are suppressed until an Administrator re-opens the tour.\n" +
+                        "4. **Stay Dates Alignment**: Verify that the Hotel check-in and check-out dates fall within the Tour arrival and departure bounds.",
+                    TargetUrl = "/tours",
+                    ActionLabel = "Open Tours Grid",
+                    IsActive = true
+                },
+                new AiKnowledgeItem
+                {
+                    SourceType = "SystemTroubleshooting",
+                    SourceFile = "troubleshooting_guide.md",
+                    Category = "Troubleshooting",
+                    QuestionPattern = "How is hotel cost calculated or why hotel calculation is wrong?",
+                    Keywords = "hotel, cost, calculation, calculate, wrong, price, rate, room price, fluctuate, total cost, formula",
+                    AnswerMarkdown = "**Troubleshooting & Explanation: Hotel Cost Calculation Formula**\n\n" +
+                        "Hotel costs in UNO_ERP are calculated dynamically based on room type rates and stay duration:\n\n" +
+                        "• **Editable Nightly Rates**: Master Data default rates (Single, Double, Twin, Triple) pre-fill upon hotel selection, but can be customized per tour entry to handle price fluctuations over time.\n" +
+                        "• **Pricing Basis**: Calculation varies depending on whether the hotel operates on a **Per Room / Night** or **Per Pax / Night** basis.\n" +
+                        "• **Calculation Formula**:\n" +
+                        "  $$\\text{Total Hotel Cost} = \\sum (\\text{SingleRate} \\times \\text{SingleCount} + \\text{DoubleRate} \\times \\text{DoubleCount} + \\text{TwinRate} \\times \\text{TwinCount} + \\text{TripleRate} \\times \\text{TripleCount}) \\times \\text{Total Nights}$$\n" +
+                        "• **Dynamic Preview**: The total cost live updates in real time as room counts or nightly rate entries are edited in the Add/Edit Hotel Service modal.",
+                    TargetUrl = "/tours",
+                    ActionLabel = "Open Tour Details",
+                    IsActive = true
+                }
+            };
+
+            foreach (var item in troubleshootingFaqs)
+            {
+                var existing = await _context.AiKnowledgeItems
+                    .FirstOrDefaultAsync(k => k.SourceFile == item.SourceFile && k.QuestionPattern == item.QuestionPattern);
+
+                if (existing != null)
+                {
+                    existing.Keywords = item.Keywords;
+                    existing.AnswerMarkdown = item.AnswerMarkdown;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    item.CreatedAt = DateTime.UtcNow;
+                    item.UpdatedAt = DateTime.UtcNow;
+                    _context.AiKnowledgeItems.Add(item);
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         private async Task<int> ParseAndSaveMarkdownSectionsAsync(string fileName, string content)
