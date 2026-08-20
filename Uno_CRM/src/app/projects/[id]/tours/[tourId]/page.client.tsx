@@ -1260,7 +1260,7 @@ export default function TourDetailPage() {
                     >
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-blue-600" />
-                        <span>Accommodation & Staff Hotel Stays Breakdown</span>
+                        <span>Staff Accommodation</span>
                         <span className="bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
                           {costBuckets.operational.filter(s => s.hotelId || s.roomType).length} Stays
                         </span>
