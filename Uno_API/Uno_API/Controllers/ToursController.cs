@@ -28,6 +28,8 @@ namespace Uno_API.Controllers
                     .Include(t => t.TourStatus)
                     .Include(t => t.Project)
                         .ThenInclude(p => p!.Client)
+                    .Include(t => t.TourServices)
+                    .AsNoTracking()
                     .AsQueryable();
 
                 if (projectId.HasValue)
@@ -35,7 +37,9 @@ namespace Uno_API.Controllers
                     query = query.Where(t => t.ProjectId == projectId.Value);
                 }
 
-                var result = await query.Select(t => new
+                var tours = await query.ToListAsync();
+
+                var result = tours.Select(t => new
                 {
                     t.Id,
                     t.TourCode,
@@ -65,7 +69,7 @@ namespace Uno_API.Controllers
                         ts.GuideId,
                         ts.Description
                     })
-                }).ToListAsync();
+                });
 
                 return Ok(result);
             }
