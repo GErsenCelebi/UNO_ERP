@@ -67,29 +67,8 @@
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
-  <Target Name="BuildUnoCrmOnBuildTarget" BeforeTargets="BeforeBuild" Condition="'$(BuildUnoCrmOnBuild)' == 'true' and '$(PublishProfile)' == '' and '$(PublishDir)' == '' and '$(UnoCrmHasBuilt)' != 'true' and Exists('$(UnoCrmProjectDir)\package.json')">
-    <Message Text="Building Uno_CRM for Uno_API build..." Importance="high" />
-    <Exec WorkingDirectory="$(UnoCrmProjectDir)" Command="npm.cmd run build" EnvironmentVariables="NEXT_BUILD=true" />
-    
-    <RemoveDir Directories="wwwroot" />
-    <MakeDir Directories="wwwroot" />
-    <!-- Copy exported Next.js app to wwwroot -->
-    <Exec Command="xcopy /Y /E /I &quot;$(UnoCrmProjectDir)\out\*&quot; &quot;wwwroot\&quot;" />
-    
-    <PropertyGroup>
-      <UnoCrmHasBuilt>true</UnoCrmHasBuilt>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <!-- Force MSBuild to recognize the newly generated files and push them to the WebDeploy payload -->
-      <Content Remove="wwwroot\**" />
-      <Content Remove="wwwroot\**\*" />
-      <Content Include="wwwroot\**" CopyToPublishDirectory="PreserveNewest" />
-    </ItemGroup>
-  </Target>
-
-  <Target Name="BuildUnoCrmOnPublishTarget" BeforeTargets="ComputeFilesToPublish" Condition="'$(BuildUnoCrmOnPublish)' == 'true' and '$(UnoCrmHasBuilt)' != 'true' and Exists('$(UnoCrmProjectDir)\package.json')">
-    <Message Text="Building Uno_CRM for Uno_API..." Importance="high" />
+  <Target Name="BuildUnoCrmTarget" BeforeTargets="BeforeBuild;ComputeFilesToPublish" Condition="'$(UnoCrmHasBuilt)' != 'true' and Exists('$(UnoCrmProjectDir)\package.json')">
+    <Message Text="Building Uno_CRM SPA for Uno_API..." Importance="high" />
     <Exec WorkingDirectory="$(UnoCrmProjectDir)" Command="npm.cmd run build" EnvironmentVariables="NEXT_BUILD=true" />
     
     <RemoveDir Directories="wwwroot" />
