@@ -36,7 +36,7 @@ interface UserAccount {
   password?: string;
   name: string;
   role: string;
-  isActive: bool;
+  isActive: boolean;
   createdAt?: string;
 }
 
@@ -114,8 +114,8 @@ export default function UserManagementPage() {
       setUsers(data);
 
       // Collect any custom roles from existing users
-      const customRoles = Array.from(new Set(data.map((u: UserAccount) => u.role).filter(Boolean)));
-      setRolesList(prev => Array.from(new Set([...prev, ...customRoles])));
+      const customRoles = Array.from(new Set<string>(data.map((u: UserAccount) => u.role).filter(Boolean)));
+      setRolesList(prev => Array.from(new Set<string>([...prev, ...customRoles])));
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Error connecting to User Management API');

@@ -203,7 +203,7 @@ export default function AIChatDrawer() {
                           onClick={() => setIsOpen(false)}
                           className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
                         >
-                          {link.Label} <ArrowRight className="w-3 h-3" />
+                          {link.label || (link as any).Label} <ArrowRight className="w-3 h-3" />
                         </Link>
                       ))}
                     </div>

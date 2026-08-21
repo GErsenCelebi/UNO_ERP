@@ -721,7 +721,7 @@ export default function MasterDataPage() {
                         onClick={async () => {
                           setLoading(true);
                           try {
-                            const res = await fetch(`${getApiUrl()}/aiknowledgeitems/sync-repository`, { method: 'POST' });
+                            const res = await fetch(`${API}/aiknowledgeitems/sync-repository`, { method: 'POST' });
                             if (res.ok) {
                               const resultData = await res.json();
                               alert(`Successfully synced Documentation Repository!\nProcessed ${resultData.totalFilesProcessed} markdown files and ingested ${resultData.totalKnowledgeItemsIngested} knowledge items into AppDB.`);
