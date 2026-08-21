@@ -46,6 +46,7 @@ namespace Uno_API.Controllers
                         p.ProjectCode,
                         p.ClientId,
                         ClientName = p.Client != null ? p.Client.Name : "",
+                        p.ProjectStatusId,
                         p.StartDate,
                         p.EndDate,
                         p.Description,
