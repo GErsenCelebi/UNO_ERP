@@ -73,6 +73,8 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        type="button"
+        suppressHydrationWarning
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-slate-100 rounded-full text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors focus:ring-1 focus:ring-blue-500 min-w-[120px] justify-between"
       >

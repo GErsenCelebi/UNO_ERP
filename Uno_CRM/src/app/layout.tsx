@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} print:block print:h-auto print:overflow-visible print:bg-white`}>
+      <body suppressHydrationWarning className={`${inter.className} print:block print:h-auto print:overflow-visible print:bg-white`}>
         <AppLayout>{children}</AppLayout>
       </body>
     </html>
