@@ -1873,163 +1873,161 @@ export default function TourDetailPage() {
                         </div>
                       </div>
 
-                      {/* 2-Column Side-by-Side Grid: Staff Accommodation & Hotel Tax (Left) | Live Preview (Right) */}
+                      {/* Staff Accommodation (Left) & Hotel Tax (Right) Side-by-Side */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* Left Column: Staff Accommodation & Hotel Tax */}
-                        <div className="space-y-3">
-                          {/* Staff Accommodation */}
-                          <div className="space-y-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
-                                <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation
-                              </span>
-                              <span className="text-[9px] text-amber-700 italic">Adjust dates</span>
-                            </div>
-
-                            <div className="space-y-2">
-                              {/* Guide Accommodation */}
-                              <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={!!newService.includeGuideRoom} 
-                                    onChange={e => {
-                                      const checked = e.target.checked;
-                                      setNewService({ 
-                                        ...newService, 
-                                        includeGuideRoom: checked,
-                                        guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
-                                        guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
-                                        guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
-                                      });
-                                    }} 
-                                    className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
-                                  />
-                                  <span className="text-xs font-bold text-slate-800">Include Guide Room</span>
-                                </label>
-
-                                {!!newService.includeGuideRoom && (
-                                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      <div>
-                                        <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
-                                        <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                      </div>
-                                      <div>
-                                        <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
-                                        <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Guide Rate (€/night)</label>
-                                      <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Driver Accommodation */}
-                              <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={!!newService.includeDriverRoom} 
-                                    onChange={e => {
-                                      const checked = e.target.checked;
-                                      setNewService({ 
-                                        ...newService, 
-                                        includeDriverRoom: checked,
-                                        driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
-                                        driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
-                                        driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
-                                      });
-                                    }} 
-                                    className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
-                                  />
-                                  <span className="text-xs font-bold text-slate-800">Include Driver Room</span>
-                                </label>
-
-                                {!!newService.includeDriverRoom && (
-                                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      <div>
-                                        <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
-                                        <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                      </div>
-                                      <div>
-                                        <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
-                                        <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Driver Rate (€/night)</label>
-                                      <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                        {/* Staff Accommodation */}
+                        <div className="space-y-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5 text-amber-600" /> Staff Accommodation
+                            </span>
+                            <span className="text-[9px] text-amber-700 italic">Adjust dates</span>
                           </div>
 
-                          {/* Hotel / City Tax (Per Night Per Pax) */}
-                          <div className="space-y-2 bg-blue-50/60 p-3 rounded-xl border border-blue-200/80">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1">
-                                <Building2 className="w-3.5 h-3.5 text-blue-600" /> Hotel Tax (City Tax)
-                              </span>
-                              <span className="text-[9px] text-blue-700 italic">Per Pax / Night</span>
-                            </div>
-
-                            <div className="bg-white p-2.5 rounded-lg border border-blue-200 shadow-2xs space-y-1.5">
+                          <div className="space-y-2">
+                            {/* Guide Accommodation */}
+                            <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input 
                                   type="checkbox" 
-                                  checked={!!newService.includeHotelTax} 
+                                  checked={!!newService.includeGuideRoom} 
                                   onChange={e => {
                                     const checked = e.target.checked;
                                     setNewService({ 
                                       ...newService, 
-                                      includeHotelTax: checked,
-                                      hotelTaxRate: checked ? (newService.hotelTaxRate || 2.50) : 0
+                                      includeGuideRoom: checked,
+                                      guideStartDate: checked ? (newService.guideStartDate || newService.startDate) : '',
+                                      guideEndDate: checked ? (newService.guideEndDate || newService.endDate) : '',
+                                      guideRate: checked ? (newService.guideRate || newService.singleRate || 60) : 0
                                     });
                                   }} 
-                                  className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300" 
+                                  className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
                                 />
-                                <span className="text-xs font-bold text-slate-800">Include Hotel / City Tax</span>
+                                <span className="text-xs font-bold text-slate-800">Include Guide Room</span>
                               </label>
 
-                              {!!newService.includeHotelTax && (
+                              {!!newService.includeGuideRoom && (
                                 <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                  <div>
-                                    <label className="block text-[9px] font-semibold text-slate-500">Tax Rate (€ / pax / night)</label>
-                                    <input 
-                                      type="number" 
-                                      step="0.10" 
-                                      value={newService.hotelTaxRate || ''} 
-                                      onChange={e => setNewService({ ...newService, hotelTaxRate: parseFloat(e.target.value) || 0 })} 
-                                      className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
-                                      placeholder="2.50" 
-                                    />
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
+                                      <input type="date" value={newService.guideStartDate || ''} onChange={e => setNewService({ ...newService, guideStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
+                                      <input type="date" value={newService.guideEndDate || ''} onChange={e => setNewService({ ...newService, guideEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
+                                    </div>
                                   </div>
-                                  <div className="p-2 bg-blue-50/50 rounded-md text-[10px] text-blue-900 font-medium space-y-0.5 border border-blue-100">
-                                    <div className="flex justify-between">
-                                      <span>Total Pax:</span>
-                                      <span className="font-bold">{tour?.pax || 0} Pax</span>
+                                  <div>
+                                    <label className="block text-[9px] font-semibold text-slate-500">Guide Rate (€/night)</label>
+                                    <input type="number" step="0.01" value={newService.guideRate || ''} onChange={e => setNewService({ ...newService, guideRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="60" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Driver Accommodation */}
+                            <div className="bg-white p-2.5 rounded-lg border border-amber-200 shadow-2xs space-y-1.5">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                  type="checkbox" 
+                                  checked={!!newService.includeDriverRoom} 
+                                  onChange={e => {
+                                    const checked = e.target.checked;
+                                    setNewService({ 
+                                      ...newService, 
+                                      includeDriverRoom: checked,
+                                      driverStartDate: checked ? (newService.driverStartDate || newService.startDate) : '',
+                                      driverEndDate: checked ? (newService.driverEndDate || newService.endDate) : '',
+                                      driverRate: checked ? (newService.driverRate || newService.singleRate || 50) : 0
+                                    });
+                                  }} 
+                                  className="w-3.5 h-3.5 text-amber-600 rounded border-slate-300" 
+                                />
+                                <span className="text-xs font-bold text-slate-800">Include Driver Room</span>
+                              </label>
+
+                              {!!newService.includeDriverRoom && (
+                                <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-in</label>
+                                      <input type="date" value={newService.driverStartDate || ''} onChange={e => setNewService({ ...newService, driverStartDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
                                     </div>
-                                    <div className="flex justify-between">
-                                      <span>Nightly Tax ({tour?.pax || 0} × €{newService.hotelTaxRate || 0}):</span>
-                                      <span className="font-bold">€{((tour?.pax || 0) * (newService.hotelTaxRate || 0)).toFixed(2)}</span>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Check-out</label>
+                                      <input type="date" value={newService.driverEndDate || ''} onChange={e => setNewService({ ...newService, driverEndDate: e.target.value })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs" suppressHydrationWarning />
                                     </div>
-                                    <div className="flex justify-between pt-0.5 border-t border-blue-200/60 font-bold text-blue-950">
-                                      <span>Total Stay Tax ({newService.quantity || 1} N):</span>
-                                      <span>€{((tour?.pax || 0) * (newService.hotelTaxRate || 0) * (newService.quantity || 1)).toFixed(2)}</span>
-                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[9px] font-semibold text-slate-500">Driver Rate (€/night)</label>
+                                    <input type="number" step="0.01" value={newService.driverRate || ''} onChange={e => setNewService({ ...newService, driverRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-amber-700" placeholder="50" />
                                   </div>
                                 </div>
                               )}
                             </div>
                           </div>
                         </div>
+
+                        {/* Hotel / City Tax (Per Night Per Pax) */}
+                        <div className="space-y-2 bg-blue-50/60 p-3 rounded-xl border border-blue-200/80">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                              <Building2 className="w-3.5 h-3.5 text-blue-600" /> Hotel Tax (City Tax)
+                            </span>
+                            <span className="text-[9px] text-blue-700 italic">Per Pax / Night</span>
+                          </div>
+
+                          <div className="bg-white p-2.5 rounded-lg border border-blue-200 shadow-2xs space-y-1.5">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={!!newService.includeHotelTax} 
+                                onChange={e => {
+                                  const checked = e.target.checked;
+                                  setNewService({ 
+                                    ...newService, 
+                                    includeHotelTax: checked,
+                                    hotelTaxRate: checked ? (newService.hotelTaxRate || 2.50) : 0
+                                  });
+                                }} 
+                                className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300" 
+                              />
+                              <span className="text-xs font-bold text-slate-800">Include Hotel / City Tax</span>
+                            </label>
+
+                            {!!newService.includeHotelTax && (
+                              <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                <div>
+                                  <label className="block text-[9px] font-semibold text-slate-500">Tax Rate (€ / pax / night)</label>
+                                  <input 
+                                    type="number" 
+                                    step="0.10" 
+                                    value={newService.hotelTaxRate || ''} 
+                                    onChange={e => setNewService({ ...newService, hotelTaxRate: parseFloat(e.target.value) || 0 })} 
+                                    className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                    placeholder="2.50" 
+                                  />
+                                </div>
+                                <div className="p-2 bg-blue-50/50 rounded-md text-[10px] text-blue-900 font-medium space-y-0.5 border border-blue-100">
+                                  <div className="flex justify-between">
+                                    <span>Total Pax:</span>
+                                    <span className="font-bold">{tour?.pax || 0} Pax</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Nightly Tax ({tour?.pax || 0} × €{newService.hotelTaxRate || 0}):</span>
+                                    <span className="font-bold">€{((tour?.pax || 0) * (newService.hotelTaxRate || 0)).toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between pt-0.5 border-t border-blue-200/60 font-bold text-blue-950">
+                                    <span>Total Stay Tax ({newService.quantity || 1} N):</span>
+                                    <span>€{((tour?.pax || 0) * (newService.hotelTaxRate || 0) * (newService.quantity || 1)).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
                         {/* Live Preview Column */}
                         <div className="md:col-span-1">
@@ -2078,8 +2076,7 @@ export default function TourDetailPage() {
                           })()}
                         </div>
                       </div>
-                    </div>
-                  ) : (
+                    ) : (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">Room Type</label>
