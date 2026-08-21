@@ -115,9 +115,24 @@ export default function DashboardClient() {
       if (res.ok) {
         const result = await res.json();
         setData(result);
+      } else {
+        setData({
+          tourActuals: { preConfirmed: 0, activeDone: 0 },
+          projectActuals: { activeCompleted: 0, rest: 0 },
+          projectVolume: { estimatedBudget: 0, revenue: 0, expense: 0 },
+          tourBreakdowns: [],
+          ganttProjects: []
+        });
       }
     } catch (err) {
       console.error(err);
+      setData({
+        tourActuals: { preConfirmed: 0, activeDone: 0 },
+        projectActuals: { activeCompleted: 0, rest: 0 },
+        projectVolume: { estimatedBudget: 0, revenue: 0, expense: 0 },
+        tourBreakdowns: [],
+        ganttProjects: []
+      });
     } finally {
       setLoading(false);
     }
