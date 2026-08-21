@@ -2,6 +2,7 @@
 import React, { useEffect, useState, FormEvent, useRef, useCallback } from 'react';
 import { Search, Bell, LayoutDashboard, Briefcase, Users, CalendarDays, LineChart, Settings, Plus, X, Trash2, Edit2, Database, MapPin, Star, Phone, FileText, Truck, Clock, DollarSign, BarChart3, TrendingUp, Target, Activity, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, Loader2, LayoutTemplate, Sparkles, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { getCurrentUser, UserSession } from '@/lib/auth';
 
 const API = '/api';
 
@@ -407,6 +408,11 @@ function ExcelImportPanel() {
 
 export default function MasterDataPage() {
   const [activeTab, setActiveTab] = useState<TabType>('projectStatuses');
+  const [user, setUser] = useState<UserSession | null>(null);
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
   const [data, setData] = useState<GenericData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectOptions, setSelectOptions] = useState<Record<string, any[]>>({});
@@ -552,11 +558,13 @@ export default function MasterDataPage() {
             <button suppressHydrationWarning className="relative p-1.5 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-full hover:bg-blue-50">
               <Bell className="w-4 h-4" />
             </button>
-            <div className="flex items-center space-x-2 border-l border-slate-200 pl-4 cursor-pointer group">
-              <img src="https://i.pravatar.cc/150?u=admin" alt="Admin" className="w-7 h-7 rounded-full ring-1 ring-slate-100 group-hover:ring-blue-200 transition-all" />
+            <div className="flex items-center space-x-2 border-l border-slate-200 pl-4">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                {user?.name ? user.name.charAt(0) : 'G'}
+              </div>
               <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-700 transition-colors">Sarah J.</span>
-                <span className="text-[10px] text-slate-500">Travel Manager</span>
+                <span className="text-xs font-semibold text-slate-800">{user?.name || 'G. Ersen Çelebi'}</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{user?.role || 'Administrator'}</span>
               </div>
             </div>
           </div>
