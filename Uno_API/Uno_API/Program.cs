@@ -11,7 +11,7 @@ builder.Logging.AddDebug();
 
 var initializeDatabaseOnStartup =
     builder.Configuration.GetValue<bool?>("InitializeDatabaseOnStartup")
-    ?? builder.Environment.IsDevelopment();
+    ?? true;
 
 // Add services to the container.
 builder.Services.AddControllers().AddJsonOptions(x =>
