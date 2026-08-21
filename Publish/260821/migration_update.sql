@@ -105,4 +105,64 @@ IF NOT EXISTS (SELECT * FROM [Users] WHERE [Email] = 'deniz.evren@uno-dmc.cz')
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+
+IF NOT EXISTS (SELECT * FROM [AiKnowledgeItems] WHERE [QuestionPattern] LIKE '%city tax%')
+BEGIN
+    INSERT INTO [AiKnowledgeItems] ([SourceType], [SourceFile], [Category], [QuestionPattern], [Keywords], [AnswerMarkdown], [TargetUrl], [ActionLabel], [IsActive], [CreatedAt], [UpdatedAt])
+    VALUES (
+        'Documentation',
+        'tests/e2e/test_hotel_tax.py',
+        'Hotel Expenses',
+        'How is city tax calculated for hotels? / How does hotel tax work? / Why does city tax show 2 N?',
+        'hotel tax, city tax, pax tax, per night, hotel expense, operational service, calculation',
+        '### Hotel / City Tax Calculation & Display Behavior' + CHAR(10) + CHAR(10) + '1. **Calculation Formula**:' + CHAR(10) + '   - `Nightly Tax = Total Pax × Tax Rate (€/pax/night)`' + CHAR(10) + '   - `Total Stay Tax = Total Pax × Tax Rate × Number of Nights` ' + CHAR(10) + CHAR(10) + '2. **Table Display Rules**:' + CHAR(10) + '   - Listed directly under **OPERATIONAL SERVICES → Hotel**.' + CHAR(10) + '   - **Description**: `[Hotel Name] (City Tax × [Pax] Pax)`' + CHAR(10) + '   - **QTY**: Displayed as Stay Nights (e.g. `2 N`).' + CHAR(10) + '   - **Unit Price**: `Total Pax × Tax Rate` (e.g. `28 Pax × €2.50 = €70.00`).' + CHAR(10) + '   - **Total**: `Total Stay Tax` (e.g. `€140.00`).',
+        '/tour-calendar',
+        'View Tour Calendar',
+        1,
+        GETUTCDATE(),
+        GETUTCDATE()
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM [AiKnowledgeItems] WHERE [QuestionPattern] LIKE '%invoice total amount%')
+BEGIN
+    INSERT INTO [AiKnowledgeItems] ([SourceType], [SourceFile], [Category], [QuestionPattern], [Keywords], [AnswerMarkdown], [TargetUrl], [ActionLabel], [IsActive], [CreatedAt], [UpdatedAt])
+    VALUES (
+        'Documentation',
+        'tests/e2e/test_invoice_total_amount.py',
+        'Invoicing & Billing',
+        'How is invoice total amount calculated? / How to update invoice total amount?',
+        'invoice, total amount, auto sum, line items, revenue, invoicing',
+        '### Invoice Total Amount Auto-Summing Behavior' + CHAR(10) + CHAR(10) + '1. **Automatic Initial Calculation**:' + CHAR(10) + '   - When an invoice is created for a tour, **Total Amount** automatically populates as the sum of all generated line items.' + CHAR(10) + CHAR(10) + '2. **1-Click Auto-Sum Button**:' + CHAR(10) + '   - Click the **`⚡ Auto-Sum From Line Items`** button next to the Total Amount field to instantly recalculate and sync the invoice total whenever line items are modified.',
+        '/invoices',
+        'View Invoices',
+        1,
+        GETUTCDATE(),
+        GETUTCDATE()
+    );
+END
+
+IF NOT EXISTS (SELECT * FROM [AiKnowledgeItems] WHERE [QuestionPattern] LIKE '%calendar navigation%')
+BEGIN
+    INSERT INTO [AiKnowledgeItems] ([SourceType], [SourceFile], [Category], [QuestionPattern], [Keywords], [AnswerMarkdown], [TargetUrl], [ActionLabel], [IsActive], [CreatedAt], [UpdatedAt])
+    VALUES (
+        'Documentation',
+        'tests/e2e/test_tour_calendar_navigation.py',
+        'Calendar & Navigation',
+        'How does tour calendar navigation work? / Where does the back arrow take me?',
+        'calendar, tour calendar, back arrow, project id, navigation',
+        '### Tour Navigation & Back Arrow Behavior' + CHAR(10) + CHAR(10) + '1. **Calendar Event Links**:' + CHAR(10) + '   - Clicking a tour on the calendar opens `/projects/[projectId]/tours/[tourId]` using its assigned project ID.' + CHAR(10) + CHAR(10) + '2. **Smart Back Arrow (`←`)**:' + CHAR(10) + '   - Returns to your previous page (e.g., **Tour Calendar** if opened from calendar, or **Project Details** if opened from a project) while preserving scroll position and active filters.',
+        '/tour-calendar',
+        'View Tour Calendar',
+        1,
+        GETUTCDATE(),
+        GETUTCDATE()
+    );
+END
+
+COMMIT;
+GO
+
+
 
