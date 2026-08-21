@@ -22,50 +22,61 @@ namespace Uno_API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTours([FromQuery] int? projectId)
         {
-            var query = _context.Tours
-                .Include(t => t.TourStatus)
-                .Include(t => t.Project)
-                    .ThenInclude(p => p!.Client)
-                .AsQueryable();
-
-            if (projectId.HasValue)
+            try
             {
-                query = query.Where(t => t.ProjectId == projectId.Value);
-            }
+                var query = _context.Tours
+                    .Include(t => t.TourStatus)
+                    .Include(t => t.Project)
+                        .ThenInclude(p => p!.Client)
+                    .AsQueryable();
 
-            var result = await query.Select(t => new
-            {
-                t.Id,
-                t.TourCode,
-                t.Destination,
-                t.ArrivalDate,
-                StartDate = t.ArrivalDate,
-                t.EndDate,
-                t.Pax,
-                t.Adults,
-                t.Children,
-                t.Infants,
-                BaseFee = t.BaseFee > 0 ? t.BaseFee : 250m,
-                t.TotalFee,
-                GuideCommission = t.GuideCommission > 0 ? t.GuideCommission : 10m,
-                t.TourStatusId,
-                t.ProjectId,
-                t.ArrivalFlight,
-                t.DepartureFlight,
-                t.ArrivalAirport,
-                t.DepartureAirport,
-                TourStatus = t.TourStatus != null ? new { t.TourStatus.Id, t.TourStatus.Name, t.TourStatus.OrderIndex } : null,
-                Project = t.Project != null ? new { t.Project.Id, t.Project.ProjectCode, Client = t.Project.Client != null ? new { t.Project.Client.Id, t.Project.Client.Name } : null } : null,
-                TourServices = t.TourServices.Select(ts => new
+                if (projectId.HasValue)
                 {
-                    ts.Id,
-                    ts.ServiceCategoryId,
-                    ts.GuideId,
-                    ts.Description
-                })
-            }).ToListAsync();
+                    query = query.Where(t => t.ProjectId == projectId.Value);
+                }
 
-            return Ok(result);
+                var result = await query.Select(t => new
+                {
+                    t.Id,
+                    t.TourCode,
+                    t.Destination,
+                    t.ArrivalDate,
+                    StartDate = t.ArrivalDate,
+                    t.EndDate,
+                    t.Pax,
+                    t.Adults,
+                    t.Children,
+                    t.Infants,
+                    BaseFee = t.BaseFee > 0 ? t.BaseFee : 250m,
+                    t.TotalFee,
+                    GuideCommission = t.GuideCommission > 0 ? t.GuideCommission : 10m,
+                    t.TourStatusId,
+                    t.ProjectId,
+                    t.ArrivalFlight,
+                    t.DepartureFlight,
+                    t.ArrivalAirport,
+                    t.DepartureAirport,
+                    TourStatus = t.TourStatus != null ? new { t.TourStatus.Id, t.TourStatus.Name, t.TourStatus.OrderIndex } : null,
+                    Project = t.Project != null ? new { t.Project.Id, t.Project.ProjectCode, Client = t.Project.Client != null ? new { t.Project.Client.Id, t.Project.Client.Name } : null } : null,
+                    TourServices = (t.TourServices ?? new List<TourService>()).Select(ts => new
+                    {
+                        ts.Id,
+                        ts.ServiceCategoryId,
+                        ts.GuideId,
+                        ts.Description
+                    })
+                }).ToListAsync();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new {
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
         }
 
         // GET: api/Tours/5
