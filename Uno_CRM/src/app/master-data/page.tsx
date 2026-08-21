@@ -1032,6 +1032,21 @@ export default function MasterDataPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Double + Extra Bed (DBL + EB) */}
+                      <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-200 space-y-2">
+                        <span className="text-xs font-bold text-purple-900">Double + Extra Bed (DBL + EB)</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Room (€)</label>
+                            <input type="number" step="0.01" value={formData['dblEbRoomRate'] || ''} onChange={e => setFormData({...formData, dblEbRoomRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-medium text-purple-900" placeholder="170" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Pax (€)</label>
+                            <input type="number" step="0.01" value={formData['dblEbPaxRate'] || ''} onChange={e => setFormData({...formData, dblEbPaxRate: Number(e.target.value)})} className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-medium text-purple-900" placeholder="56.67" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </>
