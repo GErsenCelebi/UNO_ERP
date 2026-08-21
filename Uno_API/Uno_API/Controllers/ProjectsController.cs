@@ -32,30 +32,39 @@ namespace Uno_API.Controllers
 
         // GET: api/Projects
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetProjects()
+        public async Task<IActionResult> GetProjects()
         {
-            var projects = await _context.Projects
-                .Include(p => p.Client)
-                .Include(p => p.Tours)
-                .Include(p => p.ProjectStatus)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.ProjectCode,
-                    p.ClientId,
-                    ClientName = p.Client != null ? p.Client.Name : "",
-                    p.StartDate,
-                    p.EndDate,
-                    p.Description,
-                    p.ApproxBudget,
-                    p.BaseCurrency,
-                    p.ProjectStatusId,
-                    ProjectStatusName = p.ProjectStatus != null ? p.ProjectStatus.Name : "",
-                    ToursCount = p.Tours != null ? p.Tours.Count : 0
-                })
-                .ToListAsync();
+            try
+            {
+                var projects = await _context.Projects
+                    .Include(p => p.Client)
+                    .Include(p => p.Tours)
+                    .Include(p => p.ProjectStatus)
+                    .Select(p => new
+                    {
+                        p.Id,
+                        p.ProjectCode,
+                        p.ClientId,
+                        ClientName = p.Client != null ? p.Client.Name : "",
+                        p.StartDate,
+                        p.EndDate,
+                        p.Description,
+                        p.ApproxBudget,
+                        ProjectStatus = p.ProjectStatus != null ? p.ProjectStatus.Name : "",
+                        StatusColor = p.ProjectStatus != null ? p.ProjectStatus.Name : "",
+                        ToursCount = p.Tours.Count()
+                    }).ToListAsync();
 
-            return Ok(projects);
+                return Ok(projects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    error = ex.Message, 
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace 
+                });
+            }
         }
 
         // GET: api/Projects/5
