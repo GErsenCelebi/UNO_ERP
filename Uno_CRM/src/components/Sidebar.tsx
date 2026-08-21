@@ -59,6 +59,7 @@ export default function Sidebar() {
               <Link 
               key={item.name} 
               href={item.href}
+              prefetch={false}
               title={isCollapsed ? item.name : undefined}
               className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
                 isActive 
@@ -77,6 +78,7 @@ export default function Sidebar() {
           {isCollapsed ? (
             <Link
               href="/projects"
+              prefetch={false}
               title="Projection"
               className={`flex items-center justify-center py-2 rounded-lg font-medium text-sm transition-colors ${
                 isProjectsActive
@@ -106,6 +108,7 @@ export default function Sidebar() {
               <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isProjectsOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
                 <Link
                   href="/projects"
+                  prefetch={false}
                   className={`flex items-center py-1.5 pl-10 pr-3 rounded-lg text-xs font-medium transition-colors mt-0.5 ${
                     pathname === '/projects' || (pathname?.startsWith('/projects/') && !pathname?.startsWith('/tours'))
                       ? 'text-blue-700 bg-blue-50/60'
@@ -117,6 +120,7 @@ export default function Sidebar() {
                 </Link>
                 <Link
                   href="/tours"
+                  prefetch={false}
                   className={`flex items-center py-1.5 pl-10 pr-3 rounded-lg text-xs font-medium transition-colors mt-0.5 ${
                     isToursActive
                       ? 'text-blue-700 bg-blue-50/60'
@@ -128,6 +132,7 @@ export default function Sidebar() {
                 </Link>
                 <Link
                   href="/tour-calendar"
+                  prefetch={false}
                   className={`flex items-center py-1.5 pl-10 pr-3 rounded-lg text-xs font-medium transition-colors mt-0.5 ${
                     pathname?.startsWith('/tour-calendar')
                       ? 'text-blue-700 bg-blue-50/60'
@@ -150,6 +155,7 @@ export default function Sidebar() {
             <Link 
               key={item.name} 
               href={item.href}
+              prefetch={false}
               title={isCollapsed ? item.name : undefined}
               className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
                 isActive 
@@ -167,6 +173,7 @@ export default function Sidebar() {
       <div className={`p-4 border-t border-slate-200 shrink-0 overflow-x-hidden ${isCollapsed ? 'px-3' : 'px-4'}`}>
         <Link
           href="/audit-logs"
+          prefetch={false}
           title={isCollapsed ? 'Audit Logs' : undefined}
           className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
             pathname?.startsWith('/audit-logs')
@@ -180,6 +187,7 @@ export default function Sidebar() {
 
         <Link
           href="/settings"
+          prefetch={false}
           title={isCollapsed ? 'User Accounts' : undefined}
           className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
             pathname?.startsWith('/settings')
