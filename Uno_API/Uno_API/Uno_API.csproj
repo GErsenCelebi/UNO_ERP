@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseAppHost>false</UseAppHost>
     <UnoCrmProjectDir>..\..\Uno_CRM</UnoCrmProjectDir>
-    <BuildUnoCrmOnPublish Condition="'$(BuildUnoCrmOnPublish)' == ''">true</BuildUnoCrmOnPublish>
+    <BuildUnoCrmOnPublish Condition="'$(BuildUnoCrmOnPublish)' == ''">false</BuildUnoCrmOnPublish>
     <BuildUnoCrmOnBuild Condition="'$(BuildUnoCrmOnBuild)' == ''">true</BuildUnoCrmOnBuild>
     <ExcludeWwwrootFromPublish Condition="'$(ExcludeWwwrootFromPublish)' == ''">false</ExcludeWwwrootFromPublish>
   </PropertyGroup>
