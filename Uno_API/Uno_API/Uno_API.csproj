@@ -79,14 +79,6 @@
     <PropertyGroup>
       <UnoCrmHasBuilt>true</UnoCrmHasBuilt>
     </PropertyGroup>
-
-    <ItemGroup>
-      <!-- Force MSBuild to recognize the newly generated files and push them to the WebDeploy payload -->
-      <Content Remove="wwwroot\**\*.*" />
-      <Content Remove="wwwroot\**\*" />
-      <Content Remove="wwwroot\**" />
-      <Content Include="wwwroot\**" CopyToPublishDirectory="PreserveNewest" />
-    </ItemGroup>
   </Target>
 
 </Project>
