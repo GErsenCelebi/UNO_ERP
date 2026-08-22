@@ -33,12 +33,19 @@ namespace Uno_API.Services
             await IngestTroubleshootingFaqsAsync();
 
             // Root workspace directory and UserManuals directory
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var currentDir = Directory.GetCurrentDirectory();
+
             var candidatePaths = new[]
             {
                 @"C:\Ersen\Projects_2025\Codex\UNO_ERP",
                 @"C:\Ersen\Projects_2025\Codex\UNO_ERP\UserManuals",
-                Path.Combine(Directory.GetCurrentDirectory(), "..", "UserManuals"),
-                Path.Combine(Directory.GetCurrentDirectory(), "UserManuals")
+                Path.Combine(currentDir, "..", "UserManuals"),
+                Path.Combine(currentDir, "UserManuals"),
+                Path.Combine(currentDir, "wwwroot", "UserManuals"),
+                Path.Combine(currentDir, "wwwroot"),
+                Path.Combine(baseDir, "wwwroot", "UserManuals"),
+                Path.Combine(baseDir, "wwwroot")
             };
 
             var mdFiles = new List<string>();
