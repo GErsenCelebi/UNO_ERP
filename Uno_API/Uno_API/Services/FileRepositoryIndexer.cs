@@ -32,7 +32,10 @@ namespace Uno_API.Services
             // Seed System Troubleshooting FAQs first
             await IngestTroubleshootingFaqsAsync();
 
-            // Root workspace directory and UserManuals directory
+            // 1. Fetch live markdown files from GitHub repository
+            var githubIngested = await FetchFromGitHubRepoAsync(result);
+
+            // 2. Local Candidate Paths Fallback
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var currentDir = Directory.GetCurrentDirectory();
 
@@ -67,6 +70,8 @@ namespace Uno_API.Services
             foreach (var filePath in mdFiles)
             {
                 var fileName = Path.GetFileName(filePath);
+                if (result.ProcessedFiles.Contains(fileName, StringComparer.OrdinalIgnoreCase)) continue;
+
                 result.ProcessedFiles.Add(fileName);
                 result.TotalFilesProcessed++;
 
@@ -76,6 +81,55 @@ namespace Uno_API.Services
             }
 
             return result;
+        }
+
+        private async Task<int> FetchFromGitHubRepoAsync(FileRepositoryIndexerResult result)
+        {
+            int totalIngested = 0;
+            try
+            {
+                using var http = new System.Net.Http.HttpClient();
+                http.DefaultRequestHeaders.Add("User-Agent", "UNO_ERP-Indexer");
+
+                // List of known repository markdown files
+                var githubFiles = new[]
+                {
+                    "RELEASE_NOTES_2026_08_21.md",
+                    "Uno_Tour_Status_Transition_Process_Flows.md",
+                    "user_manual.md",
+                    "01_Project_Charter_and_Scope.md",
+                    "README.md"
+                };
+
+                foreach (var fileName in githubFiles)
+                {
+                    var url = $"https://raw.githubusercontent.com/GErsenCelebi/UNO_ERP/main/UserManuals/{fileName}";
+                    var res = await http.GetAsync(url);
+                    if (!res.IsSuccessStatusCode)
+                    {
+                        // Try root repo directory
+                        url = $"https://raw.githubusercontent.com/GErsenCelebi/UNO_ERP/main/{fileName}";
+                        res = await http.GetAsync(url);
+                    }
+
+                    if (res.IsSuccessStatusCode)
+                    {
+                        var content = await res.Content.ReadAsStringAsync();
+                        if (!string.IsNullOrWhiteSpace(content))
+                        {
+                            result.ProcessedFiles.Add($"GitHub:{fileName}");
+                            result.TotalFilesProcessed++;
+                            var count = await ParseAndSaveMarkdownSectionsAsync(fileName, content);
+                            totalIngested += count;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GitHub Indexer] Warning: {ex.Message}");
+            }
+            return totalIngested;
         }
 
         private async Task IngestTroubleshootingFaqsAsync()
