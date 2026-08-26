@@ -1049,7 +1049,7 @@ export default function TourDetailPage() {
 
         {/* ──── TOUR INFO TAB ──── */}
         {activeTab === 'info' && (
-          <div className="p-6 max-w-3xl mx-auto">
+          <div className="p-6 max-w-6xl mx-auto space-y-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
                 <div>
@@ -1183,8 +1183,8 @@ export default function TourDetailPage() {
                   </div>
                 </form>
               ) : (
-                <div className="p-6 space-y-4">
-                  <div className="grid grid-cols-3 gap-6">
+                <div className="p-6 space-y-6">
+                  <div className="grid grid-cols-4 gap-6">
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Tour Code</p>
                       <p className="text-sm font-bold text-slate-800">{tour.tourCode}</p>
@@ -1200,57 +1200,56 @@ export default function TourDetailPage() {
                       <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Destination</p>
                       <p className="text-sm font-bold text-slate-800 flex items-center"><MapPin className="w-4 h-4 mr-1 text-indigo-400" /> {tour.destination}</p>
                     </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Status & Guide(s)</p>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">{tour.tourStatus?.name || 'N/A'}</span>
+                        <span className="text-sm font-bold text-slate-700">
+                          {(() => {
+                            const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
+                            const allGuides = Array.from(new Set(svcGuides));
+                            return allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
                     
-                    <div className="col-span-2">
+                    <div className="col-span-4">
                       <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Pricing & Passenger Breakdown</p>
-                      <div className="flex gap-4">
-                        <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex-1">
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
                           <p className="text-xs text-slate-500 mb-1">Pax Breakdown</p>
                           <p className="text-sm font-bold text-slate-800">
                             {tour.adults || 0} A, {tour.children || 0} C, {tour.infants || 0} I <span className="text-slate-400 font-normal">({tour.pax || 0} Total)</span>
                           </p>
                         </div>
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex-1">
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
                           <p className="text-xs text-emerald-600 mb-1">Base Fee</p>
                           <p className="text-sm font-bold text-emerald-700">€{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}</p>
                         </div>
-                        <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 flex-1">
+                        <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5">
                           <p className="text-xs text-purple-600 mb-1">Guide Commission</p>
                           <p className="text-sm font-bold text-purple-700">{tour.guideCommission !== undefined ? tour.guideCommission : 10}% (€{guideCommissionAmount.toLocaleString()})</p>
                         </div>
-                        <div className="bg-sky-50 border border-sky-100 rounded-lg p-3 flex-1">
+                        <div className="bg-sky-50 border border-sky-100 rounded-xl p-3.5">
                           <p className="text-xs text-sky-600 mb-1">Dynamic Total</p>
                           <p className="text-sm font-bold text-sky-700">€{Number(tour.totalFee || 0).toLocaleString()}</p>
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Status</p>
-                      <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">{tour.tourStatus?.name || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Guide(s)</p>
-                      <p className="text-sm font-bold text-slate-800">
-                        {(() => {
-                          const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
-                          const allGuides = Array.from(new Set(svcGuides));
-                          return allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
-                        })()}
-                      </p>
-                    </div>
                   </div>
-                  <div className="border-t border-slate-100 pt-4 space-y-3">
-                      <div className="flex items-center text-sm text-slate-600">
-                        <PlaneLanding className="w-4 h-4 mr-2 text-indigo-400" />
+                  <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
+                      <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                        <PlaneLanding className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
                         <span className="font-medium mr-2">Arrival:</span> {new Date(tour.arrivalDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                         {tour.arrivalFlight && <span className="ml-2 font-semibold">({tour.arrivalFlight})</span>}
-                        {tour.arrivalAirport && <span className="ml-2 text-xs bg-slate-100 px-2 py-0.5 rounded-full">{tour.arrivalAirport}</span>}
+                        {tour.arrivalAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.arrivalAirport}</span>}
                       </div>
-                      <div className="flex items-center text-sm text-slate-600">
-                        <PlaneTakeoff className="w-4 h-4 mr-2 text-indigo-400" />
+                      <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                        <PlaneTakeoff className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
                         <span className="font-medium mr-2">Departure:</span> {new Date(tour.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                         {tour.departureFlight && <span className="ml-2 font-semibold">({tour.departureFlight})</span>}
-                        {tour.departureAirport && <span className="ml-2 text-xs bg-slate-100 px-2 py-0.5 rounded-full">{tour.departureAirport}</span>}
+                        {tour.departureAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.departureAirport}</span>}
                       </div>
                     </div>
 
