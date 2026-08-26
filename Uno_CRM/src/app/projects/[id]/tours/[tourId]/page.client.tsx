@@ -1264,8 +1264,8 @@ export default function TourDetailPage() {
                       const hotelName = hotelObj?.name || (svc.description ? svc.description.split('(')[0].trim() : 'Hotel Stay');
                       const city = hotelObj?.location || tour.destination || '-';
                       
-                      const startDateStr = svc.serviceStartDate || svc.serviceDate || tour.arrivalDate;
-                      const endDateStr = svc.serviceEndDate || tour.endDate;
+                      const startDateStr = svc.startDate || svc.serviceStartDate || svc.serviceDate || tour.arrivalDate;
+                      const endDateStr = svc.endDate || svc.serviceEndDate || tour.endDate;
                       
                       const key = `${hotelName}_${startDateStr}`;
                       if (!hotelReservationsMap[key]) {
