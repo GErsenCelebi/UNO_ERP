@@ -1950,89 +1950,133 @@ export default function TourDetailPage() {
               {/* Hotel */}
               {serviceType === 'Hotel' && (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Select Hotel</label>
-                      <select required value={newService.hotelId || ''} onChange={e => {
-                        const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
-                        const basis = h?.pricingBasis === 'Room' ? 'Room' : 'Pax';
-                        
-                        // Auto-calculate rooming list counts from passengers
-                        const passList = tour?.passengers || [];
-                        const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
-                        const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
-                        const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
-                        const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
-                        const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
+                  <div className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div className="md:col-span-5">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Select Hotel</label>
+                        <select required value={newService.hotelId || ''} onChange={e => {
+                          const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
+                          const basis = h?.pricingBasis === 'Room' ? 'Room' : 'Pax';
+                          
+                          // Auto-calculate rooming list counts from passengers
+                          const passList = tour?.passengers || [];
+                          const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
+                          const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
+                          const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
+                          const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
+                          const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
 
-                        const sCount = basis === 'Room' ? sPass : sPass;
-                        const dCount = basis === 'Room' ? Math.ceil(dPass / 2) : dPass;
-                        const twCount = basis === 'Room' ? Math.ceil(twPass / 2) : twPass;
-                        const trCount = basis === 'Room' ? Math.ceil(trPass / 3) : trPass;
-                        const ebCount = basis === 'Room' ? Math.ceil(ebPass / 3) : ebPass;
+                          const sCount = basis === 'Room' ? sPass : sPass;
+                          const dCount = basis === 'Room' ? Math.ceil(dPass / 2) : dPass;
+                          const twCount = basis === 'Room' ? Math.ceil(twPass / 2) : twPass;
+                          const trCount = basis === 'Room' ? Math.ceil(trPass / 3) : trPass;
+                          const ebCount = basis === 'Room' ? Math.ceil(ebPass / 3) : ebPass;
 
-                        const sRate = basis === 'Room' ? (h?.singleRoomRate || h?.singleRate || 0) : (h?.singlePaxRate || h?.singleRate || 0);
-                        const dRate = basis === 'Room' ? (h?.doubleRoomRate || (h?.doubleRate ? h?.doubleRate * 2 : 0)) : (h?.doublePaxRate || h?.doubleRate || 0);
-                        const twRate = basis === 'Room' ? (h?.twinRoomRate || (h?.twinRate ? h?.twinRate * 2 : 0)) : (h?.twinPaxRate || h?.twinRate || 0);
-                        const trRate = basis === 'Room' ? (h?.tripleRoomRate || (h?.tripleRate ? h?.tripleRate * 3 : 0)) : (h?.triplePaxRate || h?.tripleRate || 0);
-                        const ebRate = basis === 'Room' ? (h?.dblEbRoomRate || h?.dblEbRate || 0) : (h?.dblEbPaxRate || h?.dblEbRate || 0);
+                          const sRate = basis === 'Room' ? (h?.singleRoomRate || h?.singleRate || 0) : (h?.singlePaxRate || h?.singleRate || 0);
+                          const dRate = basis === 'Room' ? (h?.doubleRoomRate || (h?.doubleRate ? h?.doubleRate * 2 : 0)) : (h?.doublePaxRate || h?.doubleRate || 0);
+                          const twRate = basis === 'Room' ? (h?.twinRoomRate || (h?.twinRate ? h?.twinRate * 2 : 0)) : (h?.twinPaxRate || h?.twinRate || 0);
+                          const trRate = basis === 'Room' ? (h?.tripleRoomRate || (h?.tripleRate ? h?.tripleRate * 3 : 0)) : (h?.triplePaxRate || h?.tripleRate || 0);
+                          const ebRate = basis === 'Room' ? (h?.dblEbRoomRate || h?.dblEbRate || 0) : (h?.dblEbPaxRate || h?.dblEbRate || 0);
 
-                        setNewService({ 
-                          ...newService, 
-                          hotelId: h?.id || null, 
-                          description: h?.name || '', 
-                          pricingBasis: basis,
-                          singleCount: sCount,
-                          doubleCount: dCount,
-                          twinCount: twCount,
-                          tripleCount: trCount,
-                          dblEbCount: ebCount,
-                          singleRate: sRate,
-                          doubleRate: dRate,
-                          twinRate: twRate,
-                          tripleRate: trRate,
-                          dblEbRate: ebRate,
-                          unitPrice: dRate || 0,
-                          guideRate: sRate || 60,
-                          driverRate: sRate || 50
-                        });
-                      }} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select a Hotel...</option>
-                        {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location} ({h.pricingBasis === 'Room' ? 'Per Room' : 'Per Pax'})</option>)}
-                      </select>
-                    </div>
+                          setNewService({ 
+                            ...newService, 
+                            hotelId: h?.id || null, 
+                            description: h?.name || '', 
+                            pricingBasis: basis,
+                            singleCount: sCount,
+                            doubleCount: dCount,
+                            twinCount: twCount,
+                            tripleCount: trCount,
+                            dblEbCount: ebCount,
+                            singleRate: sRate,
+                            doubleRate: dRate,
+                            twinRate: twRate,
+                            tripleRate: trRate,
+                            dblEbRate: ebRate,
+                            unitPrice: dRate || 0,
+                            guideRate: sRate || 60,
+                            driverRate: sRate || 50
+                          });
+                        }} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                          <option value="">Select a Hotel...</option>
+                          {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location} ({h.pricingBasis === 'Room' ? 'Per Room' : 'Per Pax'})</option>)}
+                        </select>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Check-in Date</label>
-                      <input required type="date" value={newService.startDate || ''} onChange={e => {
-                        const newStart = e.target.value;
-                        const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
-                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
-                        setNewService({ ...newService, startDate: newStart, quantity: n });
-                      }} className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium" suppressHydrationWarning />
-                    </div>
+                      {/* ──── PRICING BASIS TOGGLE ──── */}
+                      <div className="md:col-span-4">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Pricing Basis</label>
+                        <div className="inline-flex bg-white p-1 rounded-xl border border-slate-200 shadow-2xs w-full">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newBasis = 'Room';
+                              const h = hotels.find((x: any) => x.id === newService.hotelId);
+                              const passList = tour?.passengers || [];
+                              const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
+                              const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
+                              const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
+                              const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
+                              const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Check-out Date ({isNaN(newService.quantity) || !newService.quantity ? 1 : newService.quantity} Nights)</label>
-                      <input required type="date" value={newService.endDate || ''} onChange={e => {
-                        const newEnd = e.target.value;
-                        const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
-                        const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
-                        setNewService({ ...newService, endDate: newEnd, quantity: n });
-                      }} className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium" suppressHydrationWarning />
-                    </div>
-                  </div>
+                              setNewService({
+                                ...newService,
+                                pricingBasis: newBasis,
+                                singleCount: sPass,
+                                doubleCount: Math.ceil(dPass / 2),
+                                twinCount: Math.ceil(twPass / 2),
+                                tripleCount: Math.ceil(trPass / 3),
+                                dblEbCount: Math.ceil(ebPass / 3),
+                                singleRate: h?.singleRoomRate || h?.singleRate || newService.singleRate || 0,
+                                doubleRate: h?.doubleRoomRate || (h?.doubleRate ? h?.doubleRate * 2 : 0) || newService.doubleRate || 0,
+                                twinRate: h?.twinRoomRate || (h?.twinRate ? h?.twinRate * 2 : 0) || newService.twinRate || 0,
+                                tripleRate: h?.tripleRoomRate || (h?.tripleRate ? h?.tripleRate * 3 : 0) || newService.tripleRate || 0,
+                                dblEbRate: h?.dblEbRoomRate || h?.dblEbRate || newService.dblEbRate || 0,
+                              });
+                            }}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${newService.pricingBasis === 'Room' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-blue-600'}`}
+                          >
+                            🏢 Per Room
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newBasis = 'Pax';
+                              const h = hotels.find((x: any) => x.id === newService.hotelId);
+                              const passList = tour?.passengers || [];
+                              const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
+                              const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
+                              const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
+                              const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
+                              const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
 
-                  {/* ──── PRICING BASIS TOGGLE & AUTO-FILL BUTTON ──── */}
-                  <div className="flex items-center justify-between bg-gradient-to-r from-blue-50/80 to-indigo-50/80 p-3 rounded-xl border border-blue-200/80">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Pricing Basis:</span>
-                      <div className="inline-flex bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                              setNewService({
+                                ...newService,
+                                pricingBasis: newBasis,
+                                singleCount: sPass,
+                                doubleCount: dPass,
+                                twinCount: twPass,
+                                tripleCount: trPass,
+                                dblEbCount: ebPass,
+                                singleRate: h?.singlePaxRate || h?.singleRate || newService.singleRate || 0,
+                                doubleRate: h?.doublePaxRate || h?.doubleRate || newService.doubleRate || 0,
+                                twinRate: h?.twinPaxRate || h?.twinRate || newService.twinRate || 0,
+                                tripleRate: h?.triplePaxRate || h?.tripleRate || newService.tripleRate || 0,
+                                dblEbRate: h?.dblEbPaxRate || h?.dblEbRate || newService.dblEbRate || 0,
+                              });
+                            }}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${newService.pricingBasis === 'Pax' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
+                          >
+                            👤 Per Pax
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* ──── AUTO-FILL BUTTON ──── */}
+                      <div className="md:col-span-3">
                         <button
                           type="button"
                           onClick={() => {
-                            const newBasis = 'Room';
-                            const h = hotels.find((x: any) => x.id === newService.hotelId);
                             const passList = tour?.passengers || [];
                             const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
                             const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
@@ -2040,84 +2084,45 @@ export default function TourDetailPage() {
                             const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
                             const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
 
+                            const isRoom = newService.pricingBasis === 'Room';
                             setNewService({
                               ...newService,
-                              pricingBasis: newBasis,
-                              singleCount: sPass,
-                              doubleCount: Math.ceil(dPass / 2),
-                              twinCount: Math.ceil(twPass / 2),
-                              tripleCount: Math.ceil(trPass / 3),
-                              dblEbCount: Math.ceil(ebPass / 3),
-                              singleRate: h?.singleRoomRate || h?.singleRate || newService.singleRate || 0,
-                              doubleRate: h?.doubleRoomRate || (h?.doubleRate ? h?.doubleRate * 2 : 0) || newService.doubleRate || 0,
-                              twinRate: h?.twinRoomRate || (h?.twinRate ? h?.twinRate * 2 : 0) || newService.twinRate || 0,
-                              tripleRate: h?.tripleRoomRate || (h?.tripleRate ? h?.tripleRate * 3 : 0) || newService.tripleRate || 0,
-                              dblEbRate: h?.dblEbRoomRate || h?.dblEbRate || newService.dblEbRate || 0,
+                              singleCount: isRoom ? sPass : sPass,
+                              doubleCount: isRoom ? Math.ceil(dPass / 2) : dPass,
+                              twinCount: isRoom ? Math.ceil(twPass / 2) : twPass,
+                              tripleCount: isRoom ? Math.ceil(trPass / 3) : trPass,
+                              dblEbCount: isRoom ? Math.ceil(ebPass / 3) : ebPass,
                             });
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newService.pricingBasis === 'Room' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-blue-600'}`}
+                          className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1"
+                          title="Sync room & pax counts with live tour passenger manifest"
                         >
-                          🏢 Per Room / Night
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newBasis = 'Pax';
-                            const h = hotels.find((x: any) => x.id === newService.hotelId);
-                            const passList = tour?.passengers || [];
-                            const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
-                            const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
-                            const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
-                            const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
-                            const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
-
-                            setNewService({
-                              ...newService,
-                              pricingBasis: newBasis,
-                              singleCount: sPass,
-                              doubleCount: dPass,
-                              twinCount: twPass,
-                              tripleCount: trPass,
-                              dblEbCount: ebPass,
-                              singleRate: h?.singlePaxRate || h?.singleRate || newService.singleRate || 0,
-                              doubleRate: h?.doublePaxRate || h?.doubleRate || newService.doubleRate || 0,
-                              twinRate: h?.twinPaxRate || h?.twinRate || newService.twinRate || 0,
-                              tripleRate: h?.triplePaxRate || h?.tripleRate || newService.tripleRate || 0,
-                              dblEbRate: h?.dblEbPaxRate || h?.dblEbRate || newService.dblEbRate || 0,
-                            });
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newService.pricingBasis === 'Pax' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
-                        >
-                          👤 Per Pax / Night
+                          ⚡ Auto-Fill Bookings
                         </button>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const passList = tour?.passengers || [];
-                        const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
-                        const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
-                        const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
-                        const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
-                        const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Check-in Date</label>
+                        <input required type="date" value={newService.startDate || ''} onChange={e => {
+                          const newStart = e.target.value;
+                          const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
+                          const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
+                          setNewService({ ...newService, startDate: newStart, quantity: n });
+                        }} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium" suppressHydrationWarning />
+                      </div>
 
-                        const isRoom = newService.pricingBasis === 'Room';
-                        setNewService({
-                          ...newService,
-                          singleCount: isRoom ? sPass : sPass,
-                          doubleCount: isRoom ? Math.ceil(dPass / 2) : dPass,
-                          twinCount: isRoom ? Math.ceil(twPass / 2) : twPass,
-                          tripleCount: isRoom ? Math.ceil(trPass / 3) : trPass,
-                          dblEbCount: isRoom ? Math.ceil(ebPass / 3) : ebPass,
-                        });
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-                      title="Sync room & pax counts with live tour passenger manifest"
-                    >
-                      ⚡ Auto-Fill from Rooming List
-                    </button>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Check-out Date ({isNaN(newService.quantity) || !newService.quantity ? 1 : newService.quantity} Nights)</label>
+                        <input required type="date" value={newService.endDate || ''} onChange={e => {
+                          const newEnd = e.target.value;
+                          const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
+                          const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
+                          setNewService({ ...newService, endDate: newEnd, quantity: n });
+                        }} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium" suppressHydrationWarning />
+                      </div>
+                    </div>
                   </div>
 
                   {/* ──── LIVE OCCUPANCY MATCH BANNER ──── */}
