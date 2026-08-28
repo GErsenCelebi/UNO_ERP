@@ -120,6 +120,16 @@ namespace Uno_API.Controllers
                 tour.TourStatusId = 1; // Draft
             }
 
+            // Ensure valid dates
+            if (tour.ArrivalDate == default || tour.ArrivalDate.Year < 2000)
+            {
+                tour.ArrivalDate = DateTime.Today;
+            }
+            if (tour.EndDate == default || tour.EndDate < tour.ArrivalDate)
+            {
+                tour.EndDate = tour.ArrivalDate.AddDays(7);
+            }
+
             // Compute BaseFee
             tour.BaseFee = (tour.Adults * tour.AdultRate) + (tour.Children * tour.ChildRate) + (tour.Infants * tour.InfantRate);
             if (tour.GuideCommission <= 0) tour.GuideCommission = 10.00m;

@@ -136,10 +136,15 @@ export default function ToursKanbanPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        ...newTour,
+        arrivalDate: newTour.startDate || new Date().toISOString().split('T')[0],
+        endDate: newTour.endDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+      };
       const res = await fetch(`${API}/tours`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTour),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setIsModalOpen(false);

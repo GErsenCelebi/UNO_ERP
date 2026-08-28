@@ -36,6 +36,7 @@ namespace Uno_API.Models
         public decimal GuideCommission { get; set; } = 10.00m;
 
         public bool AccountingClosed { get; set; } = false;
+        public string? Notes { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public Project? Project { get; set; }
         public TourStatus? TourStatus { get; set; }

@@ -88,6 +88,7 @@ export default function TourDetailPage() {
 
   const [activeTab, setActiveTab] = useState('info');
   const [tour, setTour] = useState<Tour | null>(null);
+  const [tourNotes, setTourNotes] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   // Edit tour
@@ -295,12 +296,14 @@ export default function TourDetailPage() {
       if (tourRes.ok) {
         const t = await tourRes.json();
         setTour(t);
+        setTourNotes(t.notes || '');
         const guideSvc = loadedServices.find((s: any) => s.guideId || s.serviceCategoryId === 4 || (s.description || '').toLowerCase().includes('guide'));
         setEditData({
           ...t,
           guideId: guideSvc?.guideId || '',
           arrivalDate: t.arrivalDate?.substring(0, 16) || '',
           endDate: t.endDate?.substring(0, 16) || '',
+          notes: t.notes || '',
         });
       }
       if (catRes?.ok) setServiceCategories(await catRes.json());
@@ -317,6 +320,25 @@ export default function TourDetailPage() {
       if (projRes?.ok) setProjects(await projRes.json());
       if (attachRes?.ok) setAttachments(await attachRes.json());
     } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!tour) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/tours/${tourId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...tour, notes: tourNotes })
+      });
+      if (res.ok) {
+        setTour({ ...tour, notes: tourNotes });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpdateTour = async (e: React.FormEvent) => {
@@ -1450,12 +1472,34 @@ export default function TourDetailPage() {
                             </table>
                           </div>
                         ) : (
-                          <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
-                            No hotel reservations attached to this tour yet.
-                          </div>
-                        )}
                       </div>
                     );
+                  })()}
+
+                  {/* ──── OPERATIONAL REMARKS & SPECIAL TOUR NOTES ──── */}
+                  <div className="border-t border-slate-100 pt-5 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        Operational Remarks & Special Tour Notes
+                      </h3>
+                      <button 
+                        type="button"
+                        onClick={handleSaveNotes}
+                        disabled={saving}
+                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {saving ? 'Saving...' : '💾 Save Notes'}
+                      </button>
+                    </div>
+                    <textarea
+                      rows={5}
+                      value={tourNotes}
+                      onChange={e => setTourNotes(e.target.value)}
+                      className="w-full p-4 bg-slate-50/90 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium leading-relaxed"
+                      placeholder="Type special tour instructions, client preferences, operational remarks, guide notes, flight arrival/departure details or special requirements here..."
+                    />
+                  </div>
                   })()}
                 </div>
               )}
