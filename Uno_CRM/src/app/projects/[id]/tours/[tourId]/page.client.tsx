@@ -324,21 +324,25 @@ export default function TourDetailPage() {
 
   const [notesSavedSuccess, setNotesSavedSuccess] = useState(false);
   const handleSaveNotes = async () => {
-    if (!tour) return;
+    if (!tourId) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API}/tours/${tourId}`, {
+      const res = await fetch(`${API}/tours/${tourId}/notes`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...tour, notes: tourNotes })
+        body: JSON.stringify({ notes: tourNotes })
       });
       if (res.ok) {
-        setTour({ ...tour, notes: tourNotes });
+        const data = await res.json();
+        setTour((prev: any) => prev ? { ...prev, notes: data.notes } : prev);
         setNotesSavedSuccess(true);
         setTimeout(() => setNotesSavedSuccess(false), 3000);
+      } else {
+        alert('Failed to save notes. Error code: ' + res.status);
       }
     } catch (err) {
       console.error(err);
+      alert('Error saving notes: ' + String(err));
     } finally {
       setSaving(false);
     }

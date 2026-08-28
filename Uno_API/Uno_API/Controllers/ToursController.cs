@@ -198,6 +198,27 @@ namespace Uno_API.Controllers
             return NoContent();
         }
 
+        public class TourNotesDto
+        {
+            public string? Notes { get; set; }
+        }
+
+        // PUT: api/Tours/5/notes
+        [HttpPut("{id}/notes")]
+        public async Task<IActionResult> UpdateTourNotes(int id, [FromBody] TourNotesDto dto)
+        {
+            var existingTour = await _context.Tours.FirstOrDefaultAsync(t => t.Id == id);
+            if (existingTour == null)
+            {
+                return NotFound();
+            }
+
+            existingTour.Notes = dto?.Notes ?? "";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, tourId = id, notes = existingTour.Notes });
+        }
+
         // DELETE: api/Tours/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTour(int id)
