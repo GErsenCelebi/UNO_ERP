@@ -1167,346 +1167,359 @@ export default function TourDetailPage() {
 
         {/* ──── TOUR INFO TAB ──── */}
         {activeTab === 'info' && (
-          <div className="p-6 max-w-6xl mx-auto space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800">Tour Information</h2>
-                  <p className="text-sm text-slate-500 mt-1">View and edit tour details</p>
-                </div>
-                {!isEditing && (
-                  <button onClick={() => setIsEditing(true)} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5">
-                    <Edit className="w-4 h-4" /> Edit
-                  </button>
-                )}
-              </div>
-
-              {isEditing && editData ? (
-                <form onSubmit={handleUpdateTour} className="p-6 space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+          <div className="p-6 max-w-7xl mx-auto space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* LEFT COLUMN (7-8 Cols): Tour Information & Hotel Reservations */}
+              <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Tour Code</label>
-                      <input required type="text" value={editData.tourCode} onChange={e => setEditData({ ...editData, tourCode: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      <h2 className="text-xl font-bold text-slate-800">Tour Information</h2>
+                      <p className="text-sm text-slate-500 mt-1">View and edit tour details</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Destination</label>
-                      <input required type="text" value={editData.destination} onChange={e => setEditData({ ...editData, destination: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Adults</label>
-                      <input required type="number" min="1" value={editData.adults === ('' as any) ? '' : (editData.adults || 1)} onChange={e => setEditData({ ...editData, adults: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Children</label>
-                      <input required type="number" min="0" value={editData.children === ('' as any) ? '' : (editData.children || 0)} onChange={e => setEditData({ ...editData, children: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Infants</label>
-                      <input required type="number" min="0" value={editData.infants === ('' as any) ? '' : (editData.infants || 0)} onChange={e => setEditData({ ...editData, infants: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Base Fee (€)</label>
-                      <input required type="number" min="0" value={editData.baseFee === ('' as any) ? '' : (editData.baseFee || 0)} onChange={e => setEditData({ ...editData, baseFee: e.target.value === '' ? ('' as any) : parseFloat(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" />
-                    </div>
-                  </div>
-                  
-                  {editData.baseFee > 0 && (
-                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex justify-between items-center text-sm">
-                      <span className="font-semibold text-emerald-800">Dynamic Total (Adults + 50% Children)</span>
-                      <span className="font-bold text-emerald-900 text-lg">€{(((editData.adults || 0) * (editData.baseFee || 0)) + ((editData.children || 0) * (editData.baseFee || 0) * 0.5)).toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 space-y-4">
-                    <h3 className="text-sm font-semibold text-slate-800 mb-2">Flight Information</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival Flight</label>
-                        <input type="text" value={editData.arrivalFlight || ''} onChange={e => setEditData({ ...editData, arrivalFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1234" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival Date & Time</label>
-                        <input required type="datetime-local" value={editData.arrivalDate} onChange={e => setEditData({ ...editData, arrivalDate: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival City/Airport</label>
-                        <input type="text" value={editData.arrivalAirport || ''} onChange={e => setEditData({ ...editData, arrivalAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. IST / Istanbul" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure Flight</label>
-                        <input type="text" value={editData.departureFlight || ''} onChange={e => setEditData({ ...editData, departureFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1235" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure Date & Time</label>
-                        <input required type="datetime-local" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure City/Airport</label>
-                        <input type="text" value={editData.departureAirport || ''} onChange={e => setEditData({ ...editData, departureAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. BUD / Budapest" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    {projects.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Project</label>
-                        <select value={editData.projectId} onChange={e => setEditData({ ...editData, projectId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800">
-                          {projects.map((p: any) => (
-                            <option key={p.id} value={p.id}>{p.projectCode} — {p.description || p.client?.name || `Project #${p.id}`}</option>
-                          ))}
-                        </select>
-                      </div>
+                    {!isEditing && (
+                      <button onClick={() => setIsEditing(true)} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5">
+                        <Edit className="w-4 h-4" /> Edit
+                      </button>
                     )}
-                    {tourStatuses.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
-                        <select value={editData.tourStatusId} onChange={e => setEditData({ ...editData, tourStatusId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
-                          {tourStatuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Guide</label>
-                      <select value={editData.guideId || ''} onChange={e => setEditData({ ...editData, guideId: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800">
-                        <option value="">No Guide Assigned</option>
-                        {guides.map((g: any) => (
-                          <option key={g.id} value={g.id}>{g.name} ({g.language || 'Guide'})</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Guide Commission (%)</label>
-                      <input 
-                        type="number" 
-                        step="0.1" 
-                        min="0" 
-                        max="100" 
-                        value={editData.guideCommission !== undefined ? editData.guideCommission : 10} 
-                        onChange={e => setEditData({ ...editData, guideCommission: parseFloat(e.target.value) || 0 })} 
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-bold text-purple-700" 
-                        placeholder="10 %" 
-                      />
-                    </div>
                   </div>
 
-                  <div className="pt-2 flex gap-3">
-                    <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl">Cancel</button>
-                    <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-60">
-                      {saving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-4 gap-6">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Tour Code</p>
-                      <p className="text-sm font-bold text-slate-800">{tour.tourCode}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Assigned Project</p>
-                      <p className="text-sm font-bold text-blue-600 flex items-center">
-                        <Briefcase className="w-4 h-4 mr-1.5 text-blue-500" />
-                        {projects.find(p => p.id === tour.projectId)?.projectCode || tour.project?.projectCode || `Project #${tour.projectId}`}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Destination</p>
-                      <p className="text-sm font-bold text-slate-800 flex items-center"><MapPin className="w-4 h-4 mr-1 text-indigo-400" /> {tour.destination}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Status & Guide(s)</p>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">{tour.tourStatus?.name || 'N/A'}</span>
-                        <span className="text-sm font-bold text-slate-700">
-                          {(() => {
-                            const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
-                            const allGuides = Array.from(new Set(svcGuides));
-                            return allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
-                          })()}
-                        </span>
+                  {isEditing && editData ? (
+                    <form onSubmit={handleUpdateTour} className="p-6 space-y-5">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Tour Code</label>
+                          <input required type="text" value={editData.tourCode} onChange={e => setEditData({ ...editData, tourCode: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Destination</label>
+                          <input required type="text" value={editData.destination} onChange={e => setEditData({ ...editData, destination: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="col-span-4">
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Pricing & Passenger Breakdown</p>
+                      
                       <div className="grid grid-cols-4 gap-4">
-                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
-                          <p className="text-xs text-slate-500 mb-1">Pax Breakdown</p>
-                          <p className="text-sm font-bold text-slate-800">
-                            {tour.adults || 0} A, {tour.children || 0} C, {tour.infants || 0} I <span className="text-slate-400 font-normal">({tour.pax || 0} Total)</span>
-                          </p>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Adults</label>
+                          <input required type="number" min="1" value={editData.adults === ('' as any) ? '' : (editData.adults || 1)} onChange={e => setEditData({ ...editData, adults: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
-                          <p className="text-xs text-emerald-600 mb-1">Base Fee</p>
-                          <p className="text-sm font-bold text-emerald-700">€{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}</p>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Children</label>
+                          <input required type="number" min="0" value={editData.children === ('' as any) ? '' : (editData.children || 0)} onChange={e => setEditData({ ...editData, children: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
-                        <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5">
-                          <p className="text-xs text-purple-600 mb-1">Guide Commission</p>
-                          <p className="text-sm font-bold text-purple-700">{tour.guideCommission !== undefined ? tour.guideCommission : 10}% (€{guideCommissionAmount.toLocaleString()})</p>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Infants</label>
+                          <input required type="number" min="0" value={editData.infants === ('' as any) ? '' : (editData.infants || 0)} onChange={e => setEditData({ ...editData, infants: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
-                        <div className="bg-sky-50 border border-sky-100 rounded-xl p-3.5">
-                          <p className="text-xs text-sky-600 mb-1">Dynamic Total</p>
-                          <p className="text-sm font-bold text-sky-700">€{Number(tour.totalFee || 0).toLocaleString()}</p>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Base Fee (€)</label>
+                          <input required type="number" min="0" value={editData.baseFee === ('' as any) ? '' : (editData.baseFee || 0)} onChange={e => setEditData({ ...editData, baseFee: e.target.value === '' ? ('' as any) : parseFloat(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" />
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
-                      <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
-                        <PlaneLanding className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
-                        <span className="font-medium mr-2">Arrival:</span> {new Date(tour.arrivalDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                        {tour.arrivalFlight && <span className="ml-2 font-semibold">({tour.arrivalFlight})</span>}
-                        {tour.arrivalAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.arrivalAirport}</span>}
-                      </div>
-                      <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
-                        <PlaneTakeoff className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
-                        <span className="font-medium mr-2">Departure:</span> {new Date(tour.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                        {tour.departureFlight && <span className="ml-2 font-semibold">({tour.departureFlight})</span>}
-                        {tour.departureAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.departureAirport}</span>}
-                      </div>
-                    </div>
-
-                  {/* ──── HOTEL RESERVATIONS TABLE ──── */}
-                  {(() => {
-                    const hotelServices = services.filter(s => s.hotelId || s.serviceCategoryId === 1 || (s.serviceCategory?.name || '').toLowerCase().includes('hotel'));
-                    const hotelReservationsMap: Record<string, { hotelName: string; city: string; startDate: string; endDate: string; rooms: string[]; totalCost: number }> = {};
-                    
-                    hotelServices.forEach(svc => {
-                      const hotelObj = hotels.find((h: any) => h.id === svc.hotelId);
-                      const hotelName = hotelObj?.name || (svc.description ? svc.description.split('(')[0].trim() : 'Hotel Stay');
-                      const city = hotelObj?.location || tour.destination || '-';
                       
-                      const startDateStr = svc.startDate || svc.serviceStartDate || svc.serviceDate || tour.arrivalDate;
-                      const endDateStr = svc.endDate || svc.serviceEndDate || tour.endDate;
-                      
-                      const key = `${hotelName}_${startDateStr}`;
-                      if (!hotelReservationsMap[key]) {
-                        hotelReservationsMap[key] = {
-                          hotelName,
-                          city,
-                          startDate: startDateStr ? new Date(startDateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
-                          endDate: endDateStr ? new Date(endDateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
-                          rooms: [],
-                          totalCost: 0
-                        };
-                      }
-                      
-                      if (svc.roomType && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax') {
-                        hotelReservationsMap[key].rooms.push(`${svc.roomCount}x ${svc.roomType}`);
-                      } else if (svc.description && !svc.description.includes('City Tax') && !svc.description.includes('Hotel Tax')) {
-                        hotelReservationsMap[key].rooms.push(svc.description);
-                      }
-                      
-                      hotelReservationsMap[key].totalCost += (svc.totalAmount || (svc.unitPrice * (svc.quantity || 1)) || 0);
-                    });
-
-                    const hotelReservationsList = Object.values(hotelReservationsMap);
-
-                    return (
-                      <div className="border-t border-slate-100 pt-5 mt-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-indigo-600" />
-                            Hotel Reservations & Stays
-                          </h3>
-                          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                            {hotelReservationsList.length} {hotelReservationsList.length === 1 ? 'Hotel' : 'Hotels'}
-                          </span>
+                      {editData.baseFee > 0 && (
+                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex justify-between items-center text-sm">
+                          <span className="font-semibold text-emerald-800">Dynamic Total (Adults + 50% Children)</span>
+                          <span className="font-bold text-emerald-900 text-lg">€{(((editData.adults || 0) * (editData.baseFee || 0)) + ((editData.children || 0) * (editData.baseFee || 0) * 0.5)).toLocaleString()}</span>
                         </div>
-
-                        {hotelReservationsList.length > 0 ? (
-                          <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-                            <table className="w-full text-xs text-left text-slate-700">
-                              <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200">
-                                <tr>
-                                  <th className="px-4 py-2.5">Hotel Name</th>
-                                  <th className="px-4 py-2.5">Dates / Stay</th>
-                                  <th className="px-4 py-2.5">City / Location</th>
-                                  <th className="px-4 py-2.5">Room Details</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 bg-white">
-                                {hotelReservationsList.map((hRes, idx) => (
-                                  <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                                    <td className="px-4 py-3 font-bold text-slate-800">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                                          <Building2 className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span>{hRes.hotelName}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-600 font-medium">
-                                      <div className="flex items-center gap-1.5">
-                                        <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>{hRes.startDate} – {hRes.endDate}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-600 font-medium">
-                                      <div className="flex items-center gap-1.5">
-                                        <MapPin className="w-3.5 h-3.5 text-rose-400" />
-                                        <span>{hRes.city}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-500">
-                                      {hRes.rooms.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1">
-                                          {hRes.rooms.map((r, rIdx) => (
-                                            <span key={rIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">
-                                              {r}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <span className="text-slate-400 italic">Standard Stay</span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                        ) : (
-                          <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
-                            No hotel reservations attached to this tour yet.
+                      )}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-800 mb-2">Flight Information</h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival Flight</label>
+                            <input type="text" value={editData.arrivalFlight || ''} onChange={e => setEditData({ ...editData, arrivalFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1234" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival Date & Time</label>
+                            <input required type="datetime-local" value={editData.arrivalDate} onChange={e => setEditData({ ...editData, arrivalDate: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival City/Airport</label>
+                            <input type="text" value={editData.arrivalAirport || ''} onChange={e => setEditData({ ...editData, arrivalAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. IST / Istanbul" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 mt-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure Flight</label>
+                            <input type="text" value={editData.departureFlight || ''} onChange={e => setEditData({ ...editData, departureFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1235" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure Date & Time</label>
+                            <input required type="datetime-local" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure City/Airport</label>
+                            <input type="text" value={editData.departureAirport || ''} onChange={e => setEditData({ ...editData, departureAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. BUD / Budapest" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        {projects.length > 0 && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Project</label>
+                            <select value={editData.projectId} onChange={e => setEditData({ ...editData, projectId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800">
+                              {projects.map((p: any) => (
+                                <option key={p.id} value={p.id}>{p.projectCode} — {p.description || p.client?.name || `Project #${p.id}`}</option>
+                              ))}
+                            </select>
                           </div>
                         )}
+                        {tourStatuses.length > 0 && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
+                            <select value={editData.tourStatusId} onChange={e => setEditData({ ...editData, tourStatusId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
+                              {tourStatuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Guide</label>
+                          <select value={editData.guideId || ''} onChange={e => setEditData({ ...editData, guideId: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800">
+                            <option value="">No Guide Assigned</option>
+                            {guides.map((g: any) => (
+                              <option key={g.id} value={g.id}>{g.name} ({g.language || 'Guide'})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Guide Commission (%)</label>
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            min="0" 
+                            max="100" 
+                            value={editData.guideCommission !== undefined ? editData.guideCommission : 10} 
+                            onChange={e => setEditData({ ...editData, guideCommission: parseFloat(e.target.value) || 0 })} 
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-bold text-purple-700" 
+                            placeholder="10 %" 
+                          />
+                        </div>
                       </div>
-                    );
-                  })()}
 
-                  {/* ──── OPERATIONAL REMARKS & SPECIAL TOUR NOTES ──── */}
-                  <div className="border-t border-slate-100 pt-5 mt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-600" />
-                        Operational Remarks & Special Tour Notes
-                      </h3>
-                      <button 
-                        type="button"
-                        onClick={handleSaveNotes}
-                        disabled={saving}
-                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {saving ? 'Saving...' : '💾 Save Notes'}
-                      </button>
+                      <div className="pt-2 flex gap-3">
+                        <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl">Cancel</button>
+                        <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-60">
+                          {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="p-6 space-y-6">
+                      <div className="grid grid-cols-4 gap-6">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Tour Code</p>
+                          <p className="text-sm font-bold text-slate-800">{tour.tourCode}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Assigned Project</p>
+                          <p className="text-sm font-bold text-blue-600 flex items-center">
+                            <Briefcase className="w-4 h-4 mr-1.5 text-blue-500" />
+                            {projects.find(p => p.id === tour.projectId)?.projectCode || tour.project?.projectCode || `Project #${tour.projectId}`}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Destination</p>
+                          <p className="text-sm font-bold text-slate-800 flex items-center"><MapPin className="w-4 h-4 mr-1 text-indigo-400" /> {tour.destination}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Status & Guide(s)</p>
+                          <div className="flex items-center gap-2">
+                            <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">{tour.tourStatus?.name || 'N/A'}</span>
+                            <span className="text-sm font-bold text-slate-700">
+                              {(() => {
+                                const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
+                                const allGuides = Array.from(new Set(svcGuides));
+                                return allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="col-span-4">
+                          <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Pricing & Passenger Breakdown</p>
+                          <div className="grid grid-cols-4 gap-4">
+                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                              <p className="text-xs text-slate-500 mb-1">Pax Breakdown</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {tour.adults || 0} A, {tour.children || 0} C, {tour.infants || 0} I <span className="text-slate-400 font-normal">({tour.pax || 0} Total)</span>
+                              </p>
+                            </div>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
+                              <p className="text-xs text-emerald-600 mb-1">Base Fee</p>
+                              <p className="text-sm font-bold text-emerald-700">€{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}</p>
+                            </div>
+                            <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5">
+                              <p className="text-xs text-purple-600 mb-1">Guide Commission</p>
+                              <p className="text-sm font-bold text-purple-700">{tour.guideCommission !== undefined ? tour.guideCommission : 10}% (€{guideCommissionAmount.toLocaleString()})</p>
+                            </div>
+                            <div className="bg-sky-50 border border-sky-100 rounded-xl p-3.5">
+                              <p className="text-xs text-sky-600 mb-1">Dynamic Total</p>
+                              <p className="text-sm font-bold text-sky-700">€{Number(tour.totalFee || 0).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
+                          <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                            <PlaneLanding className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
+                            <span className="font-medium mr-2">Arrival:</span> {new Date(tour.arrivalDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                            {tour.arrivalFlight && <span className="ml-2 font-semibold">({tour.arrivalFlight})</span>}
+                            {tour.arrivalAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.arrivalAirport}</span>}
+                          </div>
+                          <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                            <PlaneTakeoff className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
+                            <span className="font-medium mr-2">Departure:</span> {new Date(tour.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                            {tour.departureFlight && <span className="ml-2 font-semibold">({tour.departureFlight})</span>}
+                            {tour.departureAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.departureAirport}</span>}
+                          </div>
+                        </div>
+
+                      {/* ──── HOTEL RESERVATIONS TABLE ──── */}
+                      {(() => {
+                        const hotelServices = services.filter(s => s.hotelId || s.serviceCategoryId === 1 || (s.serviceCategory?.name || '').toLowerCase().includes('hotel'));
+                        const hotelReservationsMap: Record<string, { hotelName: string; city: string; startDate: string; endDate: string; rooms: string[]; totalCost: number }> = {};
+                        
+                        hotelServices.forEach(svc => {
+                          const hotelObj = hotels.find((h: any) => h.id === svc.hotelId);
+                          const hotelName = hotelObj?.name || (svc.description ? svc.description.split('(')[0].trim() : 'Hotel Stay');
+                          const city = hotelObj?.location || tour.destination || '-';
+                          
+                          const startDateStr = svc.startDate || svc.serviceStartDate || svc.serviceDate || tour.arrivalDate;
+                          const endDateStr = svc.endDate || svc.serviceEndDate || tour.endDate;
+                          
+                          const key = `${hotelName}_${startDateStr}`;
+                          if (!hotelReservationsMap[key]) {
+                            hotelReservationsMap[key] = {
+                              hotelName,
+                              city,
+                              startDate: startDateStr ? new Date(startDateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
+                              endDate: endDateStr ? new Date(endDateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
+                              rooms: [],
+                              totalCost: 0
+                            };
+                          }
+                          
+                          if (svc.roomType && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax') {
+                            hotelReservationsMap[key].rooms.push(`${svc.roomCount}x ${svc.roomType}`);
+                          } else if (svc.description && !svc.description.includes('City Tax') && !svc.description.includes('Hotel Tax')) {
+                            hotelReservationsMap[key].rooms.push(svc.description);
+                          }
+                          
+                          hotelReservationsMap[key].totalCost += (svc.totalAmount || (svc.unitPrice * (svc.quantity || 1)) || 0);
+                        });
+
+                        const hotelReservationsList = Object.values(hotelReservationsMap);
+
+                        return (
+                          <div className="border-t border-slate-100 pt-5 mt-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-indigo-600" />
+                                Hotel Reservations & Stays
+                              </h3>
+                              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                                {hotelReservationsList.length} {hotelReservationsList.length === 1 ? 'Hotel' : 'Hotels'}
+                              </span>
+                            </div>
+
+                            {hotelReservationsList.length > 0 ? (
+                              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                                <table className="w-full text-xs text-left text-slate-700">
+                                  <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200">
+                                    <tr>
+                                      <th className="px-4 py-2.5">Hotel Name</th>
+                                      <th className="px-4 py-2.5">Dates / Stay</th>
+                                      <th className="px-4 py-2.5">City / Location</th>
+                                      <th className="px-4 py-2.5">Room Details</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100 bg-white">
+                                    {hotelReservationsList.map((hRes, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-slate-800">
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                              <Building2 className="w-3.5 h-3.5" />
+                                            </div>
+                                            <span>{hRes.hotelName}</span>
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600 font-medium">
+                                          <div className="flex items-center gap-1.5">
+                                            <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                                            <span>{hRes.startDate} – {hRes.endDate}</span>
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600 font-medium">
+                                          <div className="flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                                            <span>{hRes.city}</span>
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-500">
+                                          {hRes.rooms.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1">
+                                              {hRes.rooms.map((r, rIdx) => (
+                                                <span key={rIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">
+                                                  {r}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <span className="text-slate-400 italic">Standard Stay</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                                No hotel reservations attached to this tour yet.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <textarea
-                      rows={5}
-                      value={tourNotes}
-                      onChange={e => setTourNotes(e.target.value)}
-                      className="w-full p-4 bg-slate-50/90 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium leading-relaxed"
-                      placeholder="Type special tour instructions, client preferences, operational remarks, guide notes, flight arrival/departure details or special requirements here..."
-                    />
-                  </div>
+                  )}
                 </div>
-              )}
+                <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
+              </div>
+
+              {/* RIGHT COLUMN (4-5 Cols): Standalone Operational Remarks & Special Tour Notes Card */}
+              <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 sticky top-6">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    Operational Remarks & Notes
+                  </h3>
+                  <button 
+                    type="button"
+                    onClick={handleSaveNotes}
+                    disabled={saving}
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : '💾 Save Notes'}
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-500 font-medium leading-normal">
+                  Enter special tour instructions, guide/driver remarks, flight arrival notes, or client preferences:
+                </p>
+
+                <textarea
+                  rows={14}
+                  value={tourNotes}
+                  onChange={e => setTourNotes(e.target.value)}
+                  className="w-full p-4 bg-slate-50/90 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium leading-relaxed resize-y"
+                  placeholder="Type special tour instructions, client preferences, operational remarks, guide notes, flight arrival/departure details..."
+                />
+              </div>
+
             </div>
-            <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
           </div>
         )}
 
