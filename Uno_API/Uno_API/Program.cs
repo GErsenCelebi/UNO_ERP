@@ -56,6 +56,9 @@ if (initializeDatabaseOnStartup)
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'DblEbRate' AND Object_ID = Object_ID(N'TourServices')) ALTER TABLE [TourServices] ADD [DblEbRate] decimal(18,2) NOT NULL DEFAULT 0;",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'DblEbCount' AND Object_ID = Object_ID(N'TourServices')) ALTER TABLE [TourServices] ADD [DblEbCount] int NOT NULL DEFAULT 0;",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'IsRevenue' AND Object_ID = Object_ID(N'TourServices')) ALTER TABLE [TourServices] ADD [IsRevenue] bit NOT NULL DEFAULT 0;",
+            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'DiscountAmount' AND Object_ID = Object_ID(N'TourServices')) ALTER TABLE [TourServices] ADD [DiscountAmount] decimal(18,2) NULL;",
+            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'DiscountNotes' AND Object_ID = Object_ID(N'TourServices')) ALTER TABLE [TourServices] ADD [DiscountNotes] nvarchar(max) NULL;",
+            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'PricingBasis' AND Object_ID = Object_ID(N'TourServices')) ALTER TABLE [TourServices] ADD [PricingBasis] nvarchar(50) NULL;",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'SingleRoomRate' AND Object_ID = Object_ID(N'Hotels'))
               BEGIN
                   ALTER TABLE [Hotels] ADD [SingleRoomRate] decimal(18,2) NOT NULL DEFAULT 0;

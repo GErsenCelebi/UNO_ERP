@@ -60,6 +60,11 @@ namespace Uno_API.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal? DriverTotal { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? DiscountAmount { get; set; }
+        public string? DiscountNotes { get; set; }
+        public string? PricingBasis { get; set; }
+
         public bool? IsRevenue { get; set; }
 
         [System.Text.Json.Serialization.JsonIgnore]
