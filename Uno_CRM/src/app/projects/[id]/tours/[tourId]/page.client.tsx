@@ -1470,8 +1470,11 @@ export default function TourDetailPage() {
                                 ))}
                               </tbody>
                             </table>
-                          </div>
                         ) : (
+                          <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                            No hotel reservations attached to this tour yet.
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
@@ -1500,7 +1503,6 @@ export default function TourDetailPage() {
                       placeholder="Type special tour instructions, client preferences, operational remarks, guide notes, flight arrival/departure details or special requirements here..."
                     />
                   </div>
-                  })()}
                 </div>
               )}
             </div>
