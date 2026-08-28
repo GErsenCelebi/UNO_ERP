@@ -60,6 +60,7 @@ namespace Uno_API.Controllers
                     t.DepartureFlight,
                     t.ArrivalAirport,
                     t.DepartureAirport,
+                    t.Notes,
                     TourStatus = t.TourStatus != null ? new { t.TourStatus.Id, t.TourStatus.Name, t.TourStatus.OrderIndex } : null,
                     Project = t.Project != null ? new { t.Project.Id, t.Project.ProjectCode, Client = t.Project.Client != null ? new { t.Project.Client.Id, t.Project.Client.Name } : null } : null,
                     TourServices = (t.TourServices ?? new List<TourService>()).Select(ts => new
@@ -174,6 +175,7 @@ namespace Uno_API.Controllers
             if (tour.TourStatusId > 0) existingTour.TourStatusId = tour.TourStatusId;
             if (tour.ProjectId > 0) existingTour.ProjectId = tour.ProjectId;
             if (tour.TotalFee > 0) existingTour.TotalFee = tour.TotalFee;
+            existingTour.Notes = tour.Notes;
 
             existingTour.BaseFee = (existingTour.Adults * existingTour.AdultRate) + (existingTour.Children * existingTour.ChildRate) + (existingTour.Infants * existingTour.InfantRate);
 

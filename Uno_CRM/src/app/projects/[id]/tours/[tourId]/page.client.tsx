@@ -322,6 +322,7 @@ export default function TourDetailPage() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
+  const [notesSavedSuccess, setNotesSavedSuccess] = useState(false);
   const handleSaveNotes = async () => {
     if (!tour) return;
     setSaving(true);
@@ -333,6 +334,8 @@ export default function TourDetailPage() {
       });
       if (res.ok) {
         setTour({ ...tour, notes: tourNotes });
+        setNotesSavedSuccess(true);
+        setTimeout(() => setNotesSavedSuccess(false), 3000);
       }
     } catch (err) {
       console.error(err);
@@ -346,6 +349,7 @@ export default function TourDetailPage() {
     setSaving(true);
     try {
       const { tourStatus, project, guideId, ...cleanData } = editData;
+      cleanData.notes = tourNotes;
       cleanData.pax = (cleanData.adults || 0) + (cleanData.children || 0) + (cleanData.infants || 0);
       cleanData.totalFee = ((cleanData.adults || 0) * (cleanData.baseFee || 0)) + ((cleanData.children || 0) * (cleanData.baseFee || 0) * 0.5);
       
@@ -1496,14 +1500,21 @@ export default function TourDetailPage() {
                     <FileText className="w-5 h-5 text-blue-600" />
                     Operational Remarks & Notes
                   </h3>
-                  <button 
-                    type="button"
-                    onClick={handleSaveNotes}
-                    disabled={saving}
-                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {saving ? 'Saving...' : '💾 Save Notes'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {notesSavedSuccess && (
+                      <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold animate-pulse">
+                        ✓ Saved!
+                      </span>
+                    )}
+                    <button 
+                      type="button"
+                      onClick={handleSaveNotes}
+                      disabled={saving}
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : '💾 Save Notes'}
+                    </button>
+                  </div>
                 </div>
 
                 <p className="text-xs text-slate-500 font-medium leading-normal">
