@@ -327,11 +327,18 @@ export default function TourDetailPage() {
     if (!tourId) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API}/tours/${tourId}/notes`, {
+      let res = await fetch(`${API}/tours/${tourId}/notes`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: tourNotes })
       });
+      if (res.status === 405) {
+        res = await fetch(`${API}/tours/${tourId}/notes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: tourNotes })
+        });
+      }
       if (res.ok) {
         const data = await res.json();
         setTour((prev: any) => prev ? { ...prev, notes: data.notes } : prev);

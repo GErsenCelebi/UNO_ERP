@@ -203,8 +203,9 @@ namespace Uno_API.Controllers
             public string? Notes { get; set; }
         }
 
-        // PUT: api/Tours/5/notes
+        // PUT / POST: api/Tours/5/notes
         [HttpPut("{id}/notes")]
+        [HttpPost("{id}/notes")]
         public async Task<IActionResult> UpdateTourNotes(int id, [FromBody] TourNotesDto dto)
         {
             var existingTour = await _context.Tours.FirstOrDefaultAsync(t => t.Id == id);
