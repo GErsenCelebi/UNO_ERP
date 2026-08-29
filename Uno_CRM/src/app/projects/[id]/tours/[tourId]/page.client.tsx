@@ -692,16 +692,17 @@ export default function TourDetailPage() {
         // Hotel Tax / City Tax
         if (newService.includeHotelTax && (newService.hotelTaxRate || 0) > 0) {
             const taxRate = newService.hotelTaxRate || 0;
-            const totalPax = tour?.pax || 1;
-            const nightlyTaxUnit = taxRate * totalPax;
-            const taxTotal = nightlyTaxUnit * q;
+            const totalPax = newService.taxPaxCount !== undefined ? newService.taxPaxCount : (tour?.pax || 1);
+            const taxNights = newService.taxNights !== undefined ? newService.taxNights : q;
+            const taxTotal = newService.hotelTaxTotal !== undefined ? newService.hotelTaxTotal : (taxRate * totalPax * taxNights);
+            const unitPrice = taxNights > 0 ? (taxTotal / taxNights) : taxTotal;
             payloads.push({
               ...basePayload,
               hotelId: newService.hotelId,
               roomType: 'City Tax',
               roomCount: totalPax,
-              quantity: q,
-              unitPrice: nightlyTaxUnit,
+              quantity: taxNights,
+              unitPrice: unitPrice,
               totalAmount: taxTotal,
               description: `Hotel Tax (€${taxRate}/pax/night)`
             });
@@ -2548,35 +2549,98 @@ export default function TourDetailPage() {
                               <span className="text-xs font-bold text-slate-800">Include Hotel / City Tax</span>
                             </label>
 
-                            {!!newService.includeHotelTax && (
-                              <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                <div>
-                                  <label className="block text-[9px] font-semibold text-slate-500">Tax Rate (€ / pax / night)</label>
-                                  <input 
-                                    type="number" 
-                                    step="0.10" 
-                                    value={newService.hotelTaxRate || ''} 
-                                    onChange={e => setNewService({ ...newService, hotelTaxRate: parseFloat(e.target.value) || 0 })} 
-                                    className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
-                                    placeholder="2.50" 
-                                  />
+                            {!!newService.includeHotelTax && (() => {
+                              const currentPax = newService.taxPaxCount !== undefined ? newService.taxPaxCount : (tour?.pax || 0);
+                              const currentNights = newService.taxNights !== undefined ? newService.taxNights : (newService.quantity || 1);
+                              const currentRate = newService.hotelTaxRate || 0;
+                              const calculatedTotal = (currentPax * currentRate * currentNights);
+                              const currentTotal = newService.hotelTaxTotal !== undefined ? newService.hotelTaxTotal : calculatedTotal;
+
+                              return (
+                                <div className="space-y-2 pt-1.5 border-t border-slate-100">
+                                  <div className="grid grid-cols-3 gap-1.5">
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500">Tax Rate (€/pax/N)</label>
+                                      <input 
+                                        type="number" 
+                                        step="0.10" 
+                                        value={newService.hotelTaxRate || ''} 
+                                        onChange={e => {
+                                          const rate = parseFloat(e.target.value) || 0;
+                                          setNewService((prev: any) => ({
+                                            ...prev,
+                                            hotelTaxRate: rate,
+                                            hotelTaxTotal: undefined
+                                          }));
+                                        }} 
+                                        className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                        placeholder="2.50" 
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500 font-medium">Total Pax</label>
+                                      <input 
+                                        type="number" 
+                                        value={currentPax} 
+                                        onChange={e => {
+                                          const p = parseInt(e.target.value) || 0;
+                                          setNewService((prev: any) => ({
+                                            ...prev,
+                                            taxPaxCount: p,
+                                            hotelTaxTotal: undefined
+                                          }));
+                                        }} 
+                                        className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-semibold text-slate-500 font-medium">Total Nights</label>
+                                      <input 
+                                        type="number" 
+                                        value={currentNights} 
+                                        onChange={e => {
+                                          const n = parseInt(e.target.value) || 0;
+                                          setNewService((prev: any) => ({
+                                            ...prev,
+                                            taxNights: n,
+                                            hotelTaxTotal: undefined
+                                          }));
+                                        }} 
+                                        className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[9px] font-semibold text-slate-500">Total Stay Tax (€) [Editable Override]</label>
+                                    <input 
+                                      type="number" 
+                                      step="0.01" 
+                                      value={currentTotal} 
+                                      onChange={e => {
+                                        const tot = parseFloat(e.target.value) || 0;
+                                        setNewService((prev: any) => ({
+                                          ...prev,
+                                          hotelTaxTotal: tot
+                                        }));
+                                      }} 
+                                      className="w-full px-2 py-1 bg-blue-50 border border-blue-300 rounded text-xs font-extrabold text-blue-900 shadow-2xs" 
+                                    />
+                                  </div>
+
+                                  <div className="p-2 bg-blue-50/50 rounded-md text-[10px] text-blue-900 font-medium space-y-0.5 border border-blue-100">
+                                    <div className="flex justify-between">
+                                      <span>Nightly Tax ({currentPax} Pax × €{currentRate}):</span>
+                                      <span className="font-bold">€{(currentPax * currentRate).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-0.5 border-t border-blue-200/60 font-bold text-blue-950">
+                                      <span>Total Stay Tax ({currentNights} N):</span>
+                                      <span className="font-extrabold text-blue-900">€{Number(currentTotal).toFixed(2)}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="p-2 bg-blue-50/50 rounded-md text-[10px] text-blue-900 font-medium space-y-0.5 border border-blue-100">
-                                  <div className="flex justify-between">
-                                    <span>Total Pax:</span>
-                                    <span className="font-bold">{tour?.pax || 0} Pax</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Nightly Tax ({tour?.pax || 0} × €{newService.hotelTaxRate || 0}):</span>
-                                    <span className="font-bold">€{((tour?.pax || 0) * (newService.hotelTaxRate || 0)).toFixed(2)}</span>
-                                  </div>
-                                  <div className="flex justify-between pt-0.5 border-t border-blue-200/60 font-bold text-blue-950">
-                                    <span>Total Stay Tax ({newService.quantity || 1} N):</span>
-                                    <span>€{((tour?.pax || 0) * (newService.hotelTaxRate || 0) * (newService.quantity || 1)).toFixed(2)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
