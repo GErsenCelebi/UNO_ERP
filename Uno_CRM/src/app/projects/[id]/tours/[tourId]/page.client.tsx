@@ -453,14 +453,20 @@ export default function TourDetailPage() {
     return '-';
   };
 
-  const openServiceModal = (type: string, isRevenue?: boolean) => {
-    setServiceType(type);
+  const openServiceModal = (type: string, isRevenue: boolean = false) => {
+    setEditingServiceId(null);
+    let effectiveType = type;
+    const isTax = type === 'City Tax' || type === 'Hotel Tax';
+    if (isTax) {
+      effectiveType = 'Hotel';
+    }
+    setServiceType(effectiveType);
     
-    let defaultQty = 1;
-    if (type === 'Invoiced Fee' || type === 'Client Flat Invoice' || type === 'Tour Package Fee') {
+    let defaultQty: any = 1;
+    if (effectiveType === 'Invoiced Fee' || effectiveType === 'Client Flat Invoice' || effectiveType === 'Tour Package Fee') {
       defaultQty = (tour?.pax || 0) + 0.5 * (tour?.children || 0);
       if (defaultQty === 0) defaultQty = 1;
-    } else if (type === 'Hotel') {
+    } else if (effectiveType === 'Hotel') {
       defaultQty = '' as any;
     }
 
@@ -476,8 +482,8 @@ export default function TourDetailPage() {
       singleRate: 0, doubleRate: 0, twinRate: 0, tripleRate: 0, dblEbRate: 0,
       includeGuideRoom: false, guideStartDate: '', guideEndDate: '', guideRate: 0,
       includeDriverRoom: false, driverStartDate: '', driverEndDate: '', driverRate: 0,
-      includeHotelTax: false, hotelTaxRate: 2.50,
-      flightNo: '', serviceDate: '', startDate: type === 'Hotel' ? '' : (tour?.arrivalDate?.split('T')[0] || ''), endDate: type === 'Hotel' ? '' : (tour?.endDate?.split('T')[0] || ''), fromAirport: '', toAirport: '',
+      includeHotelTax: isTax ? true : false, hotelTaxRate: 2.50,
+      flightNo: '', serviceDate: '', startDate: effectiveType === 'Hotel' ? '' : (tour?.arrivalDate?.split('T')[0] || ''), endDate: effectiveType === 'Hotel' ? '' : (tour?.endDate?.split('T')[0] || ''), fromAirport: '', toAirport: '',
       guideAssignments: [{
         id: Date.now(),
         guideId: '',

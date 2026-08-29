@@ -170,7 +170,7 @@ namespace Uno_API.Controllers
                     Children = children,
                     Infants = infants,
                     Pax = pax > 0 ? pax : (adults + children + infants),
-                    TourStatusId = 3
+                    TourStatusId = 1
                 };
                 _context.Tours.Add(tour);
                 await _context.SaveChangesAsync();
