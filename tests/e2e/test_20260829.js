@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const xlsx = require('xlsx');
+const xlsx = require('../../Uno_CRM/node_modules/xlsx');
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -18,7 +18,7 @@ async function request(url, options = {}) {
 
 async function run() {
   console.log('================================================================');
-  console.log('🚀 STARTING E2E TEST WORKFLOW FOR TOURS 9 THROUGH 12');
+  console.log('🚀 STARTING E2E TEST WORKFLOW FOR ALL 12 TEST TOURS (TestTour1 - TestTour12)');
   console.log('================================================================\n');
 
   // ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ async function run() {
         projectCode: 'TEST-20260829',
         description: 'Tests 20260829',
         clientId: clientId,
-        projectStatusId: 3,
+        projectStatusId: 1, // First status on dashboard
         startDate: '2026-09-01T00:00:00',
         endDate: '2026-09-30T00:00:00',
         baseCurrency: 'EUR'
@@ -103,11 +103,19 @@ async function run() {
   }
 
   // ---------------------------------------------------------------------------
-  // STEP 2: Configure Tours 9, 10, 11, and 12
+  // STEP 2: Configure All 12 Test Tours
   // ---------------------------------------------------------------------------
-  console.log('\n📍 STEP 2: Creating Tours 9 through 12...');
+  console.log('\n📍 STEP 2: Creating All 12 Test Tours (TestTour1 through TestTour12)...');
 
   const newTourConfigs = [
+    { tourCode: 'TestTour1', destination: 'Budapest-Vienna-Prague', arrivalDate: '2026-09-01T10:00:00', endDate: '2026-09-07T18:00:00', arrivalFlight: 'TK 1001', arrivalAirport: 'BUD', departureFlight: 'TK 1002', departureAirport: 'PRG', pricingMode: 'Pax', route: ['Budapest', 'Vienna', 'Prague'] },
+    { tourCode: 'TestTour2', destination: 'Budapest-Vienna-Prague', arrivalDate: '2026-09-01T10:00:00', endDate: '2026-09-07T18:00:00', arrivalFlight: 'TK 1003', arrivalAirport: 'BUD', departureFlight: 'TK 1004', departureAirport: 'PRG', pricingMode: 'Room', route: ['Budapest', 'Vienna', 'Prague'] },
+    { tourCode: 'TestTour3', destination: 'Prague-Vienna-Budapest', arrivalDate: '2026-09-01T11:00:00', endDate: '2026-09-07T19:00:00', arrivalFlight: 'TK 1005', arrivalAirport: 'PRG', departureFlight: 'TK 1006', departureAirport: 'BUD', pricingMode: 'Pax', route: ['Prague', 'Vienna', 'Budapest'] },
+    { tourCode: 'TestTour4', destination: 'Prague-Vienna-Budapest', arrivalDate: '2026-09-01T11:00:00', endDate: '2026-09-07T19:00:00', arrivalFlight: 'TK 1007', arrivalAirport: 'PRG', departureFlight: 'TK 1008', departureAirport: 'BUD', pricingMode: 'Room', route: ['Prague', 'Vienna', 'Budapest'] },
+    { tourCode: 'TestTour5', destination: 'Budapest-Vienna-Prague', arrivalDate: '2026-09-08T10:00:00', endDate: '2026-09-14T18:00:00', arrivalFlight: 'TK 1009', arrivalAirport: 'BUD', departureFlight: 'TK 1010', departureAirport: 'PRG', pricingMode: 'Pax', route: ['Budapest', 'Vienna', 'Prague'] },
+    { tourCode: 'TestTour6', destination: 'Budapest-Vienna-Prague', arrivalDate: '2026-09-08T10:00:00', endDate: '2026-09-14T18:00:00', arrivalFlight: 'TK 1011', arrivalAirport: 'BUD', departureFlight: 'TK 1012', departureAirport: 'PRG', pricingMode: 'Room', route: ['Budapest', 'Vienna', 'Prague'] },
+    { tourCode: 'TestTour7', destination: 'Prague-Vienna-Budapest', arrivalDate: '2026-09-08T11:00:00', endDate: '2026-09-14T19:00:00', arrivalFlight: 'TK 1013', arrivalAirport: 'PRG', departureFlight: 'TK 1014', departureAirport: 'BUD', pricingMode: 'Pax', route: ['Prague', 'Vienna', 'Budapest'] },
+    { tourCode: 'TestTour8', destination: 'Prague-Vienna-Budapest', arrivalDate: '2026-09-08T11:00:00', endDate: '2026-09-14T19:00:00', arrivalFlight: 'TK 1015', arrivalAirport: 'PRG', departureFlight: 'TK 1016', departureAirport: 'BUD', pricingMode: 'Room', route: ['Prague', 'Vienna', 'Budapest'] },
     { tourCode: 'TestTour9', destination: 'Budapest-Vienna-Prague', arrivalDate: '2026-09-01T10:00:00', endDate: '2026-09-07T18:00:00', arrivalFlight: 'TK 1017', arrivalAirport: 'BUD', departureFlight: 'TK 1018', departureAirport: 'PRG', pricingMode: 'Pax', route: ['Budapest', 'Vienna', 'Prague'] },
     { tourCode: 'TestTour10', destination: 'Budapest-Vienna-Prague', arrivalDate: '2026-09-08T10:00:00', endDate: '2026-09-14T18:00:00', arrivalFlight: 'TK 1019', arrivalAirport: 'BUD', departureFlight: 'TK 1020', departureAirport: 'PRG', pricingMode: 'Room', route: ['Budapest', 'Vienna', 'Prague'] },
     { tourCode: 'TestTour11', destination: 'Prague-Vienna-Budapest', arrivalDate: '2026-09-15T11:00:00', endDate: '2026-09-21T19:00:00', arrivalFlight: 'TK 1021', arrivalAirport: 'PRG', departureFlight: 'TK 1022', departureAirport: 'BUD', pricingMode: 'Pax', route: ['Prague', 'Vienna', 'Budapest'] },
@@ -136,7 +144,7 @@ async function run() {
       baseFee: 250,
       totalFee: (27 * 250) + (2 * 250 * 0.5), // €7,000
       guideCommission: 10,
-      tourStatusId: 3,
+      tourStatusId: 1, // Starts from first status on dashboard (Draft)
       projectId: project.id
     };
 
@@ -148,20 +156,20 @@ async function run() {
       });
       if (!createTourRes.ok) throw new Error(`Failed to create tour ${cfg.tourCode}`);
       tour = createTourRes.data;
-      console.log(`  ✓ Created Tour "${cfg.tourCode}" (ID: ${tour.id}, Pax: 30 [27A, 2C, 1I], Mode: ${cfg.pricingMode})`);
+      console.log(`  ✓ Created Tour "${cfg.tourCode}" (ID: ${tour.id}, Pax: 30 [27A, 2C, 1I], Status: 1, Mode: ${cfg.pricingMode})`);
     } else {
       await request(`${API_BASE}/tours/${tour.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...tour, ...tourPayload })
       });
-      console.log(`  ✓ Updated Tour "${cfg.tourCode}" (ID: ${tour.id}, Pax: 30 [27A, 2C, 1I], Mode: ${cfg.pricingMode})`);
+      console.log(`  ✓ Updated Tour "${cfg.tourCode}" (ID: ${tour.id}, Pax: 30 [27A, 2C, 1I], Status: 1, Mode: ${cfg.pricingMode})`);
     }
     processedTours.push({ ...cfg, id: tour.id, tourObj: tour });
   }
 
   // ---------------------------------------------------------------------------
-  // STEP 3: Generate Rooming Excel Files with Family Grouping & Room Numbers
+  // STEP 3: Generate Rooming Excel Files & Import Bookings
   // ---------------------------------------------------------------------------
   console.log('\n📍 STEP 3: Generating Rooming Excel Files & Importing Bookings...');
 
@@ -368,12 +376,12 @@ async function run() {
   // STEP 5: Final Summary
   // ---------------------------------------------------------------------------
   console.log('\n================================================================');
-  console.log('✅ TOURS 9 THROUGH 12 COMPLETED SUCCESSFULLY!');
+  console.log('✅ ALL 12 TEST TOURS (TestTour1 - TestTour12) COMPLETED SUCCESSFULLY!');
   console.log('================================================================');
   console.log(`📁 Project Name : Tests 20260829 (ID: ${project.id})`);
-  console.log(`🚌 New Tours Processed: ${processedTours.length}`);
+  console.log(`🚌 Tours Processed: ${processedTours.length}`);
   processedTours.forEach((t, i) => {
-    console.log(`   ${i + 9}. ${t.tourCode} | Pax: 30 (27A, 2C, 1I) | Route: ${t.destination} | Pricing: ${t.pricingMode}/Night | Flights: ${t.arrivalFlight} -> ${t.departureFlight}`);
+    console.log(`   ${i + 1}. ${t.tourCode} | Pax: 30 (27A, 2C, 1I) | Route: ${t.destination} | Pricing: ${t.pricingMode}/Night | Status: Draft (1) | Flights: ${t.arrivalFlight} -> ${t.departureFlight}`);
   });
   console.log('📄 Rooming Excel files with Room Numbers & Children badges imported cleanly.');
   console.log('================================================================\n');
