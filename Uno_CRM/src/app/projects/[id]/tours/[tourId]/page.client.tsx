@@ -2675,7 +2675,13 @@ export default function TourDetailPage() {
 
                             const gTotal = gNights * (newService.guideRate || 0);
                             const dTotal = dNights * (newService.driverRate || 0);
-                            const taxTotal = newService.includeHotelTax ? (newService.hotelTaxRate || 0) * (tour?.pax || 0) * safeQty : 0;
+                            const curTaxPax = newService.taxPaxCount !== undefined ? newService.taxPaxCount : (tour?.pax || 0);
+                            const curTaxNights = newService.taxNights !== undefined ? newService.taxNights : safeQty;
+                            const curTaxRate = newService.hotelTaxRate || 0;
+                            const curTaxNightly = newService.taxNightlyTotal !== undefined ? newService.taxNightlyTotal : (curTaxPax * curTaxRate);
+                            const taxTotal = newService.includeHotelTax 
+                              ? (newService.hotelTaxTotal !== undefined ? newService.hotelTaxTotal : (curTaxNightly * curTaxNights)) 
+                              : 0;
 
                             const passengerTotal = (
                               (newService.singleCount * (newService.singleRate || 0) * safeQty) +
