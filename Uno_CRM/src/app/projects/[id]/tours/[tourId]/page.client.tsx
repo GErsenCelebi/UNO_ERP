@@ -879,27 +879,30 @@ export default function TourDetailPage() {
 
   // Excursion sales calculation for Guide Commission
   const totalExcursionSales = revenueServices
-    .filter(s => getCategoryName(s).toLowerCase() === 'excursion')
+    .filter(s => {
+      const cat = getCategoryName(s).toLowerCase();
+      return cat.includes('excursion') || s.excursionId !== null;
+    })
     .reduce((sum, s) => sum + (s.totalAmount || (s.quantity || 1) * s.unitPrice || 0), 0);
 
   const guideCommissionRate = tour?.guideCommission !== undefined && tour?.guideCommission !== null 
     ? Number(tour.guideCommission) 
     : 10;
 
-  const guideCommissionAmount = (totalExcursionSales * guideCommissionRate) / 100;
+  const guideCommissionAmount = totalExcursionSales > 0 ? (totalExcursionSales * guideCommissionRate) / 100 : 0;
 
-  const guideCommissionService: TourService = {
+  const guideCommissionService: TourService | null = guideCommissionAmount > 0 ? {
     id: -999,
     tourId: parseInt(tourId),
     serviceCategoryId: getCategoryId('Guide') || 4,
-    description: `Guide Commission (${guideCommissionRate}% on €${totalExcursionSales.toLocaleString()} Excursions)`,
+    description: `Guide Commission (${guideCommissionRate}% on €${totalExcursionSales.toLocaleString()} Excursion Sales)`,
     quantity: 1,
     unitPrice: guideCommissionAmount,
     totalAmount: guideCommissionAmount,
     isRevenue: false
-  };
+  } : null;
 
-  const effectiveCostServices = [...costServices, guideCommissionService];
+  const effectiveCostServices = guideCommissionService ? [...costServices, guideCommissionService] : costServices;
 
   const getServiceBuckets = (svcList: TourService[]) => {
     const base = svcList.filter(s => (serviceCategories.find(c => c.id === s.serviceCategoryId)?.isBase) || s.id === -999);
@@ -2553,14 +2556,18 @@ export default function TourDetailPage() {
                               const currentPax = newService.taxPaxCount !== undefined ? newService.taxPaxCount : (tour?.pax || 0);
                               const currentNights = newService.taxNights !== undefined ? newService.taxNights : (newService.quantity || 1);
                               const currentRate = newService.hotelTaxRate || 0;
-                              const calculatedTotal = (currentPax * currentRate * currentNights);
-                              const currentTotal = newService.hotelTaxTotal !== undefined ? newService.hotelTaxTotal : calculatedTotal;
+                              
+                              const calcNightly = currentPax * currentRate;
+                              const currentNightly = newService.taxNightlyTotal !== undefined ? newService.taxNightlyTotal : calcNightly;
+                              
+                              const calcTotal = currentNightly * currentNights;
+                              const currentTotal = newService.hotelTaxTotal !== undefined ? newService.hotelTaxTotal : calcTotal;
 
                               return (
-                                <div className="space-y-2 pt-1.5 border-t border-slate-100">
-                                  <div className="grid grid-cols-3 gap-1.5">
+                                <div className="space-y-2 pt-2 border-t border-slate-100">
+                                  <div className="grid grid-cols-3 gap-2">
                                     <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500">Tax Rate (€/pax/N)</label>
+                                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Tax Rate (€/pax/N)</label>
                                       <input 
                                         type="number" 
                                         step="0.10" 
@@ -2570,15 +2577,16 @@ export default function TourDetailPage() {
                                           setNewService((prev: any) => ({
                                             ...prev,
                                             hotelTaxRate: rate,
+                                            taxNightlyTotal: undefined,
                                             hotelTaxTotal: undefined
                                           }));
                                         }} 
-                                        className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-xs font-bold text-blue-700 focus:bg-white focus:border-blue-500" 
                                         placeholder="2.50" 
                                       />
                                     </div>
                                     <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500 font-medium">Total Pax</label>
+                                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Total Pax</label>
                                       <input 
                                         type="number" 
                                         value={currentPax} 
@@ -2587,14 +2595,15 @@ export default function TourDetailPage() {
                                           setNewService((prev: any) => ({
                                             ...prev,
                                             taxPaxCount: p,
+                                            taxNightlyTotal: undefined,
                                             hotelTaxTotal: undefined
                                           }));
                                         }} 
-                                        className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-xs font-bold text-blue-700 focus:bg-white focus:border-blue-500" 
                                       />
                                     </div>
                                     <div>
-                                      <label className="block text-[9px] font-semibold text-slate-500 font-medium">Total Nights</label>
+                                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Total Nights (N)</label>
                                       <input 
                                         type="number" 
                                         value={currentNights} 
@@ -2606,36 +2615,44 @@ export default function TourDetailPage() {
                                             hotelTaxTotal: undefined
                                           }));
                                         }} 
-                                        className="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-blue-700" 
+                                        className="w-full px-2 py-1 bg-slate-50 border border-slate-300 rounded-md text-xs font-bold text-blue-700 focus:bg-white focus:border-blue-500" 
                                       />
                                     </div>
                                   </div>
 
-                                  <div>
-                                    <label className="block text-[9px] font-semibold text-slate-500">Total Stay Tax (€) [Editable Override]</label>
-                                    <input 
-                                      type="number" 
-                                      step="0.01" 
-                                      value={currentTotal} 
-                                      onChange={e => {
-                                        const tot = parseFloat(e.target.value) || 0;
-                                        setNewService((prev: any) => ({
-                                          ...prev,
-                                          hotelTaxTotal: tot
-                                        }));
-                                      }} 
-                                      className="w-full px-2 py-1 bg-blue-50 border border-blue-300 rounded text-xs font-extrabold text-blue-900 shadow-2xs" 
-                                    />
-                                  </div>
-
-                                  <div className="p-2 bg-blue-50/50 rounded-md text-[10px] text-blue-900 font-medium space-y-0.5 border border-blue-100">
-                                    <div className="flex justify-between">
-                                      <span>Nightly Tax ({currentPax} Pax × €{currentRate}):</span>
-                                      <span className="font-bold">€{(currentPax * currentRate).toFixed(2)}</span>
+                                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-blue-100/80">
+                                    <div>
+                                      <label className="block text-[10px] font-bold text-blue-800 mb-0.5">Nightly Tax (€)</label>
+                                      <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        value={currentNightly} 
+                                        onChange={e => {
+                                          const nTax = parseFloat(e.target.value) || 0;
+                                          setNewService((prev: any) => ({
+                                            ...prev,
+                                            taxNightlyTotal: nTax,
+                                            hotelTaxTotal: undefined
+                                          }));
+                                        }} 
+                                        className="w-full px-2 py-1 bg-blue-50/80 border border-blue-300 rounded-md text-xs font-extrabold text-blue-900 focus:bg-white focus:border-blue-600" 
+                                      />
                                     </div>
-                                    <div className="flex justify-between pt-0.5 border-t border-blue-200/60 font-bold text-blue-950">
-                                      <span>Total Stay Tax ({currentNights} N):</span>
-                                      <span className="font-extrabold text-blue-900">€{Number(currentTotal).toFixed(2)}</span>
+                                    <div>
+                                      <label className="block text-[10px] font-bold text-blue-900 mb-0.5">Total Stay Tax (€)</label>
+                                      <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        value={currentTotal} 
+                                        onChange={e => {
+                                          const tot = parseFloat(e.target.value) || 0;
+                                          setNewService((prev: any) => ({
+                                            ...prev,
+                                            hotelTaxTotal: tot
+                                          }));
+                                        }} 
+                                        className="w-full px-2 py-1 bg-blue-100/80 border-2 border-blue-400 rounded-md text-xs font-black text-blue-950 focus:bg-white focus:border-blue-600" 
+                                      />
                                     </div>
                                   </div>
                                 </div>
