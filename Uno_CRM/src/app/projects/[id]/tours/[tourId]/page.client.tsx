@@ -1066,10 +1066,10 @@ export default function TourDetailPage() {
                         </td>
                         <td className="px-6 py-3 font-medium text-slate-700">{getServiceDescription(svc)}</td>
                         <td className="px-6 py-3 text-slate-500">{getServiceDetails(svc)}</td>
-                        <td className="px-6 py-3 text-center text-xs font-medium" title={svc.hotelId && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax' ? `${svc.roomCount} ${((svc as any).pricingBasis === 'Pax' ? 'Pax' : 'Rooms')} × ${Math.round((svc.quantity || 1) / svc.roomCount)} Nights = ${svc.quantity}` : undefined}>
+                        <td className="px-6 py-3 text-center text-xs font-semibold">
                           {svc.hotelId && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax' 
-                            ? `${svc.quantity} (${svc.roomCount}${((svc as any).pricingBasis === 'Pax' ? ' Pax' : 'R')} × ${Math.round((svc.quantity || 1) / svc.roomCount)}N)` 
-                            : (svc.hotelId ? `${svc.quantity || 1} N` : svc.quantity)}
+                            ? `${svc.quantity || 2} Nights (${svc.roomCount} Rooms)` 
+                            : (svc.hotelId ? `${svc.quantity || 1} Nights` : svc.quantity)}
                         </td>
                         <td className="px-6 py-3 text-right">€{Number(svc.unitPrice).toFixed(2)}</td>
                         <td className="px-6 py-3 font-semibold text-slate-800 text-right">€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1)).toLocaleString()}</td>
@@ -1698,9 +1698,29 @@ export default function TourDetailPage() {
                             <div className="p-4 space-y-4 bg-white/90">
                               {/* 2. Guide Accommodation */}
                               <div className="space-y-2">
-                                <h5 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
-                                  <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation
-                                </h5>
+                                <div className="flex items-center justify-between">
+                                  <h5 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-amber-600" /> Guide Accommodation
+                                  </h5>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      openServiceModal('Hotel', false);
+                                      setNewService((prev: any) => ({
+                                        ...prev,
+                                        description: 'Guide Room Accommodation',
+                                        roomType: 'Guide Room',
+                                        includeGuideRoom: true,
+                                        guideStartDate: tour?.arrivalDate?.split('T')[0] || '',
+                                        guideEndDate: tour?.endDate?.split('T')[0] || '',
+                                        guideRate: 60
+                                      }));
+                                    }}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 bg-amber-100/80 hover:bg-amber-200 px-2.5 py-1 rounded-lg transition-all"
+                                  >
+                                    <Plus className="w-3 h-3" /> Add Guide Stay
+                                  </button>
+                                </div>
                                 {costBuckets.operational.filter(s => s.roomType === 'Guide Room' || s.includeGuideRoom).length === 0 ? (
                                   <p className="text-xs text-slate-400 italic">No guide accommodation entries.</p>
                                 ) : (
@@ -1717,8 +1737,18 @@ export default function TourDetailPage() {
                                               <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
                                             )}
                                           </div>
-                                          <div className="font-bold text-amber-900">
-                                            {s.guideNights || s.quantity || 1} Nights @ €{s.guideRate || s.unitPrice || 0}/night = <span className="text-amber-700">€{(s.guideTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                          <div className="flex items-center gap-3">
+                                            <div className="font-bold text-amber-900">
+                                              {s.guideNights || s.quantity || 1} Nights @ €{s.guideRate || s.unitPrice || 0}/night = <span className="text-amber-700">€{(s.guideTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                              <button type="button" onClick={() => openEditServiceModal(s)} className="p-1.5 text-amber-700 hover:text-amber-900 hover:bg-amber-100 rounded-lg transition-colors" title="Edit Guide Accommodation">
+                                                <Pencil className="w-3.5 h-3.5" />
+                                              </button>
+                                              <button type="button" onClick={() => handleDeleteService(s.id)} className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded-lg transition-colors" title="Delete Guide Accommodation">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
                                           </div>
                                         </div>
                                       );
@@ -1729,9 +1759,29 @@ export default function TourDetailPage() {
 
                               {/* 3. Driver Accommodation */}
                               <div className="space-y-2">
-                                <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                  <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation
-                                </h5>
+                                <div className="flex items-center justify-between">
+                                  <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Truck className="w-3.5 h-3.5 text-slate-600" /> Driver Accommodation
+                                  </h5>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      openServiceModal('Hotel', false);
+                                      setNewService((prev: any) => ({
+                                        ...prev,
+                                        description: 'Driver Room Accommodation',
+                                        roomType: 'Driver Room',
+                                        includeDriverRoom: true,
+                                        driverStartDate: tour?.arrivalDate?.split('T')[0] || '',
+                                        driverEndDate: tour?.endDate?.split('T')[0] || '',
+                                        driverRate: 50
+                                      }));
+                                    }}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-slate-200/80 hover:bg-slate-300 px-2.5 py-1 rounded-lg transition-all"
+                                  >
+                                    <Plus className="w-3 h-3" /> Add Driver Stay
+                                  </button>
+                                </div>
                                 {costBuckets.operational.filter(s => s.roomType === 'Driver Room' || s.includeDriverRoom).length === 0 ? (
                                   <p className="text-xs text-slate-400 italic">No driver accommodation entries.</p>
                                 ) : (
@@ -1748,8 +1798,18 @@ export default function TourDetailPage() {
                                               <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
                                             )}
                                           </div>
-                                          <div className="font-bold text-slate-800">
-                                            {s.driverNights || s.quantity || 1} Nights @ €{s.driverRate || s.unitPrice || 0}/night = <span className="text-blue-700">€{(s.driverTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                          <div className="flex items-center gap-3">
+                                            <div className="font-bold text-slate-800">
+                                              {s.driverNights || s.quantity || 1} Nights @ €{s.driverRate || s.unitPrice || 0}/night = <span className="text-blue-700">€{(s.driverTotal || s.totalAmount || 0).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                              <button type="button" onClick={() => openEditServiceModal(s)} className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-200 rounded-lg transition-colors" title="Edit Driver Accommodation">
+                                                <Pencil className="w-3.5 h-3.5" />
+                                              </button>
+                                              <button type="button" onClick={() => handleDeleteService(s.id)} className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded-lg transition-colors" title="Delete Driver Accommodation">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
                                           </div>
                                         </div>
                                       );
@@ -1871,6 +1931,8 @@ export default function TourDetailPage() {
                   <table className="w-full text-left text-sm">
                     <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
                       <tr>
+                        <th className="px-4 py-3">Room #</th>
+                        <th className="px-4 py-3">Pax Type</th>
                         <th className="px-4 py-3">First Name</th>
                         <th className="px-4 py-3">Surname</th>
                         <th className="px-4 py-3">Gender</th>
@@ -1888,13 +1950,27 @@ export default function TourDetailPage() {
                     <tbody className="divide-y divide-slate-100">
                       {filteredPassengers.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="px-4 py-8 text-center text-slate-400">
+                          <td colSpan={14} className="px-4 py-8 text-center text-slate-400">
                             {bookingSearchQuery ? `No passengers matched "${bookingSearchQuery}".` : 'No passengers found.'}
                           </td>
                         </tr>
                       ) : (
                         filteredPassengers.map((p: any) => (
                         <tr key={p.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-extrabold text-blue-700">
+                            {p.roomNumber ? `Room ${p.roomNumber}` : '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                              (p.paxType || '').toLowerCase().includes('child') ? 'bg-amber-100 text-amber-800' :
+                              (p.paxType || '').toLowerCase().includes('infant') ? 'bg-rose-100 text-rose-800' :
+                              'bg-slate-100 text-slate-700'
+                            }`}>
+                              {(p.paxType || '').toLowerCase().includes('child') ? 'Children 🧒' :
+                               (p.paxType || '').toLowerCase().includes('infant') ? 'Infant 👶' :
+                               'Adult'}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 font-semibold text-slate-800">{p.firstName || '-'}</td>
                           <td className="px-4 py-3 font-semibold text-slate-800">{p.lastName || '-'}</td>
                           <td className="px-4 py-3 text-slate-600">{p.gender || '-'}</td>
@@ -1904,7 +1980,7 @@ export default function TourDetailPage() {
                           <td className="px-4 py-3 text-slate-600">{p.visaNo || '-'}</td>
                           <td className="px-4 py-3 text-slate-600">{p.phone || '-'}</td>
                           <td className="px-4 py-3 text-slate-600">{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.roomType || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 font-medium">{p.roomType || '-'}</td>
                           <td className="px-4 py-3 text-center font-medium text-slate-700">{p.pax}</td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">

@@ -18,6 +18,8 @@ namespace Uno_API.Models
         public string PassportType { get; set; } = string.Empty;
         public string VisaNo { get; set; } = string.Empty;
         public string RoomType { get; set; } = string.Empty;
+        public int? RoomNumber { get; set; }
+        public string? PaxType { get; set; } = "Adult";
         public string Address { get; set; } = string.Empty;
 
         public int Pax { get; set; }

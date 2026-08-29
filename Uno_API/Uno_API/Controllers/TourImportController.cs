@@ -476,6 +476,9 @@ namespace Uno_API.Controllers
                     Booking? currentBooking = null;
                     int lastRow = wsRooming.LastRowUsed()!.RowNumber();
 
+                    var refToRoomMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    int nextRoomNum = 1;
+
                     for (int r = 2; r <= lastRow; r++)
                     {
                         var row = wsRooming.Row(r);
@@ -528,6 +531,18 @@ namespace Uno_API.Controllers
 
                         int.TryParse(GetVal(row, "PaxNo"), out int paxIndex);
 
+                        int? assignedRoomNumber = null;
+                        string keyRef = !string.IsNullOrEmpty(bookingRef) ? bookingRef : (!string.IsNullOrEmpty(col1) && col1.Contains("-") ? col1 : "");
+                        if (!string.IsNullOrEmpty(keyRef))
+                        {
+                            if (!refToRoomMap.TryGetValue(keyRef, out int rm))
+                            {
+                                rm = nextRoomNum++;
+                                refToRoomMap[keyRef] = rm;
+                            }
+                            assignedRoomNumber = rm;
+                        }
+
                         var passenger = new Passenger
                         {
                             TourId = tour.Id,
@@ -536,6 +551,8 @@ namespace Uno_API.Controllers
                             Gender = gender,
                             NationalId = tc,
                             RoomType = roomType,
+                            RoomNumber = assignedRoomNumber,
+                            PaxType = !string.IsNullOrEmpty(paxType) ? paxType : "Adult",
                             DateOfBirth = dob,
                             Phone = phone,
                             PassportNo = passportNo,
