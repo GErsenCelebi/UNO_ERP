@@ -37,8 +37,8 @@ namespace Uno_API.Services
 
             // 2. Local Candidate Paths Fallback
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var currentDir = Directory.GetCurrentDirectory();
-
+            var candidatePaths = new[]
+            {
                 @"C:\Ersen\Projects_2025\Uno_ERP\UserManuals",
                 @"C:\Ersen\Projects_2025\Uno_ERP\Publish\260829\importfiles",
                 @"C:\Ersen\Projects_2025\Codex\UNO_ERP",
