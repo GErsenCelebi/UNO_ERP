@@ -60,7 +60,7 @@ namespace Uno_API.Services
             {
                 if (Directory.Exists(dir))
                 {
-                    var files = Directory.GetFiles(dir, "*.md", SearchOption.TopDirectoryOnly);
+                    var files = Directory.GetFiles(dir, "*.md", SearchOption.AllDirectories);
                     foreach (var f in files)
                     {
                         if (!mdFiles.Contains(f, StringComparer.OrdinalIgnoreCase))

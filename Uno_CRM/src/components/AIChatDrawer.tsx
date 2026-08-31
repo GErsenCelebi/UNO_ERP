@@ -37,6 +37,7 @@ export default function AIChatDrawer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputQuery, setInputQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<'Projects' | 'Tours' | 'Metadata' | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome-1',
@@ -248,6 +249,111 @@ export default function AIChatDrawer() {
               </div>
             )}
             <div ref={messagesEndRef} />
+          </div>
+
+          {/* Interactive Category Selector Toolbar */}
+          <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 flex flex-col gap-1.5 text-xs">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Category:</div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'Projects' ? null : 'Projects')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 border ${
+                  selectedCategory === 'Projects' 
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                    : 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
+                }`}
+              >
+                📁 Projects
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'Tours' ? null : 'Tours')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 border ${
+                  selectedCategory === 'Tours' 
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-xs' 
+                    : 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
+                }`}
+              >
+                🚌 Tours
+              </button>
+
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'Metadata' ? null : 'Metadata')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 border ${
+                  selectedCategory === 'Metadata' 
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
+                    : 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
+                }`}
+              >
+                ⚙️ Master Data / Metadata
+              </button>
+            </div>
+
+            {/* Sub-Topic Selection Pills for Selected Category */}
+            {selectedCategory === 'Tours' && (
+              <div className="pt-1 border-t border-slate-200/60 flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-[10px] font-semibold text-purple-700">Tours Sub-topics:</span>
+                {[
+                  { label: 'Services', query: 'How to manage tour services, base services and excursion lines?' },
+                  { label: 'Hotels', query: 'How to set up hotel pricing basis (Pax vs Room) and calculate nightly rates?' },
+                  { label: 'Guide', query: 'How to assign guides and calculate the strict 10% guide commission on excursion sales?' },
+                  { label: 'Tax', query: 'How is City Tax and VAT applied to tours?' },
+                  { label: 'Discount', query: 'How to apply agency discounts on gross tour fees?' },
+                  { label: 'Financial Logic', query: 'Explain revenue vs base vs operational expenses vs net tour margin calculations.' },
+                  { label: 'Excel Import', query: 'How can I import sales excel file and rooming lists?' },
+                  { label: 'Rooming List', query: 'How to import passenger rooming lists, booking codes and pax types?' }
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(item.query)}
+                    className="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedCategory === 'Projects' && (
+              <div className="pt-1 border-t border-slate-200/60 flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-[10px] font-semibold text-blue-700">Projects Sub-topics:</span>
+                {[
+                  { label: 'Overview & Purpose', query: 'Why are Projects needed in UNO ERP and what are the most important fields?' },
+                  { label: 'Creating Projects', query: 'How to create a project manually or via Rooming List import?' },
+                  { label: 'Project Statuses', query: 'How to manage project status and track linked tours?' }
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(item.query)}
+                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedCategory === 'Metadata' && (
+              <div className="pt-1 border-t border-slate-200/60 flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-[10px] font-semibold text-emerald-700">Master Data Sub-topics:</span>
+                {[
+                  { label: 'Hotels Master', query: 'How to manage Hotels master data, star ratings and pricing basis?' },
+                  { label: 'Guides Master', query: 'How to manage Guides master data, languages and daily fee rates?' },
+                  { label: 'Transport & Drivers', query: 'How to set up Transport companies and Drivers in master data?' },
+                  { label: 'Excursions Master', query: 'How to create Excursions in master data with ticket costs and retail selling prices?' },
+                  { label: 'Tour Status Checkpoints', query: 'What are the mandatory status checkpoints before moving to Confirmed or Completed?' },
+                  { label: 'Role Permissions', query: 'What are the role permissions for Administrator, TourAdmin and Guides?' }
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(item.query)}
+                    className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Input Footer */}
