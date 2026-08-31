@@ -10,14 +10,21 @@ const wwwrootDir = 'C:\\Ersen\\Projects_2025\\Uno_ERP\\Uno_API\\Uno_API\\wwwroot
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-console.log('🚀 Building updated Excel Import Templates...');
+function safeWrite(wb, targetPath) {
+  try {
+    xlsx.writeFile(wb, targetPath);
+  } catch (err) {
+    console.warn(`  ⚠️ Could not write to ${targetPath} (file locked or open). Skipped.`);
+  }
+}
+
+console.log('🚀 Building domain-aligned Excel Import Templates...');
 
 // ============================================================================
-// 1. MASTER DATA IMPORT TEMPLATE (MasterData_Import_Template.xlsx)
+// 1. MASTER DATA IMPORT TEMPLATE (MasterData_Import_Template_v2.xlsx)
 // ============================================================================
 const wbMaster = xlsx.utils.book_new();
 
-// Sheet: Hotels (With Explicit Pax vs Room Rates & PricingBasis)
 const hotelHeaders = [
   'Hotel Name', 'Location', 'Star Rating', 'Pricing Basis (Pax/Room)', 
   'Single Room Rate (€)', 'Single Pax Rate (€)', 
@@ -35,7 +42,6 @@ const hotelSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbMaster, xlsx.utils.aoa_to_sheet(hotelSampleData), 'Hotels');
 
-// Sheet: Guides
 const guideHeaders = ['Guide Name', 'Language', 'Daily Rate (€)', 'Phone Number', 'Email'];
 const guideSampleData = [
   guideHeaders,
@@ -44,7 +50,6 @@ const guideSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbMaster, xlsx.utils.aoa_to_sheet(guideSampleData), 'Guides');
 
-// Sheet: Transport Companies
 const transportHeaders = ['Company Name', 'Contact Name', 'Contact Role', 'Email', 'Phone', 'Daily Rate (€)', 'Fleet Size'];
 const transportSampleData = [
   transportHeaders,
@@ -53,7 +58,6 @@ const transportSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbMaster, xlsx.utils.aoa_to_sheet(transportSampleData), 'Transport');
 
-// Sheet: Drivers
 const driverHeaders = ['Driver Name', 'Company Name', 'Phone Number', 'Daily Rate (€)'];
 const driverSampleData = [
   driverHeaders,
@@ -62,7 +66,6 @@ const driverSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbMaster, xlsx.utils.aoa_to_sheet(driverSampleData), 'Drivers');
 
-// Sheet: Excursions
 const excursionHeaders = ['Excursion Name', 'City / Region', 'Vendor Name', 'Adult Cost (€)', 'Child Cost (€)', 'Adult Sale Price (€)', 'Child Sale Price (€)', 'Description'];
 const excursionSampleData = [
   excursionHeaders,
@@ -71,34 +74,32 @@ const excursionSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbMaster, xlsx.utils.aoa_to_sheet(excursionSampleData), 'Excursions');
 
-const masterFileOut = path.join(outputDir, 'MasterData_Import_Template.xlsx');
-xlsx.writeFile(wbMaster, masterFileOut);
-xlsx.writeFile(wbMaster, path.join(publicDir, 'MasterData_Import_Template.xlsx'));
-xlsx.writeFile(wbMaster, path.join(wwwrootDir, 'MasterData_Import_Template.xlsx'));
-console.log('  ✓ Generated MasterData_Import_Template.xlsx (With Pax & Room Rates)');
+['MasterData_Import_Template_v2.xlsx', 'MasterData_Import_Template.xlsx'].forEach(filename => {
+  safeWrite(wbMaster, path.join(outputDir, filename));
+  safeWrite(wbMaster, path.join(publicDir, filename));
+  safeWrite(wbMaster, path.join(wwwrootDir, filename));
+});
+console.log('  ✓ Generated MasterData_Import_Template_v2.xlsx (With Pax & Room Rates)');
 
 // ============================================================================
-// 2. TOUR & ROOMING IMPORT TEMPLATE (ExcelSample1_TourRooming_Import.xlsx)
+// 2. ROOMING & TOUR IMPORT TEMPLATE (Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx)
 // ============================================================================
 const wbRooming = xlsx.utils.book_new();
 
-// Sheet: Tours
 const tourHeaders = ['Tour Code', 'Project', 'Destination', 'Arrival Date', 'End Date', 'Adults', 'Children', 'Infants', 'Pax', 'Status (Default: Draft)'];
 const tourSampleData = [
   tourHeaders,
-  ['BVP01092026', 'PRJ-BVP1', 'Budapest-Vienna-Prague', '01.09.2026', '07.09.2026', 27, 2, 1, 30, 'Draft']
+  ['BVP05072026', 'PRJ-BVP1', 'Budapest-Vienna-Prague', '05.07.2026', '12.07.2026', 27, 2, 1, 30, 'Draft']
 ];
 xlsx.utils.book_append_sheet(wbRooming, xlsx.utils.aoa_to_sheet(tourSampleData), 'Tours');
 
-// Sheet: Projects
 const projectHeaders = ['Project Code', 'Client Name', 'Description', 'Start Date', 'End Date', 'Currency'];
 const projectSampleData = [
   projectHeaders,
-  ['PRJ-BVP1', 'Apex Travel Agency', 'Orta Avrupa 2026 Autumn Tours', '01.09.2026', '30.09.2026', 'EUR']
+  ['PRJ-BVP1', 'Apex Travel Agency', 'Orta Avrupa 2026 Summer Tours', '01.07.2026', '31.07.2026', 'EUR']
 ];
 xlsx.utils.book_append_sheet(wbRooming, xlsx.utils.aoa_to_sheet(projectSampleData), 'Projects');
 
-// Sheet: Rooming
 const roomingHeaders = [
   'BookingRef', 'Yolcu Adı', 'Yolcu Soyadı', 'Cinsiyet', 
   'Oda Tipi', 'Pax Type', 'Pasaport No', 'Pasaport Type', 
@@ -106,41 +107,52 @@ const roomingHeaders = [
 ];
 const roomingSampleData = [
   roomingHeaders,
-  ['BKG-01-BVP01092026', 'Ahmet', 'Yılmaz', 'Bay', 'Double', 'Adult', 'U10000001', 'Umuma Mahsus', '15.05.1985', 'V900001', '+905551234567'],
-  ['BKG-01-BVP01092026', 'Ayşe', 'Yılmaz', 'Bayan', 'Double', 'Adult', 'U10000002', 'Umuma Mahsus', '20.08.1988', 'V900002', '+905551234567'],
-  ['BKG-02-BVP01092026', 'Mehmet', 'Kaya', 'Bay', 'Triple', 'Adult', 'U10000003', 'Umuma Mahsus', '10.03.1982', 'V900003', '+905559876543'],
-  ['BKG-02-BVP01092026', 'Fatma', 'Kaya', 'Bayan', 'Triple', 'Adult', 'U10000004', 'Umuma Mahsus', '14.07.1986', 'V900004', '+905559876543'],
-  ['BKG-02-BVP01092026', 'Can', 'Kaya', 'Bay', 'Triple', 'Children', 'U10000005', 'Umuma Mahsus', '05.09.2018', 'V900005', '+905559876543']
+  ['BKG-01-BVP05072026', 'Ahmet', 'Yılmaz', 'Bay', 'Double', 'Adult', 'U10000001', 'Umuma Mahsus', '15.05.1985', 'V900001', '+905551234567'],
+  ['BKG-01-BVP05072026', 'Ayşe', 'Yılmaz', 'Bayan', 'Double', 'Adult', 'U10000002', 'Umuma Mahsus', '20.08.1988', 'V900002', '+905551234567'],
+  ['BKG-02-BVP05072026', 'Mehmet', 'Kaya', 'Bay', 'Triple', 'Adult', 'U10000003', 'Umuma Mahsus', '10.03.1982', 'V900003', '+905559876543'],
+  ['BKG-02-BVP05072026', 'Fatma', 'Kaya', 'Bayan', 'Triple', 'Adult', 'U10000004', 'Umuma Mahsus', '14.07.1986', 'V900004', '+905559876543'],
+  ['BKG-02-BVP05072026', 'Can', 'Kaya', 'Bay', 'Triple', 'Children', 'U10000005', 'Umuma Mahsus', '05.09.2018', 'V900005', '+905559876543']
 ];
 xlsx.utils.book_append_sheet(wbRooming, xlsx.utils.aoa_to_sheet(roomingSampleData), 'Rooming');
+xlsx.utils.book_append_sheet(wbRooming, xlsx.utils.aoa_to_sheet(hotelSampleData), 'Hotels');
 
-const roomingFileOut = path.join(outputDir, 'ExcelSample1_TourRooming_Import.xlsx');
-xlsx.writeFile(wbRooming, roomingFileOut);
-xlsx.writeFile(wbRooming, path.join(publicDir, 'ExcelSample1_TourRooming_Import.xlsx'));
-xlsx.writeFile(wbRooming, path.join(wwwrootDir, 'ExcelSample1_TourRooming_Import.xlsx'));
-console.log('  ✓ Generated ExcelSample1_TourRooming_Import.xlsx');
+['Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx', 'ExcelSample1_TourRooming_Import.xlsx'].forEach(filename => {
+  safeWrite(wbRooming, path.join(outputDir, filename));
+  safeWrite(wbRooming, path.join(publicDir, filename));
+  safeWrite(wbRooming, path.join(wwwrootDir, filename));
+});
+console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx');
 
 // ============================================================================
-// 3. EXCURSION SALES IMPORT TEMPLATE (ExcelSample1_ExcursionSales_Import.xlsx)
+// 3. EXCURSION SALES IMPORT TEMPLATE (Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx)
 // ============================================================================
 const wbExcursion = xlsx.utils.book_new();
 
 const excursionSaleHeaders = ['Tour Code', 'Excursion Name', 'Passenger Name', 'Adult Count', 'Child Count', 'Sale Price (€)', 'Total Amount (€)', 'Payment Method', 'Notes'];
 const excursionSaleSampleData = [
   excursionSaleHeaders,
-  ['BVP01092026', 'Prague Castle Guided Tour', 'Ahmet Yılmaz', 2, 0, 25.00, 50.00, 'Cash (EUR)', 'Paid to guide'],
-  ['BVP01092026', 'Budapest Danube Dinner Cruise', 'Mehmet Kaya', 2, 1, 45.00, 115.00, 'Credit Card', 'Family ticket with 1 child']
+  ['BVP05072026', 'Prague Castle Guided Tour', 'Ahmet Yılmaz', 2, 0, 25.00, 50.00, 'Cash (EUR)', 'Paid to guide'],
+  ['BVP05072026', 'Budapest Danube Dinner Cruise', 'Mehmet Kaya', 2, 1, 45.00, 115.00, 'Credit Card', 'Family ticket with 1 child']
 ];
-xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(excursionSaleSampleData), 'ExcursionSales');
+xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(excursionSaleSampleData), 'ExcusionSales');
 
-const excursionFileOut = path.join(outputDir, 'ExcelSample1_ExcursionSales_Import.xlsx');
-xlsx.writeFile(wbExcursion, excursionFileOut);
-xlsx.writeFile(wbExcursion, path.join(publicDir, 'ExcelSample1_ExcursionSales_Import.xlsx'));
-xlsx.writeFile(wbExcursion, path.join(wwwrootDir, 'ExcelSample1_ExcursionSales_Import.xlsx'));
-console.log('  ✓ Generated ExcelSample1_ExcursionSales_Import.xlsx');
+const baseServiceHeaders = ['Tour Code', 'Service Category', 'Description', 'Quantity', 'Unit Price (€)', 'Total Amount (€)'];
+const baseServiceSampleData = [
+  baseServiceHeaders,
+  ['BVP05072026', 'Guide', 'Professional Licensed Guide (7 Days)', 7, 150.00, 1050.00],
+  ['BVP05072026', 'Transport', 'Luxury Bus Budapest-Vienna-Prague', 1, 3200.00, 3200.00]
+];
+xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(baseServiceSampleData), 'BaseServices');
+
+['Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx', 'ExcelSample1_ExcursionSales_Import.xlsx'].forEach(filename => {
+  safeWrite(wbExcursion, path.join(outputDir, filename));
+  safeWrite(wbExcursion, path.join(publicDir, filename));
+  safeWrite(wbExcursion, path.join(wwwrootDir, filename));
+});
+console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx');
 
 // ============================================================================
-// 4. COMPREHENSIVE COMBINED IMPORT TEMPLATE (uno_import_template.xlsx)
+// 4. DYNAMIC COMBINED IMPORT TEMPLATE (UNO_Dynamic_Import_Template.xlsx)
 // ============================================================================
 const wbCombined = xlsx.utils.book_new();
 xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(hotelSampleData), 'Hotels');
@@ -150,10 +162,11 @@ xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(roomingSampleDa
 xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(guideSampleData), 'Guides');
 xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(excursionSampleData), 'Excursions');
 
-const combinedFileOut = path.join(outputDir, 'uno_import_template.xlsx');
-xlsx.writeFile(wbCombined, combinedFileOut);
-xlsx.writeFile(wbCombined, path.join(publicDir, 'uno_import_template.xlsx'));
-xlsx.writeFile(wbCombined, path.join(wwwrootDir, 'uno_import_template.xlsx'));
-console.log('  ✓ Generated uno_import_template.xlsx');
+['UNO_Dynamic_Import_Template.xlsx', 'uno_import_template.xlsx'].forEach(filename => {
+  safeWrite(wbCombined, path.join(outputDir, filename));
+  safeWrite(wbCombined, path.join(publicDir, filename));
+  safeWrite(wbCombined, path.join(wwwrootDir, filename));
+});
+console.log('  ✓ Generated UNO_Dynamic_Import_Template.xlsx');
 
-console.log('\n✅ All Excel Import Templates Built & Saved Successfully in Publish/260829/importfiles!');
+console.log('\n✅ All Domain Excel Import Templates Built & Saved Successfully in Publish/260829/importfiles!');
