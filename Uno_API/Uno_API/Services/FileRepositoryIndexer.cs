@@ -40,6 +40,9 @@ namespace Uno_API.Services
             var currentDir = Directory.GetCurrentDirectory();
             var candidatePaths = new[]
             {
+                Path.Combine(currentDir, "wwwroot", "KB"),
+                Path.Combine(baseDir, "wwwroot", "KB"),
+                @"C:\Ersen\Projects_2025\Uno_ERP\UserManuals\KB",
                 @"C:\Ersen\Projects_2025\Uno_ERP\UserManuals",
                 @"C:\Ersen\Projects_2025\Uno_ERP\Publish\260829\importfiles",
                 @"C:\Ersen\Projects_2025\Codex\UNO_ERP",

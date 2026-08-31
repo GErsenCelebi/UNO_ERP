@@ -11,10 +11,12 @@ namespace Uno_API.Controllers
     public class AiKnowledgeItemsController : ControllerBase
     {
         private readonly UnoDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public AiKnowledgeItemsController(UnoDbContext context)
+        public AiKnowledgeItemsController(UnoDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         // GET: api/AiKnowledgeItems
@@ -44,12 +46,12 @@ namespace Uno_API.Controllers
             _context.AiKnowledgeItems.Add(item);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetAiKnowledgeItem), new { id = item.Id }, item);
+            return CreatedAtAction("GetAiKnowledgeItem", new { id = item.Id }, item);
         }
 
         // PUT: api/AiKnowledgeItems/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAiKnowledgeItem(int id, AiKnowledgeItem item)
+        public async Task<IActionResult> PutAiKnowledgeItem(int id, AiKnowledgeItem item)
         {
             if (id != item.Id) return BadRequest();
 
@@ -62,8 +64,8 @@ namespace Uno_API.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.AiKnowledgeItems.Any(e => e.Id == id)) return NotFound();
-                throw;
+                if (!AiKnowledgeItemExists(id)) return NotFound();
+                else throw;
             }
 
             return NoContent();
@@ -101,13 +103,46 @@ namespace Uno_API.Controllers
             if (!file.FileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                 return BadRequest("Only Markdown (.md) files are supported");
 
+            // 1. Resolve production / webRoot KB folder
+            var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+            var kbFolder = Path.Combine(webRoot, "KB");
+            if (!Directory.Exists(kbFolder))
+            {
+                Directory.CreateDirectory(kbFolder);
+            }
+
+            // 2. Save uploaded .md file to disk in KB folder
+            var savedPath = Path.Combine(kbFolder, Path.GetFileName(file.FileName));
+            using (var stream = new FileStream(savedPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Also save dev copy in UserManuals/KB if running locally
+            var devKbFolder = @"C:\Ersen\Projects_2025\Uno_ERP\UserManuals\KB";
+            if (Directory.Exists(@"C:\Ersen\Projects_2025\Uno_ERP\UserManuals"))
+            {
+                if (!Directory.Exists(devKbFolder)) Directory.CreateDirectory(devKbFolder);
+                var devSavedPath = Path.Combine(devKbFolder, Path.GetFileName(file.FileName));
+                using var devStream = new FileStream(devSavedPath, FileMode.Create);
+                file.OpenReadStream().Position = 0;
+                await file.CopyToAsync(devStream);
+            }
+
+            // 3. Read content & parse sections into AiKnowledgeItems DB table
+            file.OpenReadStream().Position = 0;
             using var reader = new StreamReader(file.OpenReadStream());
             var content = await reader.ReadToEndAsync();
 
             var indexer = new FileRepositoryIndexer(_context);
             var itemsCount = await indexer.ParseAndSaveMarkdownSectionsAsync(file.FileName, content);
 
-            return Ok(new { Message = $"Successfully uploaded and parsed '{file.FileName}'!", ItemsIngested = itemsCount });
+            return Ok(new { Message = $"Successfully uploaded, saved to KB folder, and parsed '{file.FileName}'!", ItemsIngested = itemsCount });
+        }
+
+        private bool AiKnowledgeItemExists(int id)
+        {
+            return _context.AiKnowledgeItems.Any(e => e.Id == id);
         }
     }
 }
