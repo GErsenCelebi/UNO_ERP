@@ -18,11 +18,9 @@ function safeWrite(wb, targetPath) {
   }
 }
 
-console.log('🚀 Building domain-aligned Excel Import Templates (100% Consistent with Green Download Sale Button & Importer)...');
+console.log('🚀 Building the 3 Official Final Import Templates...');
 
-// ============================================================================
 // 1. MASTER DATA IMPORT TEMPLATE (MasterData_Import_Template_v2.xlsx)
-// ============================================================================
 const wbMaster = xlsx.utils.book_new();
 
 const hotelHeaders = [
@@ -74,16 +72,12 @@ const excursionSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbMaster, xlsx.utils.aoa_to_sheet(excursionSampleData), 'Excursions');
 
-['MasterData_Import_Template_v2.xlsx', 'MasterData_Import_Template.xlsx'].forEach(filename => {
-  safeWrite(wbMaster, path.join(outputDir, filename));
-  safeWrite(wbMaster, path.join(publicDir, filename));
-  safeWrite(wbMaster, path.join(wwwrootDir, filename));
-});
-console.log('  ✓ Generated MasterData_Import_Template_v2.xlsx (With Pax & Room Rates)');
+safeWrite(wbMaster, path.join(outputDir, 'MasterData_Import_Template_v2.xlsx'));
+safeWrite(wbMaster, path.join(publicDir, 'MasterData_Import_Template_v2.xlsx'));
+safeWrite(wbMaster, path.join(wwwrootDir, 'MasterData_Import_Template_v2.xlsx'));
+console.log('  1. Master Data Import: MasterData_Import_Template_v2.xlsx');
 
-// ============================================================================
-// 2. ROOMING & TOUR IMPORT TEMPLATE (Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx)
-// ============================================================================
+// 2. ROOMING IMPORT TEMPLATE (Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx)
 const wbRooming = xlsx.utils.book_new();
 
 const tourHeaders = ['Tour Code', 'Project', 'Destination', 'Arrival Date', 'End Date', 'Adults', 'Children', 'Infants', 'Pax', 'Status (Default: Draft)'];
@@ -116,17 +110,12 @@ const roomingSampleData = [
 xlsx.utils.book_append_sheet(wbRooming, xlsx.utils.aoa_to_sheet(roomingSampleData), 'Rooming');
 xlsx.utils.book_append_sheet(wbRooming, xlsx.utils.aoa_to_sheet(hotelSampleData), 'Hotels');
 
-['Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx', 'ExcelSample1_TourRooming_Import.xlsx'].forEach(filename => {
-  safeWrite(wbRooming, path.join(outputDir, filename));
-  safeWrite(wbRooming, path.join(publicDir, filename));
-  safeWrite(wbRooming, path.join(wwwrootDir, filename));
-});
-console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx');
+safeWrite(wbRooming, path.join(outputDir, 'Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx'));
+safeWrite(wbRooming, path.join(publicDir, 'Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx'));
+safeWrite(wbRooming, path.join(wwwrootDir, 'Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx'));
+console.log('  2. Rooming Import: Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx');
 
-// ============================================================================
 // 3. EXCURSION SALES IMPORT TEMPLATE (Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx)
-// MATCHES EXACT GENERATION LOGIC OF GREEN "Download Sale File" BUTTON & TourImportController
-// ============================================================================
 const wbExcursion = xlsx.utils.book_new();
 
 const excursionSalesMatrix = [
@@ -143,7 +132,6 @@ const excursionSalesMatrix = [
   ['Count', '=COUNTIF(B5:B9, "☑") + COUNTIF(B5:B9, TRUE)', '=COUNTIF(C5:C9, "☑") + COUNTIF(C5:C9, TRUE)', '=COUNTIF(D5:D9, "☑") + COUNTIF(D5:D9, TRUE)'],
   ['Total Amount', '=B11*B2', '=C11*C2', '=D11*D2']
 ];
-
 xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(excursionSalesMatrix), 'ExcusionSales');
 
 const baseServiceHeaders = ['Base Service', 'Revenue', 'Expense', 'Other', 'per/Pax', 'UnitPrice', 'Adult', 'Children', 'Infant', 'Total'];
@@ -154,29 +142,9 @@ const baseServiceSampleData = [
 ];
 xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(baseServiceSampleData), 'BaseServices');
 
-['Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx', 'ExcelSample1_ExcursionSales_Import.xlsx'].forEach(filename => {
-  safeWrite(wbExcursion, path.join(outputDir, filename));
-  safeWrite(wbExcursion, path.join(publicDir, filename));
-  safeWrite(wbExcursion, path.join(wwwrootDir, filename));
-});
-console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx (Identical to Green Download Button Output)');
+safeWrite(wbExcursion, path.join(outputDir, 'Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx'));
+safeWrite(wbExcursion, path.join(publicDir, 'Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx'));
+safeWrite(wbExcursion, path.join(wwwrootDir, 'Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx'));
+console.log('  3. Excursion (Sales) Import: Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx');
 
-// ============================================================================
-// 4. DYNAMIC COMBINED IMPORT TEMPLATE (UNO_Dynamic_Import_Template.xlsx)
-// ============================================================================
-const wbCombined = xlsx.utils.book_new();
-xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(hotelSampleData), 'Hotels');
-xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(tourSampleData), 'Tours');
-xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(projectSampleData), 'Projects');
-xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(roomingSampleData), 'Rooming');
-xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(guideSampleData), 'Guides');
-xlsx.utils.book_append_sheet(wbCombined, xlsx.utils.aoa_to_sheet(excursionSampleData), 'Excursions');
-
-['UNO_Dynamic_Import_Template.xlsx', 'uno_import_template.xlsx'].forEach(filename => {
-  safeWrite(wbCombined, path.join(outputDir, filename));
-  safeWrite(wbCombined, path.join(publicDir, filename));
-  safeWrite(wbCombined, path.join(wwwrootDir, filename));
-});
-console.log('  ✓ Generated UNO_Dynamic_Import_Template.xlsx');
-
-console.log('\n✅ All Domain Excel Import Templates Built & Saved Successfully in Publish/260829/importfiles!');
+console.log('\n✅ 3 Official Final Import Templates Built & Saved Successfully in Publish/260829/importfiles!');
