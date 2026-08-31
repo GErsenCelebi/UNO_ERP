@@ -6,7 +6,9 @@ This guide details the complete Excel Import workflow in UNO ERP. It explains **
 
 ## 🎯 **Overview of the 3 Official Import Files**
 
-To ensure 100% data integrity without missing foreign key references, UNO ERP uses **3 official template files** stored in `C:\Ersen\Projects_2025\Uno_ERP\Publish\260829\importfiles\`:
+To ensure 100% data integrity without missing foreign key references, UNO ERP uses **exactly 3 official template files** located on the shared drive:
+
+📂 **Shared Drive Location**: `Shared Drive/UnoERP/ExcelImportFiles/`
 
 1. **`MasterData_Import_Template_v2.xlsx`** $\rightarrow$ *Master Data (Hotels, Guides, Transport, Drivers, Excursions)*
 2. **`Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`** $\rightarrow$ *Tour & Passenger Rooming List*
@@ -18,11 +20,11 @@ To ensure 100% data integrity without missing foreign key references, UNO ERP us
 
 ```mermaid
 flowchart TD
-    A["Step 1: Master Data Import (MasterData_Import_Template_v2.xlsx)"] --> B["Step 2: Tour & Rooming List Import (importroomingV4.xlsx)"]
+    A["Step 1: Master Data Import (MasterData_Import_Template_v2.xlsx)"] --> B["Step 2: Tour & Rooming List Import (Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx)"]
     B --> C{"Passengers Uploaded? (allPassengers.length > 0)"}
     C -- Yes --> D["Step 3: Green Download Sale File Button Appears"]
     C -- No --> E["Button Hidden / Unavailable until Rooming List Uploaded"]
-    D --> F["Step 4: Excursion Sales Import (importSalesV4.xlsx)"]
+    D --> F["Step 4: Excursion Sales Import (Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx)"]
 ```
 
 ---
@@ -32,6 +34,7 @@ flowchart TD
 > **Why First?** Tours, hotels, excursion calculations, transport, and guide assignments rely on pre-existing Master Data. If you try to import a rooming file before importing hotels, the system will not be able to match hotel names or pricing rates.
 
 * **File Name**: `MasterData_Import_Template_v2.xlsx`
+* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/MasterData_Import_Template_v2.xlsx`
 * **Target Screen**: Navigation Sidebar $\rightarrow$ **Master Data** $\rightarrow$ Click **Import Master Data** button.
 * **What it Imports**:
   * **Hotels Sheet**: Hotel Name, Location, Star Rating, **Pricing Basis (`Pax` vs `Room`)**, Single Room & Pax Rates, Double Room & Pax Rates, Twin Room & Pax Rates, Triple Room & Pax Rates, Contact Person, Email, and Phone.
@@ -47,6 +50,7 @@ flowchart TD
 > Once Master Data is loaded, you import the tour contract, project, and passenger rooming list.
 
 * **File Name**: `Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`
+* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`
 * **Target Screen**: Navigation Sidebar $\rightarrow$ **Tours** (or **Projects**) $\rightarrow$ Click **Import Rooming List**.
 * **What it Creates & Imports**:
   * **Projects Sheet**: Creates/resolves the Project (e.g. `PRJ-BVP1` / `Tests 20260829`).
@@ -76,6 +80,7 @@ flowchart TD
 > After the guide or tour leader marks which passengers attended which excursions, upload the completed sales file.
 
 * **File Name**: `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` (or the downloaded sale file).
+* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx`
 * **Target Screen**: Tour Details page $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales**.
 * **What it Calculates & Imports**:
   * **ExcusionSales Sheet**: Parses `☑` checked boxes, calculates total quantities per excursion, creates Revenue and Expense lines for the tour.
@@ -90,15 +95,15 @@ When users ask the AI Assistant about Excel imports, the assistant references th
 
 | User Question | AI Assistant Answer |
 | :--- | :--- |
-| **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template_v2.xlsx` FIRST** under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
+| **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template_v2.xlsx` FIRST** from `Shared Drive/UnoERP/ExcelImportFiles/` under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
+| **"Where are the official import template files located?"** | All 3 official template files are stored on the shared drive: `Shared Drive/UnoERP/ExcelImportFiles/`. |
+| **"What file do I use for Rooming lists?"** | Use **`Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/`. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
 | **"Why is the green Download Sale File button not showing?"** | The green **`Download Sale File` button ONLY appears after the Rooming List has been uploaded**. If no passengers exist for the tour, the button remains hidden until passenger data is imported. |
-| **"What happens when I click Download Sale File?"** | Once rooming list passengers are uploaded, clicking the green button generates an Excel file pre-populated with **all passengers in full detail** (with `(CHD)` badges for children) and interactive excursion checkboxes (`☐`/`☑`). |
-| **"What status will my imported tour have?"** | All imported tours automatically start at the **first dashboard status (`TourStatusId = 1` / Draft)**. |
+| **"What file is used for Excursion Sales import?"** | Use **`Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/` (or click the green `Download Sale File` button on the Bookings tab). |
 
 ---
 
-## 📁 **File Storage Locations**
+## 📁 **Shared Drive Storage Location**
 
-All official import templates and documentation are preserved in:
-* **Import Templates Directory**: [`C:\Ersen\Projects_2025\Uno_ERP\Publish\260829\importfiles\`](file:///C:/Ersen/Projects_2025/Uno_ERP/Publish/260829/importfiles/)
-* **AI Knowledge User Manuals Directory**: [`C:\Ersen\Projects_2025\Uno_ERP\UserManuals\EXCEL_IMPORT_WORKFLOW_GUIDE.md`](file:///C:/Ersen/Projects_2025/Uno_ERP/UserManuals/EXCEL_IMPORT_WORKFLOW_GUIDE.md)
+All official import templates are preserved in:
+* **Shared Drive Directory**: `Shared Drive/UnoERP/ExcelImportFiles/`
