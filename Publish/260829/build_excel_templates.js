@@ -18,7 +18,7 @@ function safeWrite(wb, targetPath) {
   }
 }
 
-console.log('🚀 Building domain-aligned Excel Import Templates...');
+console.log('🚀 Building domain-aligned Excel Import Templates (100% Consistent with Green Download Sale Button & Importer)...');
 
 // ============================================================================
 // 1. MASTER DATA IMPORT TEMPLATE (MasterData_Import_Template_v2.xlsx)
@@ -125,22 +125,32 @@ console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx')
 
 // ============================================================================
 // 3. EXCURSION SALES IMPORT TEMPLATE (Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx)
+// MATCHES EXACT GENERATION LOGIC OF GREEN "Download Sale File" BUTTON & TourImportController
 // ============================================================================
 const wbExcursion = xlsx.utils.book_new();
 
-const excursionSaleHeaders = ['Tour Code', 'Excursion Name', 'Passenger Name', 'Adult Count', 'Child Count', 'Sale Price (€)', 'Total Amount (€)', 'Payment Method', 'Notes'];
-const excursionSaleSampleData = [
-  excursionSaleHeaders,
-  ['BVP05072026', 'Prague Castle Guided Tour', 'Ahmet Yılmaz', 2, 0, 25.00, 50.00, 'Cash (EUR)', 'Paid to guide'],
-  ['BVP05072026', 'Budapest Danube Dinner Cruise', 'Mehmet Kaya', 2, 1, 45.00, 115.00, 'Credit Card', 'Family ticket with 1 child']
+const excursionSalesMatrix = [
+  ['Dates', '06.07.2026', '08.07.2026', '10.07.2026'],
+  ['Prices', 25.00, 45.00, 35.00],
+  ['Code', 'PRG-CASTLE', 'BUD-CRUISE', 'VIE-SCHONBRUNN'],
+  ['Passenger Name', 'Prague Castle Guided Tour', 'Budapest Danube Dinner Cruise', 'Schönbrunn Palace Tour'],
+  ['Ahmet Yılmaz', '☑', '☑', '☐'],
+  ['Ayşe Yılmaz', '☑', '☑', '☐'],
+  ['Mehmet Kaya', '☐', '☑', '☑'],
+  ['Fatma Kaya', '☐', '☑', '☑'],
+  ['Can Kaya (CHD)', '☐', '☑', '☑'],
+  ['', '', '', ''],
+  ['Count', '=COUNTIF(B5:B9, "☑") + COUNTIF(B5:B9, TRUE)', '=COUNTIF(C5:C9, "☑") + COUNTIF(C5:C9, TRUE)', '=COUNTIF(D5:D9, "☑") + COUNTIF(D5:D9, TRUE)'],
+  ['Total Amount', '=B11*B2', '=C11*C2', '=D11*D2']
 ];
-xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(excursionSaleSampleData), 'ExcusionSales');
 
-const baseServiceHeaders = ['Tour Code', 'Service Category', 'Description', 'Quantity', 'Unit Price (€)', 'Total Amount (€)'];
+xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(excursionSalesMatrix), 'ExcusionSales');
+
+const baseServiceHeaders = ['Base Service', 'Revenue', 'Expense', 'Other', 'per/Pax', 'UnitPrice', 'Adult', 'Children', 'Infant', 'Total'];
 const baseServiceSampleData = [
   baseServiceHeaders,
-  ['BVP05072026', 'Guide', 'Professional Licensed Guide (7 Days)', 7, 150.00, 1050.00],
-  ['BVP05072026', 'Transport', 'Luxury Bus Budapest-Vienna-Prague', 1, 3200.00, 3200.00]
+  ['Agency Fee', '☑', '☐', '☐', '☑', 250.00, 27, 2, 1, 7000.00],
+  ['CityTax', '☐', '☑', '☐', '☑', 2.50, 27, 2, 0, 435.00]
 ];
 xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(baseServiceSampleData), 'BaseServices');
 
@@ -149,7 +159,7 @@ xlsx.utils.book_append_sheet(wbExcursion, xlsx.utils.aoa_to_sheet(baseServiceSam
   safeWrite(wbExcursion, path.join(publicDir, filename));
   safeWrite(wbExcursion, path.join(wwwrootDir, filename));
 });
-console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx');
+console.log('  ✓ Generated Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx (Identical to Green Download Button Output)');
 
 // ============================================================================
 // 4. DYNAMIC COMBINED IMPORT TEMPLATE (UNO_Dynamic_Import_Template.xlsx)
