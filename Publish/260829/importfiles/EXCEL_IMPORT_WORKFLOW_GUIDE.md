@@ -10,9 +10,9 @@ To ensure 100% data integrity without missing foreign key references, UNO ERP us
 
 📂 **Shared Drive Location**: `Shared Drive/UnoERP/ExcelImportFiles/`
 
-1. **`MasterData_Import_Template.xlsx`** $\rightarrow$ *Master Data (Hotels, Guides, Transport, Drivers, Excursions)*
-2. **`Rooming_import_template.xlsx`** $\rightarrow$ *Tour & Passenger Rooming List*
-3. **`Sales_import_template.xlsx`** $\rightarrow$ *Excursion Sales & Base Services Report*
+1. **`MasterData_Import_Template.xlsx`** → *Master Data (Hotels, Guides, Transport, Drivers, Excursions)*
+2. **`Rooming_import_template.xlsx`** → *Tour & Passenger Rooming List*
+3. **`Sales_import_template.xlsx`** → *Excursion Sales & Base Services Report*
 
 ---
 
@@ -35,7 +35,7 @@ flowchart TD
 
 * **File Name**: `MasterData_Import_Template.xlsx`
 * **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/MasterData_Import_Template.xlsx`
-* **Target Screen**: Navigation Sidebar $\rightarrow$ **Master Data** $\rightarrow$ Click **Import Master Data** button.
+* **Target Screen**: Navigation Sidebar → **Master Data** → Click **Import Master Data** button.
 * **What it Imports**:
   * **Hotels Sheet**: Hotel Name, Location, Star Rating, **Pricing Basis (`Pax` vs `Room`)**, Single Room & Pax Rates, Double Room & Pax Rates, Twin Room & Pax Rates, Triple Room & Pax Rates, Contact Person, Email, and Phone.
   * **Guides Sheet**: Guide Names, Languages spoken, Daily Rates, Phone Numbers.
@@ -51,7 +51,7 @@ flowchart TD
 
 * **File Name**: `Rooming_import_template.xlsx`
 * **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Rooming_import_template.xlsx`
-* **Target Screen**: Navigation Sidebar $\rightarrow$ **Tours** (or **Projects**) $\rightarrow$ Click **Import Rooming List**.
+* **Target Screen**: Navigation Sidebar → **Tours** (or **Projects**) → Click **Import Rooming List**.
 * **What it Creates & Imports**:
   * **Projects Sheet**: Creates/resolves the Project (e.g. `PRJ-BVP1` / `Tests 20260829`).
   * **Tours Sheet**: Creates the Tour (`BVP05072026`) and automatically sets its initial status to **`Draft` (`TourStatusId = 1` / First Status on Dashboard)**.
@@ -81,7 +81,7 @@ flowchart TD
 
 * **File Name**: `Sales_import_template.xlsx` (or the downloaded sale file).
 * **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Sales_import_template.xlsx`
-* **Target Screen**: Tour Details page $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales**.
+* **Target Screen**: Tour Details page → **Services** tab → Click **Import Excursion Sales**.
 * **Step-by-Step Instructions**:
   1. Open the Tour Details page for your specific tour.
   2. Navigate to the **Services** tab.
@@ -97,7 +97,7 @@ When users ask the AI Assistant about Excel imports, the assistant references th
 
 | User Question | AI Assistant Answer |
 | :--- | :--- |
-| **"How can I import sales excel file?"** | Open Tour Details $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales** and select `Sales_import_template.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`. Note: The rooming list must be uploaded first so passengers exist. |
+| **"How can I import sales excel file?"** | Open Tour Details → **Services** tab → Click **Import Excursion Sales** and select `Sales_import_template.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`. Note: The rooming list must be uploaded first so passengers exist. |
 | **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template.xlsx` FIRST** from `Shared Drive/UnoERP/ExcelImportFiles/` under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
 | **"Where are the official import template files located?"** | All 3 official template files are stored on the shared drive: `Shared Drive/UnoERP/ExcelImportFiles/`. |
 | **"What file do I use for Rooming lists?"** | Use **`Rooming_import_template.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/`. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
