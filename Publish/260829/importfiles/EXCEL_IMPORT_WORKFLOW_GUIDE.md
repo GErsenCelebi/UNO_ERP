@@ -1,6 +1,6 @@
 # 📘 UNO ERP - Comprehensive Excel Import Workflow & Step-by-Step Guide
 
-This guide details the complete Excel Import workflow in UNO ERP. It explains **which file must be imported first**, the mandatory sequence of steps, data dependencies, and how the AI Assistant helps users navigate the import process.
+This guide details the complete Excel Import workflow in UNO ERP. It explains **which file must be imported first**, the mandatory sequence of steps, data dependencies, passenger list prerequisites, and how the AI Assistant helps users navigate the import process.
 
 ---
 
@@ -19,8 +19,10 @@ To ensure 100% data integrity without missing foreign key references, UNO ERP us
 ```mermaid
 flowchart TD
     A["Step 1: Master Data Import (MasterData_Import_Template_v2.xlsx)"] --> B["Step 2: Tour & Rooming List Import (importroomingV4.xlsx)"]
-    B --> C["Step 3: Download & Fill Sales File (Green Download Sale File Button)"]
-    C --> D["Step 4: Excursion Sales Import (importSalesV4.xlsx)"]
+    B --> C{"Passengers Uploaded? (allPassengers.length > 0)"}
+    C -- Yes --> D["Step 3: Green Download Sale File Button Appears"]
+    C -- No --> E["Button Hidden / Unavailable until Rooming List Uploaded"]
+    D --> F["Step 4: Excursion Sales Import (importSalesV4.xlsx)"]
 ```
 
 ---
@@ -50,20 +52,22 @@ flowchart TD
   * **Projects Sheet**: Creates/resolves the Project (e.g. `PRJ-BVP1` / `Tests 20260829`).
   * **Tours Sheet**: Creates the Tour (`BVP05072026`) and automatically sets its initial status to **`Draft` (`TourStatusId = 1` / First Status on Dashboard)**.
   * **Rooming Sheet**: Imports all 30 Passengers, groups family bookings (`BKG-01` to `BKG-15`), assigns `Room Numbers`, maps `Pax Type` (`Adult`, `Children`, `Infant`), and attaches child badges.
-  * **Hotels Sheet**: Links the tour itinerary stays across Budapest, Vienna, and Prague.
 
 ---
 
-### 3️⃣ **STEP 3: Download Pre-populated Sales Template**
-> [!TIP]
-> After importing the Rooming List in Step 2, you can download a **pre-populated sales template** containing the exact passenger list for that specific tour!
+### 3️⃣ **STEP 3: Download Pre-populated Sales Template (Prerequisite: Rooming List Uploaded)**
+> [!IMPORTANT]
+> **Green Button Availability**: The green **`Download Sale File`** button will **ONLY** appear once the passenger rooming list has been uploaded and passengers exist for the tour (`allPassengers.length > 0`). If no rooming list has been uploaded yet, the download button is hidden.
 
-* **How to Download**:
-  1. Open the Tour Details page.
+* **How it Works**:
+  1. Once Rooming List passengers are uploaded in Step 2, navigate to the Tour Details page.
   2. Click the **Bookings** tab.
-  3. Click the green **`Download Sale File`** button next to the search input.
+  3. The green **`Download Sale File`** button is now visible next to the passenger search input.
 * **Output File**: Generates `{ProjectCode}_{TourCode}_importSales.xlsx` (e.g. `PRJ-BVP1_PVB05072026_importSales.xlsx`).
-* **Contents**: Pre-populates all passenger names (with red font + `(CHD)` badge for children) and interactive drop-down checkboxes (`☐` / `☑`) for every excursion.
+* **Detailed Passenger Pre-population**:
+  * Automatically populates **all passengers in full detail** row by row.
+  * Children under 18 are highlighted in **red font with a `(CHD)` badge**.
+  * Renders interactive drop-down checkboxes (`☐` / `☑`) for every excursion across all passengers.
 
 ---
 
@@ -87,8 +91,8 @@ When users ask the AI Assistant about Excel imports, the assistant references th
 | User Question | AI Assistant Answer |
 | :--- | :--- |
 | **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template_v2.xlsx` FIRST** under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
-| **"What file do I use for Rooming lists?"** | Use **`Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`**. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
-| **"Where do I get the Excursion Sales file?"** | Click the green **`Download Sale File`** button on the **Bookings** tab of the tour page. Fill the checkboxes (`☑`), then import it back via the **Services** tab. |
+| **"Why is the green Download Sale File button not showing?"** | The green **`Download Sale File` button ONLY appears after the Rooming List has been uploaded**. If no passengers exist for the tour, the button remains hidden until passenger data is imported. |
+| **"What happens when I click Download Sale File?"** | Once rooming list passengers are uploaded, clicking the green button generates an Excel file pre-populated with **all passengers in full detail** (with `(CHD)` badges for children) and interactive excursion checkboxes (`☐`/`☑`). |
 | **"What status will my imported tour have?"** | All imported tours automatically start at the **first dashboard status (`TourStatusId = 1` / Draft)**. |
 
 ---
