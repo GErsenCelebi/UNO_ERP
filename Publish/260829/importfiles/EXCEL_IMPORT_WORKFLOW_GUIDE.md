@@ -10,9 +10,9 @@ To ensure 100% data integrity without missing foreign key references, UNO ERP us
 
 📂 **Shared Drive Location**: `Shared Drive/UnoERP/ExcelImportFiles/`
 
-1. **`MasterData_Import_Template_v2.xlsx`** $\rightarrow$ *Master Data (Hotels, Guides, Transport, Drivers, Excursions)*
-2. **`Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`** $\rightarrow$ *Tour & Passenger Rooming List*
-3. **`Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx`** $\rightarrow$ *Excursion Sales & Base Services Report*
+1. **`MasterData_Import_Template.xlsx`** $\rightarrow$ *Master Data (Hotels, Guides, Transport, Drivers, Excursions)*
+2. **`Rooming_import_template.xlsx`** $\rightarrow$ *Tour & Passenger Rooming List*
+3. **`Sales_import_template.xlsx`** $\rightarrow$ *Excursion Sales & Base Services Report*
 
 ---
 
@@ -20,11 +20,11 @@ To ensure 100% data integrity without missing foreign key references, UNO ERP us
 
 ```mermaid
 flowchart TD
-    A["Step 1: Master Data Import (MasterData_Import_Template_v2.xlsx)"] --> B["Step 2: Tour & Rooming List Import (Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx)"]
+    A["Step 1: Master Data Import (MasterData_Import_Template.xlsx)"] --> B["Step 2: Tour & Rooming List Import (Rooming_import_template.xlsx)"]
     B --> C{"Passengers Uploaded? (allPassengers.length > 0)"}
     C -- Yes --> D["Step 3: Green Download Sale File Button Appears"]
     C -- No --> E["Button Hidden / Unavailable until Rooming List Uploaded"]
-    D --> F["Step 4: Excursion Sales Import (Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx)"]
+    D --> F["Step 4: Excursion Sales Import (Sales_import_template.xlsx)"]
 ```
 
 ---
@@ -33,8 +33,8 @@ flowchart TD
 > [!IMPORTANT]
 > **Why First?** Tours, hotels, excursion calculations, transport, and guide assignments rely on pre-existing Master Data. If you try to import a rooming file before importing hotels, the system will not be able to match hotel names or pricing rates.
 
-* **File Name**: `MasterData_Import_Template_v2.xlsx`
-* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/MasterData_Import_Template_v2.xlsx`
+* **File Name**: `MasterData_Import_Template.xlsx`
+* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/MasterData_Import_Template.xlsx`
 * **Target Screen**: Navigation Sidebar $\rightarrow$ **Master Data** $\rightarrow$ Click **Import Master Data** button.
 * **What it Imports**:
   * **Hotels Sheet**: Hotel Name, Location, Star Rating, **Pricing Basis (`Pax` vs `Room`)**, Single Room & Pax Rates, Double Room & Pax Rates, Twin Room & Pax Rates, Triple Room & Pax Rates, Contact Person, Email, and Phone.
@@ -49,8 +49,8 @@ flowchart TD
 > [!NOTE]
 > Once Master Data is loaded, you import the tour contract, project, and passenger rooming list.
 
-* **File Name**: `Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`
-* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`
+* **File Name**: `Rooming_import_template.xlsx`
+* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Rooming_import_template.xlsx`
 * **Target Screen**: Navigation Sidebar $\rightarrow$ **Tours** (or **Projects**) $\rightarrow$ Click **Import Rooming List**.
 * **What it Creates & Imports**:
   * **Projects Sheet**: Creates/resolves the Project (e.g. `PRJ-BVP1` / `Tests 20260829`).
@@ -79,14 +79,14 @@ flowchart TD
 > [!NOTE]
 > Follow these exact steps to import excursion sales and base services from an Excel file into UNO ERP.
 
-* **File Name**: `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` (or the downloaded sale file).
-* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx`
+* **File Name**: `Sales_import_template.xlsx` (or the downloaded sale file).
+* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Sales_import_template.xlsx`
 * **Target Screen**: Tour Details page $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales**.
 * **Step-by-Step Instructions**:
   1. Open the Tour Details page for your specific tour.
   2. Navigate to the **Services** tab.
   3. Click the **`Import Excursion Sales`** button.
-  4. Select `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`.
+  4. Select `Sales_import_template.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`.
   5. The system parses all checked checkboxes (`☑`), calculates total passenger attendance per excursion, creates Revenue and Expense lines for the tour, calculates Guide Commission (strictly 10% of excursion sales), and updates Base Services (Agency Fee, CityTax).
 
 ---
@@ -97,10 +97,10 @@ When users ask the AI Assistant about Excel imports, the assistant references th
 
 | User Question | AI Assistant Answer |
 | :--- | :--- |
-| **"How can I import sales excel file?"** | Open Tour Details $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales** and select `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`. Note: The rooming list must be uploaded first so passengers exist. |
-| **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template_v2.xlsx` FIRST** from `Shared Drive/UnoERP/ExcelImportFiles/` under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
+| **"How can I import sales excel file?"** | Open Tour Details $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales** and select `Sales_import_template.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`. Note: The rooming list must be uploaded first so passengers exist. |
+| **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template.xlsx` FIRST** from `Shared Drive/UnoERP/ExcelImportFiles/` under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
 | **"Where are the official import template files located?"** | All 3 official template files are stored on the shared drive: `Shared Drive/UnoERP/ExcelImportFiles/`. |
-| **"What file do I use for Rooming lists?"** | Use **`Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/`. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
+| **"What file do I use for Rooming lists?"** | Use **`Rooming_import_template.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/`. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
 | **"Why is the green Download Sale File button not showing?"** | The green **`Download Sale File` button ONLY appears after the Rooming List has been uploaded**. If no passengers exist for the tour, the button remains hidden until passenger data is imported. |
 
 ---
