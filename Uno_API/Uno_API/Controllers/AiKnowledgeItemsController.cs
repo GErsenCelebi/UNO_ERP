@@ -90,5 +90,24 @@ namespace Uno_API.Controllers
             var result = await indexer.IndexWorkspaceMarkdownFilesAsync();
             return Ok(result);
         }
+
+        // POST: api/AiKnowledgeItems/upload-md
+        [HttpPost("upload-md")]
+        public async Task<IActionResult> UploadMarkdownFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded");
+
+            if (!file.FileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Only Markdown (.md) files are supported");
+
+            using var reader = new StreamReader(file.OpenReadStream());
+            var content = await reader.ReadToEndAsync();
+
+            var indexer = new FileRepositoryIndexer(_context);
+            var itemsCount = await indexer.ParseAndSaveMarkdownSectionsAsync(file.FileName, content);
+
+            return Ok(new { Message = $"Successfully uploaded and parsed '{file.FileName}'!", ItemsIngested = itemsCount });
+        }
     }
 }

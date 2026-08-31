@@ -725,26 +725,59 @@ export default function MasterDataPage() {
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                     {activeTab === 'aiKnowledge' && (
-                      <button 
-                        onClick={async () => {
-                          setLoading(true);
-                          try {
-                            const res = await fetch(`${API}/aiknowledgeitems/sync-repository`, { method: 'POST' });
-                            if (res.ok) {
-                              const resultData = await res.json();
-                              alert(`Successfully synced Documentation Repository!\nProcessed ${resultData.totalFilesProcessed} markdown files and ingested ${resultData.totalKnowledgeItemsIngested} knowledge items into AppDB.`);
-                              fetchTabItems('aiKnowledge');
+                      <>
+                        <button 
+                          onClick={async () => {
+                            setLoading(true);
+                            try {
+                              const res = await fetch(`${API}/aiknowledgeitems/sync-repository`, { method: 'POST' });
+                              if (res.ok) {
+                                const resultData = await res.json();
+                                alert(`Successfully synced Documentation Repository!\nProcessed ${resultData.totalFilesProcessed} markdown files and ingested ${resultData.totalKnowledgeItemsIngested} knowledge items into AppDB.`);
+                                fetchTabItems('aiKnowledge');
+                              }
+                            } catch (err) {
+                              alert('Failed to sync documentation repository.');
+                            } finally {
+                              setLoading(false);
                             }
-                          } catch (err) {
-                            alert('Failed to sync documentation repository.');
-                          } finally {
-                            setLoading(false);
-                          }
-                        }}
-                        className="flex items-center px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Sync Documentation Repository
-                      </button>
+                          }}
+                          className="flex items-center px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs"
+                          title="Sync all .md files from UserManuals and repository into AI Knowledge Base"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Sync Repository (.md Files)
+                        </button>
+                        <label className="flex items-center px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs cursor-pointer" title="Upload custom .md file to automatically parse and add into AI Knowledge Base">
+                          <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload .md File
+                          <input 
+                            type="file" 
+                            accept=".md" 
+                            className="hidden" 
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setLoading(true);
+                              try {
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                const res = await fetch(`${API}/aiknowledgeitems/upload-md`, { method: 'POST', body: formData });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  alert(data.message || 'File uploaded successfully!');
+                                  fetchTabItems('aiKnowledge');
+                                } else {
+                                  const err = await res.text();
+                                  alert('Upload failed: ' + err);
+                                }
+                              } catch (err) {
+                                alert('Error uploading .md file.');
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                          />
+                        </label>
+                      </>
                     )}
                     <button onClick={() => openModal()} className="flex items-center px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs">
                       <Plus className="w-4 h-4 mr-1.5" /> Add {currentConfig.title}

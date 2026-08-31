@@ -196,7 +196,7 @@ namespace Uno_API.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task<int> ParseAndSaveMarkdownSectionsAsync(string fileName, string content)
+        public async Task<int> ParseAndSaveMarkdownSectionsAsync(string fileName, string content)
         {
             int count = 0;
             // Split content by Markdown headers (# or ##)
