@@ -1,6 +1,6 @@
 # 📘 UNO ERP - Comprehensive Excel Import Workflow & Step-by-Step Guide
 
-This guide details the complete Excel Import workflow in UNO ERP. It explains **which file must be imported first**, the mandatory sequence of steps, data dependencies, passenger list prerequisites, and how the AI Assistant helps users navigate the import process.
+This guide details the complete Excel Import workflow in UNO ERP. It explains **which file must be imported first**, the mandatory sequence of steps, data dependencies, passenger list prerequisites, and how to import sales Excel files.
 
 ---
 
@@ -29,7 +29,7 @@ flowchart TD
 
 ---
 
-### 1️⃣ **STEP 1 (ALWAYS FIRST): Master Data Import**
+## 1️⃣ **How to Import Master Data Excel File (STEP 1 - ALWAYS FIRST)**
 > [!IMPORTANT]
 > **Why First?** Tours, hotels, excursion calculations, transport, and guide assignments rely on pre-existing Master Data. If you try to import a rooming file before importing hotels, the system will not be able to match hotel names or pricing rates.
 
@@ -45,7 +45,7 @@ flowchart TD
 
 ---
 
-### 2️⃣ **STEP 2: Tour & Passenger Rooming List Import**
+## 2️⃣ **How to Import Tour & Rooming List Excel File (STEP 2)**
 > [!NOTE]
 > Once Master Data is loaded, you import the tour contract, project, and passenger rooming list.
 
@@ -59,14 +59,14 @@ flowchart TD
 
 ---
 
-### 3️⃣ **STEP 3: Download Pre-populated Sales Template (Prerequisite: Rooming List Uploaded)**
+## 3️⃣ **How to Download Pre-populated Sales Template**
 > [!IMPORTANT]
 > **Green Button Availability**: The green **`Download Sale File`** button will **ONLY** appear once the passenger rooming list has been uploaded and passengers exist for the tour (`allPassengers.length > 0`). If no rooming list has been uploaded yet, the download button is hidden.
 
-* **How it Works**:
-  1. Once Rooming List passengers are uploaded in Step 2, navigate to the Tour Details page.
+* **How to Download**:
+  1. Open the Tour Details page.
   2. Click the **Bookings** tab.
-  3. The green **`Download Sale File`** button is now visible next to the passenger search input.
+  3. Click the green **`Download Sale File`** button next to the search input.
 * **Output File**: Generates `{ProjectCode}_{TourCode}_importSales.xlsx` (e.g. `PRJ-BVP1_PVB05072026_importSales.xlsx`).
 * **Detailed Passenger Pre-population**:
   * Automatically populates **all passengers in full detail** row by row.
@@ -75,17 +75,19 @@ flowchart TD
 
 ---
 
-### 4️⃣ **STEP 4: Excursion Sales & Base Services Import**
+## 4️⃣ **How to Import Sales Excel File (Excursion Sales & Base Services)**
 > [!NOTE]
-> After the guide or tour leader marks which passengers attended which excursions, upload the completed sales file.
+> Follow these exact steps to import excursion sales and base services from an Excel file into UNO ERP.
 
 * **File Name**: `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` (or the downloaded sale file).
 * **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx`
 * **Target Screen**: Tour Details page $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales**.
-* **What it Calculates & Imports**:
-  * **ExcusionSales Sheet**: Parses `☑` checked boxes, calculates total quantities per excursion, creates Revenue and Expense lines for the tour.
-  * **Guide Commission**: **Strictly calculates 10% of total excursion sales**. If no excursions are sold (or total sales $= 0$), Guide Commission is strictly set to **€0.00**.
-  * **BaseServices Sheet**: Imports agency fees and city tax entries.
+* **Step-by-Step Instructions**:
+  1. Open the Tour Details page for your specific tour.
+  2. Navigate to the **Services** tab.
+  3. Click the **`Import Excursion Sales`** button.
+  4. Select `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`.
+  5. The system parses all checked checkboxes (`☑`), calculates total passenger attendance per excursion, creates Revenue and Expense lines for the tour, calculates Guide Commission (strictly 10% of excursion sales), and updates Base Services (Agency Fee, CityTax).
 
 ---
 
@@ -95,11 +97,11 @@ When users ask the AI Assistant about Excel imports, the assistant references th
 
 | User Question | AI Assistant Answer |
 | :--- | :--- |
+| **"How can I import sales excel file?"** | Open Tour Details $\rightarrow$ **Services** tab $\rightarrow$ Click **Import Excursion Sales** and select `Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`. Note: The rooming list must be uploaded first so passengers exist. |
 | **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template_v2.xlsx` FIRST** from `Shared Drive/UnoERP/ExcelImportFiles/` under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
 | **"Where are the official import template files located?"** | All 3 official template files are stored on the shared drive: `Shared Drive/UnoERP/ExcelImportFiles/`. |
 | **"What file do I use for Rooming lists?"** | Use **`Orta Avrupa -BVP_PVB05072026_importroomingV4.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/`. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
 | **"Why is the green Download Sale File button not showing?"** | The green **`Download Sale File` button ONLY appears after the Rooming List has been uploaded**. If no passengers exist for the tour, the button remains hidden until passenger data is imported. |
-| **"What file is used for Excursion Sales import?"** | Use **`Orta Avrupa -BVP_PVB05072026_importSalesV4.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/` (or click the green `Download Sale File` button on the Bookings tab). |
 
 ---
 

@@ -71,6 +71,17 @@ namespace Uno_API.Controllers
                     if (item.AnswerMarkdown.ToLower().Contains(term)) score += 1;
                 }
 
+                // Boost dedicated User Manuals & Workflow Guides over generic Release Notes
+                var source = item.SourceFile?.ToLower() ?? "";
+                if (source.Contains("guide") || source.Contains("usermanual") || item.Category == "User Manual")
+                {
+                    score += 6;
+                }
+                if (source.Contains("release_notes"))
+                {
+                    score -= 4;
+                }
+
                 if (score > maxMatchCount && score >= 4)
                 {
                     maxMatchCount = score;
