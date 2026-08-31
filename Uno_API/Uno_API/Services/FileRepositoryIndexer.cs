@@ -264,7 +264,7 @@ namespace Uno_API.Services
                 {
                     existing.Category = category;
                     existing.Keywords = keywords;
-                    existing.AnswerMarkdown = $"**{headerLine}** (Source: `{fileName}`)\n\n{bodyText}";
+                    existing.AnswerMarkdown = $"**{headerLine}**\n\n{bodyText}";
                     existing.TargetUrl = targetUrl;
                     existing.ActionLabel = actionLabel;
                     existing.UpdatedAt = DateTime.UtcNow;
@@ -278,7 +278,7 @@ namespace Uno_API.Services
                         Category = category,
                         QuestionPattern = questionPattern,
                         Keywords = keywords,
-                        AnswerMarkdown = $"**{headerLine}** (Source: `{fileName}`)\n\n{bodyText}",
+                        AnswerMarkdown = $"**{headerLine}**\n\n{bodyText}",
                         TargetUrl = targetUrl,
                         ActionLabel = actionLabel,
                         IsActive = true,
