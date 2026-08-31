@@ -779,9 +779,11 @@ export default function MasterDataPage() {
                         </label>
                       </>
                     )}
-                    <button onClick={() => openModal()} className="flex items-center px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs">
-                      <Plus className="w-4 h-4 mr-1.5" /> Add {currentConfig.title}
-                    </button>
+                    {activeTab !== 'aiKnowledge' && (
+                      <button onClick={() => openModal()} className="flex items-center px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all text-xs">
+                        <Plus className="w-4 h-4 mr-1.5" /> Add {currentConfig.title}
+                      </button>
+                    )}
                   </div>
                 </div>
 
