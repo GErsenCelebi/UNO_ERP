@@ -210,45 +210,56 @@ namespace Uno_API.Services
             foreach (var section in sections)
             {
                 var lines = section.Trim().Split('\n');
-                var headerLine = lines[0].Trim('#', ' ', '\r');
-                if (string.IsNullOrWhiteSpace(headerLine)) continue;
+                var rawHeader = lines[0].Trim('#', ' ', '\r');
+                if (string.IsNullOrWhiteSpace(rawHeader)) continue;
+
+                var cleanHeader = Regex.Replace(rawHeader, @"[\*#]", "").Trim();
 
                 var bodyText = string.Join("\n", lines.Skip(1)).Trim();
                 if (bodyText.Length < 20) continue; // Skip tiny sections
 
-                // Extract keywords from header and body
-                var rawKeywords = $"{headerLine} {fileName.Replace(".md", "")}"
-                    .ToLower()
-                    .Replace("#", "")
-                    .Replace("—", " ")
-                    .Replace("-", " ");
+                // Extract keywords from header, filename, and body
+                var rawKeywordsText = $"{cleanHeader} {fileName.Replace(".md", "")} {bodyText.Substring(0, Math.Min(bodyText.Length, 300))}"
+                    .ToLower();
 
-                var keywords = string.Join(", ", rawKeywords.Split(' ', StringSplitOptions.RemoveEmptyEntries).Distinct().Take(10));
+                var cleanedTerms = Regex.Replace(rawKeywordsText, @"[^\w\s]", " ")
+                    .Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Where(w => w.Length >= 3 && !w.All(char.IsDigit))
+                    .Distinct()
+                    .Take(25);
+
+                var keywords = string.Join(", ", cleanedTerms);
 
                 // Determine category and target URL
                 string category = "User Manual";
                 string? targetUrl = "/tours";
                 string? actionLabel = "View Tours Grid";
 
-                if (headerLine.Contains("Status", StringComparison.OrdinalIgnoreCase) || headerLine.Contains("Transition", StringComparison.OrdinalIgnoreCase))
+                if (cleanHeader.Contains("Excel", StringComparison.OrdinalIgnoreCase) || cleanHeader.Contains("Import", StringComparison.OrdinalIgnoreCase) || fileName.Contains("Import", StringComparison.OrdinalIgnoreCase))
+                {
+                    category = "Excel Import Guide";
+                    targetUrl = "/master-data";
+                    actionLabel = "Open Excel Import Hub";
+                }
+                else if (cleanHeader.Contains("Status", StringComparison.OrdinalIgnoreCase) || cleanHeader.Contains("Transition", StringComparison.OrdinalIgnoreCase))
                 {
                     category = "Process Flow";
                     targetUrl = "/tours";
                     actionLabel = "Tour Status Kanban";
                 }
-                else if (headerLine.Contains("Master Data", StringComparison.OrdinalIgnoreCase) || headerLine.Contains("Hotel", StringComparison.OrdinalIgnoreCase) || headerLine.Contains("Guide", StringComparison.OrdinalIgnoreCase))
+                else if (cleanHeader.Contains("Master Data", StringComparison.OrdinalIgnoreCase) || cleanHeader.Contains("Hotel", StringComparison.OrdinalIgnoreCase) || cleanHeader.Contains("Guide", StringComparison.OrdinalIgnoreCase))
                 {
                     category = "Master Data";
                     targetUrl = "/master-data";
                     actionLabel = "Open Master Data";
                 }
-                else if (headerLine.Contains("Governance", StringComparison.OrdinalIgnoreCase) || headerLine.Contains("Rule", StringComparison.OrdinalIgnoreCase))
+                else if (cleanHeader.Contains("Governance", StringComparison.OrdinalIgnoreCase) || cleanHeader.Contains("Rule", StringComparison.OrdinalIgnoreCase))
                 {
                     category = "Governance";
                     targetUrl = "/settings";
                     actionLabel = "Governance & Settings";
                 }
-                else if (headerLine.Contains("KPI", StringComparison.OrdinalIgnoreCase) || headerLine.Contains("Dashboard", StringComparison.OrdinalIgnoreCase))
+                else if (cleanHeader.Contains("KPI", StringComparison.OrdinalIgnoreCase) || cleanHeader.Contains("Dashboard", StringComparison.OrdinalIgnoreCase))
                 {
                     category = "KPI Proposal";
                     targetUrl = "/projects";
@@ -256,7 +267,7 @@ namespace Uno_API.Services
                 }
 
                 // Check existing record to update or insert
-                var questionPattern = $"How to {headerLine.ToLower()}?";
+                var questionPattern = $"How to {cleanHeader.ToLower()}?";
                 var existing = await _context.AiKnowledgeItems
                     .FirstOrDefaultAsync(k => k.SourceFile == fileName && k.QuestionPattern == questionPattern);
 
@@ -264,7 +275,7 @@ namespace Uno_API.Services
                 {
                     existing.Category = category;
                     existing.Keywords = keywords;
-                    existing.AnswerMarkdown = $"**{headerLine}**\n\n{bodyText}";
+                    existing.AnswerMarkdown = $"### {cleanHeader}\n\n{bodyText}";
                     existing.TargetUrl = targetUrl;
                     existing.ActionLabel = actionLabel;
                     existing.UpdatedAt = DateTime.UtcNow;
@@ -278,7 +289,7 @@ namespace Uno_API.Services
                         Category = category,
                         QuestionPattern = questionPattern,
                         Keywords = keywords,
-                        AnswerMarkdown = $"**{headerLine}**\n\n{bodyText}",
+                        AnswerMarkdown = $"### {cleanHeader}\n\n{bodyText}",
                         TargetUrl = targetUrl,
                         ActionLabel = actionLabel,
                         IsActive = true,
@@ -287,7 +298,6 @@ namespace Uno_API.Services
                     };
                     _context.AiKnowledgeItems.Add(newItem);
                 }
-
                 count++;
             }
 

@@ -177,7 +177,7 @@ namespace Uno_API.Controllers
             }
 
             // 4. Live AppDB Queries & Data Intelligence
-            else if (q.Contains("tour") || q.Contains("active tour") || q.Contains("how many tour") || q.Contains("summarize tour"))
+            else if ((q.Contains("how many tour") || q.Contains("summarize tour") || q.Contains("active tour count")) && !q.Contains("import") && !q.Contains("excel"))
             {
                 var tourCount = await _context.Tours.CountAsync();
                 var confirmedTours = await _context.Tours.Where(t => t.TourStatusId == 3).CountAsync();
