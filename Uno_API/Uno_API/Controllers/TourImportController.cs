@@ -57,16 +57,18 @@ namespace Uno_API.Controllers
             DateTime? endDate = null;
             int adults = 0, children = 0, infants = 0, pax = 0;
 
-            // Strategy A: Inspect "Tours" sheet if present
-            var wsTours = primaryWb.Worksheets.FirstOrDefault(w => w.Name.Equals("Tours", StringComparison.OrdinalIgnoreCase));
+            // Strategy A: Inspect "Tours" or "Tour" sheet if present
+            var wsTours = primaryWb.Worksheets.FirstOrDefault(w => 
+                w.Name.Equals("Tours", StringComparison.OrdinalIgnoreCase) || 
+                w.Name.Equals("Tour", StringComparison.OrdinalIgnoreCase) ||
+                w.Name.Equals("TourData", StringComparison.OrdinalIgnoreCase));
+
             if (wsTours != null && wsTours.RangeUsed() != null && wsTours.RowsUsed().Count() >= 2)
             {
                 var row2 = wsTours.Row(2);
                 var tCodeVal = row2.Cell(1).GetString().Trim();
                 var pCodeVal = row2.Cell(2).GetString().Trim();
                 var destVal = row2.Cell(3).GetString().Trim();
-                var arrDateVal = row2.Cell(4).GetString().Trim();
-                var endDateVal = row2.Cell(5).GetString().Trim();
 
                 if (!string.IsNullOrEmpty(tCodeVal)) tourCode = tCodeVal;
                 if (!string.IsNullOrEmpty(pCodeVal)) projectName = pCodeVal;
@@ -82,34 +84,40 @@ namespace Uno_API.Controllers
             }
 
             // Strategy B: Inspect "Projects" sheet if present
-            var wsProjects = primaryWb.Worksheets.FirstOrDefault(w => w.Name.Equals("Projects", StringComparison.OrdinalIgnoreCase));
+            var wsProjects = primaryWb.Worksheets.FirstOrDefault(w => 
+                w.Name.Equals("Projects", StringComparison.OrdinalIgnoreCase) ||
+                w.Name.Equals("Project", StringComparison.OrdinalIgnoreCase));
+
             if (wsProjects != null && wsProjects.RangeUsed() != null && wsProjects.RowsUsed().Count() >= 2)
             {
                 var pCodeVal = wsProjects.Row(2).Cell(1).GetString().Trim();
                 if (!string.IsNullOrEmpty(pCodeVal)) projectName = pCodeVal;
             }
 
-            // Strategy C: Inspect filename parts (e.g. "Orta Avrupa -BVP_PVB05072026_importSales" or "PRJ-BVP_PVB05072026_rooming")
-            if (!string.IsNullOrEmpty(primaryFileName))
+            // Strategy C: Inspect filename parts (e.g. "BVP28082026_rooming" or "Orta Avrupa -BVP_PVB05072026_importSales")
+            if (string.IsNullOrEmpty(tourCode) && !string.IsNullOrEmpty(primaryFileName))
             {
                 var parts = primaryFileName.Split('_');
-                if (parts.Length >= 2)
+                foreach (var part in parts)
                 {
-                    if (string.IsNullOrEmpty(projectName)) projectName = parts[0];
-                    if (string.IsNullOrEmpty(tourCode))
+                    var cleaned = part.Replace("importrooming", "", StringComparison.OrdinalIgnoreCase)
+                                      .Replace("importSales", "", StringComparison.OrdinalIgnoreCase)
+                                      .Replace("rooming", "", StringComparison.OrdinalIgnoreCase)
+                                      .Replace("sales", "", StringComparison.OrdinalIgnoreCase)
+                                      .Trim();
+
+                    if (!string.IsNullOrEmpty(cleaned) && cleaned.Length >= 3)
                     {
-                        tourCode = parts[1].Replace("tour", "", StringComparison.OrdinalIgnoreCase)
-                                           .Replace("rooming", "", StringComparison.OrdinalIgnoreCase)
-                                           .Replace("importMetadata", "", StringComparison.OrdinalIgnoreCase)
-                                           .Replace("importrooming", "", StringComparison.OrdinalIgnoreCase)
-                                           .Replace("importSales", "", StringComparison.OrdinalIgnoreCase)
-                                           .Replace("sales", "", StringComparison.OrdinalIgnoreCase)
-                                           .Trim();
+                        if (cleaned.Any(char.IsDigit) || cleaned.StartsWith("BVP", StringComparison.OrdinalIgnoreCase) || cleaned.StartsWith("PVB", StringComparison.OrdinalIgnoreCase) || cleaned.StartsWith("PRJ", StringComparison.OrdinalIgnoreCase))
+                        {
+                            tourCode = cleaned;
+                            break;
+                        }
                     }
                 }
-                else if (string.IsNullOrEmpty(tourCode))
+                if (string.IsNullOrEmpty(tourCode) && parts.Length >= 1)
                 {
-                    tourCode = primaryFileName.Trim();
+                    tourCode = parts[0].Trim();
                 }
             }
 
@@ -388,7 +396,11 @@ namespace Uno_API.Controllers
                 }
 
                 // Rooming Passengers
-                var wsRooming = wbRooming.Worksheets.FirstOrDefault(w => w.Name.Equals("Rooming", StringComparison.OrdinalIgnoreCase));
+                var wsRooming = wbRooming.Worksheets.FirstOrDefault(w => 
+                    w.Name.Equals("Rooming", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Rooms", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Room", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Passengers", StringComparison.OrdinalIgnoreCase));
                 if (wsRooming != null && wsRooming.RangeUsed() != null && wsRooming.RowsUsed().Count() >= 2)
                 {
                     // Clear existing Passengers and Bookings for this tour

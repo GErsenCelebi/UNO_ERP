@@ -252,12 +252,15 @@ function ExcelImportPanel() {
     formData.append('roomingFile', file);
     try {
       const res = await fetch('/api/tourimport/import', { method: 'POST', body: formData });
-      const data = await res.json();
+      let data: any;
+      const text = await res.text();
+      try { data = JSON.parse(text); } catch { data = text; }
       if (res.ok) {
         setSummary({ TourId: data.tourId, TourCode: data.tourCode, Pax: data.pax });
         setLogs(prev => [...prev, { msg: `🎉 Rooming Import Successful! Tour Code: ${data.tourCode} (Pax: ${data.pax})`, type: 'ok' }]);
       } else {
-        setLogs(prev => [...prev, { msg: `❌ Rooming Import Failed: ${data || 'Error'}`, type: 'err' }]);
+        const errorMsg = typeof data === 'string' ? data : (data?.error || data?.message || JSON.stringify(data));
+        setLogs(prev => [...prev, { msg: `❌ Rooming Import Failed: ${errorMsg}`, type: 'err' }]);
       }
     } catch (err: any) {
       setLogs(prev => [...prev, { msg: `💥 Error: ${err.message}`, type: 'err' }]);
@@ -273,12 +276,15 @@ function ExcelImportPanel() {
     formData.append('salesFile', file);
     try {
       const res = await fetch('/api/tourimport/import', { method: 'POST', body: formData });
-      const data = await res.json();
+      let data: any;
+      const text = await res.text();
+      try { data = JSON.parse(text); } catch { data = text; }
       if (res.ok) {
         setSummary({ TourId: data.tourId, TourCode: data.tourCode, Pax: data.pax });
         setLogs(prev => [...prev, { msg: `🎉 Sales Import Successful! Tour Code: ${data.tourCode} (Pax: ${data.pax})`, type: 'ok' }]);
       } else {
-        setLogs(prev => [...prev, { msg: `❌ Sales Import Failed: ${data || 'Error'}`, type: 'err' }]);
+        const errorMsg = typeof data === 'string' ? data : (data?.error || data?.message || JSON.stringify(data));
+        setLogs(prev => [...prev, { msg: `❌ Sales Import Failed: ${errorMsg}`, type: 'err' }]);
       }
     } catch (err: any) {
       setLogs(prev => [...prev, { msg: `💥 Error: ${err.message}`, type: 'err' }]);
