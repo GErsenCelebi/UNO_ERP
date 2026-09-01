@@ -100,7 +100,6 @@ namespace Uno_API.Services
                 {
                     "RELEASE_NOTES_2026_08_21.md",
                     "Uno_Tour_Status_Transition_Process_Flows.md",
-                    "user_manual.md",
                     "01_Project_Charter_and_Scope.md",
                     "README.md"
                 };
@@ -140,6 +139,50 @@ namespace Uno_API.Services
         {
             var troubleshootingFaqs = new List<AiKnowledgeItem>
             {
+                new AiKnowledgeItem
+                {
+                    SourceType = "SystemTroubleshooting",
+                    SourceFile = "excel_import_master_guide.md",
+                    Category = "Excel Import Guide",
+                    QuestionPattern = "How to import a new tour, new project, or rooming list via Excel template?",
+                    Keywords = "import, excel, tour, project, rooming, template, new tour, new project, existing project, filename, notation, sheet, columns, step, steps, how to",
+                    AnswerMarkdown = "### 📊 Complete Step-by-Step Excel Import Workflow Guide\n\n" +
+                        "Follow these exact filename conventions, sheet rules, and step-by-step procedures to import projects, tours, rooming lists, or master data into UNO ERP:\n\n" +
+                        "#### 📁 1. Filename Naming Conventions & Notation\n" +
+                        "1. **New or Existing Project + New Tour**: Use `{ProjectName}_{TourCode}_rooming.xlsx`\n" +
+                        "   * *Example*: `Project1_Tour1_rooming.xlsx` (or `Orta Avrupa BVP_BVP28082026_rooming.xlsx`)\n" +
+                        "2. **Existing Tour Rooming List Update**: Use `{TourCode}_rooming.xlsx`\n" +
+                        "   * *Example*: `Tour1_rooming.xlsx` (or `BVP28082026_rooming.xlsx`)\n" +
+                        "3. **Excursion Sales & Base Fees**: Use `{ProjectName}_{TourCode}_importSales.xlsx`\n" +
+                        "   * *Example*: `Project1_Tour1_importSales.xlsx`  \n" +
+                        "4. **Master Data Catalog**: Use `MasterData_Import_Template.xlsx`  \n\n" +
+                        "#### 📊 2. Required Sheet Names & Column Details\n" +
+                        "• **Sheet 1 (`Tours` / `Tour`)**: Col A: `Tour Code` (`Tour1`), Col B: `Project` (`Project1`), Col C: `Destination`, Col D: `Arrival Date`, Col E: `End Date`, Cols F-I: `Pax Counts`.\n" +
+                        "• **Sheet 2 (`Projects` / `Project`)**: Col A: `Project Code` (`Project1`), Col B: `Client Name` (`UNO DMC`).\n" +
+                        "• **Sheet 3 (`Rooming` / `Rooms` / `Passengers`)**: Col A: `Passenger Name`, Col B: `Gender`, Col C: `Pax Type`, Col D: `Booking Ref` (`BKG-01`), Col E: `Room Number` (`101`), Col F: `Room Type` (`Single`/`Double`/`Twin`/`Triple`).\n" +
+                        "• **Sheet 4 (`Hotels` - Master Data)**: Hotel Name, Location, Star Rating, Nightly Room & Pax Rates, Pricing Basis.\n\n" +
+                        "#### 🛠️ 3. Step-by-Step Import Scenarios\n\n" +
+                        "**Scenario A: NEW Tour for a NEW Project**\n" +
+                        "1. Name file `Project1_Tour1_rooming.xlsx`.\n" +
+                        "2. In sheet `Projects`, set Col A = `Project1`, Col B = `Client Name`.\n" +
+                        "3. In sheet `Tours`, set Col A = `Tour1`, Col B = `Project1`.\n" +
+                        "4. Go to **Tours** or **Projects** screen → Click **Import Rooming List** → Upload file.\n" +
+                        "5. *Result*: Creates `Project1` on the fly (`Active` status), creates `Tour1` in **`Draft`** status, and imports all rooming passengers.\n\n" +
+                        "**Scenario B: NEW Tour for an EXISTING Project**\n" +
+                        "1. Name file `Project1_Tour1_rooming.xlsx` (or set `Tours` sheet Col B = `Project1`).\n" +
+                        "2. Click **Import Rooming List** → Upload file.\n" +
+                        "3. *Result*: Matches existing project `Project1`, creates `Tour1` in **`Draft`** status, and binds `Tour1` under `Project1`.\n\n" +
+                        "**Scenario C: EXISTING Tour Rooming Refresh**\n" +
+                        "1. Name file `Tour1_rooming.xlsx`.\n" +
+                        "2. Click **Import Rooming List** → Upload file.\n" +
+                        "3. *Result*: Refreshes passenger rooming list and pax counts, preserving all existing hotel & guide service lines.\n\n" +
+                        "**Scenario D: NEW vs EXISTING Master Data (Hotels, Guides, Transport)**\n" +
+                        "1. Go to **Master Data** screen → Click **Import Master Data** → Select `MasterData_Import_Template.xlsx`.\n" +
+                        "2. *Result*: Creates new supplier records or updates existing contract rates without duplicating records.",
+                    TargetUrl = "/master-data",
+                    ActionLabel = "Open Excel Import Hub",
+                    IsActive = true
+                },
                 new AiKnowledgeItem
                 {
                     SourceType = "SystemTroubleshooting",

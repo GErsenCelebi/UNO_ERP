@@ -1,111 +1,107 @@
-# 📘 UNO ERP - Comprehensive Excel Import Workflow & Step-by-Step Guide
+# 📊 Complete Step-by-Step Excel Import Workflow Guide (UNO ERP)
 
-This guide details the complete Excel Import workflow in UNO ERP. It explains **which file must be imported first**, the mandatory sequence of steps, data dependencies, passenger list prerequisites, and how to import sales Excel files.
-
----
-
-## 🎯 **Overview of the 3 Official Import Files**
-
-To ensure 100% data integrity without missing foreign key references, UNO ERP uses **exactly 3 official template files** located on the shared drive:
-
-📂 **Shared Drive Location**: `Shared Drive/UnoERP/ExcelImportFiles/`
-
-1. **`MasterData_Import_Template.xlsx`** → *Master Data (Hotels, Guides, Transport, Drivers, Excursions)*
-2. **`Rooming_import_template.xlsx`** → *Tour & Passenger Rooming List*
-3. **`Sales_import_template.xlsx`** → *Excursion Sales & Base Services Report*
+This official guide explains how to import Excel files into UNO ERP for all scenarios (New Projects, Existing Projects, New Tours, Existing Tours, Rooming Lists, Master Data, and Excursion Sales).
 
 ---
 
-## 🔄 **Mandatory Step-by-Step Import Workflow**
+## 📁 1. Filename Naming Conventions & Notation
 
-```mermaid
-flowchart TD
-    A["Step 1: Master Data Import (MasterData_Import_Template.xlsx)"] --> B["Step 2: Tour & Rooming List Import (Rooming_import_template.xlsx)"]
-    B --> C{"Passengers Uploaded? (allPassengers.length > 0)"}
-    C -- Yes --> D["Step 3: Green Download Sale File Button Appears"]
-    C -- No --> E["Button Hidden / Unavailable until Rooming List Uploaded"]
-    D --> F["Step 4: Excursion Sales Import (Sales_import_template.xlsx)"]
-```
+Follow these exact filename patterns so UNO ERP can automatically identify your Project and Tour:
 
----
-
-## 1️⃣ **How to Import Master Data Excel File (STEP 1 - ALWAYS FIRST)**
-> [!IMPORTANT]
-> **Why First?** Tours, hotels, excursion calculations, transport, and guide assignments rely on pre-existing Master Data. If you try to import a rooming file before importing hotels, the system will not be able to match hotel names or pricing rates.
-
-* **File Name**: `MasterData_Import_Template.xlsx`
-* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/MasterData_Import_Template.xlsx`
-* **Target Screen**: Navigation Sidebar → **Master Data** → Click **Import Master Data** button.
-* **What it Imports**:
-  * **Hotels Sheet**: Hotel Name, Location, Star Rating, **Pricing Basis (`Pax` vs `Room`)**, Single Room & Pax Rates, Double Room & Pax Rates, Twin Room & Pax Rates, Triple Room & Pax Rates, Contact Person, Email, and Phone.
-  * **Guides Sheet**: Guide Names, Languages spoken, Daily Rates, Phone Numbers.
-  * **Transport Sheet**: Bus/Transport Companies, Daily Rates, Fleet Size, Contact Details.
-  * **Drivers Sheet**: Driver Names, Assigned Transport Companies, Phone Numbers, Daily Rates.
-  * **Excursions Sheet**: Excursion Names, Cities, Vendor Names, Adult/Child Costs, and Selling Prices.
+1. **New or Existing Project + New Tour**:
+   * **Notation Pattern**: `{ProjectName}_{TourCode}_rooming.xlsx`
+   * **Example**: **`Project1_Tour1_rooming.xlsx`** *(or `Orta Avrupa BVP_BVP28082026_rooming.xlsx`)*
+2. **Existing Tour Rooming List Update**:
+   * **Notation Pattern**: `{TourCode}_rooming.xlsx`
+   * **Example**: **`Tour1_rooming.xlsx`** *(or `BVP28082026_rooming.xlsx`)*
+3. **Excursion Sales & Base Fees**:
+   * **Notation Pattern**: `{ProjectName}_{TourCode}_importSales.xlsx`
+   * **Example**: **`Project1_Tour1_importSales.xlsx`**
+4. **Master Data Catalog**:
+   * **Notation Pattern**: `MasterData_Import_Template.xlsx`
 
 ---
 
-## 2️⃣ **How to Import Tour & Rooming List Excel File (STEP 2)**
-> [!NOTE]
-> Once Master Data is loaded, you import the tour contract, project, and passenger rooming list.
+## 📊 2. Required Worksheet Names & Column Details
 
-* **File Name**: `Rooming_import_template.xlsx`
-* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Rooming_import_template.xlsx`
-* **Target Screen**: Navigation Sidebar → **Tours** (or **Projects**) → Click **Import Rooming List**.
-* **What it Creates & Imports**:
-  * **Projects Sheet**: Creates/resolves the Project (e.g. `PRJ-BVP1` / `Tests 20260829`).
-  * **Tours Sheet**: Creates the Tour (`BVP05072026`) and automatically sets its initial status to **`Draft` (`TourStatusId = 1` / First Status on Dashboard)**.
-  * **Rooming Sheet**: Imports all 30 Passengers, groups family bookings (`BKG-01` to `BKG-15`), assigns `Room Numbers`, maps `Pax Type` (`Adult`, `Children`, `Infant`), and attaches child badges.
+### 🔹 **Sheet A: `Tours` (or `Tour`, `tour`, `tours`, `TourData`)**
+* **Col A (`Cell 1`)**: `Tour Code` (e.g. `Tour1` or `BVP28082026`). *[Required]*
+* **Col B (`Cell 2`)**: `Project Code / Name` (e.g. `Project1` or `Orta Avrupa BVP`).
+* **Col C (`Cell 3`)**: `Destination` (e.g. `Prague-Vienna-Budapest`).
+* **Col D (`Cell 4`)**: `Arrival Date` (e.g. `28.08.2026`).
+* **Col E (`Cell 5`)**: `End Date` (e.g. `04.09.2026`).
+* **Col F-I (`Cells 6-9`)**: `Adults`, `Children`, `Infants`, `Pax`.
 
----
+### 🔹 **Sheet B: `Projects` (or `Project`, `project`, `projects`)**
+* **Col A (`Cell 1`)**: `Project Code / Name` (e.g. `Project1`).
+* **Col B (`Cell 2`)**: `Client Name` (e.g. `UNO DMC`).
 
-## 3️⃣ **How to Download Pre-populated Sales Template**
-> [!IMPORTANT]
-> **Green Button Availability**: The green **`Download Sale File`** button will **ONLY** appear once the passenger rooming list has been uploaded and passengers exist for the tour (`allPassengers.length > 0`). If no rooming list has been uploaded yet, the download button is hidden.
+### 🔹 **Sheet C: `Rooming` (or `Rooms`, `rooming`, `rooms`, `Passengers`)**
+* **Col A (`Cell 1`)**: `Passenger Full Name` (e.g. `John Doe`).
+* **Col B (`Cell 2`)**: `Gender` (`M` / `F`).
+* **Col C (`Cell 3`)**: `Pax Type` (`Adult`, `Child` / `CHD`, `Infant`).
+* **Col D (`Cell 4`)**: `Booking Ref` (e.g. `BKG-01`, `BKG-02`).
+* **Col E (`Cell 5`)**: `Room Number` (e.g. `101`, `102`).
+* **Col F (`Cell 6`)**: `Room Type` (`Single`, `Double`, `Twin`, `Triple`).
 
-* **How to Download**:
-  1. Open the Tour Details page.
-  2. Click the **Bookings** tab.
-  3. Click the green **`Download Sale File`** button next to the search input.
-* **Output File**: Generates `{ProjectCode}_{TourCode}_importSales.xlsx` (e.g. `PRJ-BVP1_PVB05072026_importSales.xlsx`).
-* **Detailed Passenger Pre-population**:
-  * Automatically populates **all passengers in full detail** row by row.
-  * Children under 18 are highlighted in **red font with a `(CHD)` badge**.
-  * Renders interactive drop-down checkboxes (`☐` / `☑`) for every excursion across all passengers.
+### 🔹 **Sheet D: `Flights`**
+* **Row 2**: Arrival Flight No (`Cell 1`), Arrival Airport (`Cell 3`), Arrival Date (`Cell 4`).
+* **Row 3**: Departure Flight No (`Cell 1`), Departure Airport (`Cell 2`), Departure Date (`Cell 4`).
 
----
-
-## 4️⃣ **How to Import Sales Excel File (Excursion Sales & Base Services)**
-> [!NOTE]
-> Follow these exact steps to import excursion sales and base services from an Excel file into UNO ERP.
-
-* **File Name**: `Sales_import_template.xlsx` (or the downloaded sale file).
-* **File Location**: `Shared Drive/UnoERP/ExcelImportFiles/Sales_import_template.xlsx`
-* **Target Screen**: Tour Details page → **Services** tab → Click **Import Excursion Sales**.
-* **Step-by-Step Instructions**:
-  1. Open the Tour Details page for your specific tour.
-  2. Navigate to the **Services** tab.
-  3. Click the **`Import Excursion Sales`** button.
-  4. Select `Sales_import_template.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`.
-  5. The system parses all checked checkboxes (`☑`), calculates total passenger attendance per excursion, creates Revenue and Expense lines for the tour, calculates Guide Commission (strictly 10% of excursion sales), and updates Base Services (Agency Fee, CityTax).
+### 🔹 **Sheet E: `Hotels` (Master Data Catalog)**
+* **Col A**: Hotel Name | **Col B**: Location | **Col C**: Star Rating | **Col D**: Contact Name | **Col E**: Role | **Col F**: Email | **Col G**: Phone | **Cols H-O**: Nightly Room & Pax Rates (Single, Double, Twin, Triple) | **Col P**: Pricing Basis (`Pax` vs `Room`).
 
 ---
 
-## 🤖 **AI Assistant Query Quick Reference**
+## 🛠️ 3. Detailed Step-by-Step Import Scenarios
 
-When users ask the AI Assistant about Excel imports, the assistant references the following rules:
-
-| User Question | AI Assistant Answer |
-| :--- | :--- |
-| **"How can I import sales excel file?"** | Open Tour Details → **Services** tab → Click **Import Excursion Sales** and select `Sales_import_template.xlsx` from `Shared Drive/UnoERP/ExcelImportFiles/`. Note: The rooming list must be uploaded first so passengers exist. |
-| **"Which Excel file do I import first?"** | You MUST import **`MasterData_Import_Template.xlsx` FIRST** from `Shared Drive/UnoERP/ExcelImportFiles/` under the Master Data menu to establish hotels, rates, guides, and excursions before importing tours. |
-| **"Where are the official import template files located?"** | All 3 official template files are stored on the shared drive: `Shared Drive/UnoERP/ExcelImportFiles/`. |
-| **"What file do I use for Rooming lists?"** | Use **`Rooming_import_template.xlsx`** from `Shared Drive/UnoERP/ExcelImportFiles/`. It creates the project, sets the tour status to **Draft**, and imports passengers with room numbers. |
-| **"Why is the green Download Sale File button not showing?"** | The green **`Download Sale File` button ONLY appears after the Rooming List has been uploaded**. If no passengers exist for the tour, the button remains hidden until passenger data is imported. |
+### **Scenario 1: How to Import a NEW Tour for a NEW Project**
+1. **Filename**: Name your file **`Project1_Tour1_rooming.xlsx`**.
+2. **Projects Sheet**: In sheet `Projects`, set Col A = `Project1`, Col B = `Client Name`.
+3. **Tours Sheet**: In sheet `Tours`, set Col A = `Tour1`, Col B = `Project1`, Col C = `Prague`, Col D = `28.08.2026`.
+4. **Rooming Sheet**: In sheet `Rooming`, list passenger names, booking references (`BKG-01`), room numbers (`101`), and pax types.
+5. **Execution**: Go to **Tours** or **Projects** screen → Click **Import Rooming List** → Select file.
+6. **Result**:
+   * UNO ERP automatically creates **`Project1`** on the fly with status **`Active`**.
+   * UNO ERP creates **`Tour1`** linked to `Project1` and initializes status to **`Draft`** (first Kanban column).
+   * All passengers and family rooming bookings are attached.
 
 ---
 
-## 📁 **Shared Drive Storage Location**
+### **Scenario 2: How to Import a NEW Tour for an EXISTING Project**
+1. **Filename**: Name your file **`Project1_Tour1_rooming.xlsx`** (or set `Tours` sheet Col B = `Project1`).
+2. **Tours Sheet**: Set Col A = `Tour1`, Col B = `Project1`.
+3. **Execution**: Click **Import Rooming List** → Select file.
+4. **Result**:
+   * UNO ERP searches the database, matches existing project **`Project1`**, creates **`Tour1`** in **`Draft`** status, and binds `Tour1` directly under `Project1`.
 
-All official import templates are preserved in:
-* **Shared Drive Directory**: `Shared Drive/UnoERP/ExcelImportFiles/`
+---
+
+### **Scenario 3: How to Import / Refresh Rooming Data for an EXISTING Tour**
+1. **Filename**: Name your file **`Tour1_rooming.xlsx`** (or `BVP28082026_rooming.xlsx`).
+2. **Rooming Sheet**: Update passenger names, room numbers (`101`, `102`), or booking codes.
+3. **Execution**: Click **Import Rooming List** → Select file.
+4. **Result**:
+   * UNO ERP matches existing tour **`Tour1`**.
+   * Refreshes passenger rooming list and passenger counts (`Pax`, `Adults`, `Children`).
+   * **Preserves all existing hotel accommodation lines, guide assignments, and transport services** attached to the tour.
+
+---
+
+### **Scenario 4: How to Import NEW vs EXISTING Master Data (Hotels, Guides, Transport, Excursions)**
+1. **Filename**: Name your file **`MasterData_Import_Template.xlsx`**.
+2. **Worksheets**: Fill `Hotels`, `Guides`, `Transport`, `Drivers`, `Excursions` sheets.
+3. **Execution**: Go to **Master Data** screen → Click **Import Master Data** → Select file.
+4. **Result**:
+   * **For NEW Items**: Creates new supplier records in the Master Data catalog.
+   * **For EXISTING Items**: Updates contract rates, contact numbers, or star ratings without duplicating records.
+
+---
+
+### **Scenario 5: How to Import Excursion Sales for an EXISTING Tour**
+1. **Prerequisite**: Rooming list must already be uploaded so passenger IDs exist.
+2. **Filename**: Download template **`Project1_Tour1_importSales.xlsx`** from Tour Detail page.
+3. **Sales Sheet**: Mark excursion checkboxes (`☑`) for participating passengers.
+4. **Execution**: Click **Import Tour Sales & Base Services** → Select file.
+5. **Result**:
+   * Creates optional excursion sales lines and calculates 10% guide commission and net operator revenue.
