@@ -57,7 +57,9 @@ namespace Uno_API.Controllers
             DateTime? endDate = null;
             int adults = 0, children = 0, infants = 0, pax = 0;
 
-            // Strategy A: Inspect "Tours" or "Tour" sheet if present
+            // ---------------------------------------------------------
+            // Tier 1: Known Worksheet Inspection ("Tours", "Tour", "Projects", "Project")
+            // ---------------------------------------------------------
             var wsTours = primaryWb.Worksheets.FirstOrDefault(w => 
                 w.Name.Equals("Tours", StringComparison.OrdinalIgnoreCase) || 
                 w.Name.Equals("Tour", StringComparison.OrdinalIgnoreCase) ||
@@ -83,7 +85,6 @@ namespace Uno_API.Controllers
                 int.TryParse(row2.Cell(9).GetString().Trim(), out pax);
             }
 
-            // Strategy B: Inspect "Projects" sheet if present
             var wsProjects = primaryWb.Worksheets.FirstOrDefault(w => 
                 w.Name.Equals("Projects", StringComparison.OrdinalIgnoreCase) ||
                 w.Name.Equals("Project", StringComparison.OrdinalIgnoreCase));
@@ -94,10 +95,12 @@ namespace Uno_API.Controllers
                 if (!string.IsNullOrEmpty(pCodeVal)) projectName = pCodeVal;
             }
 
-            // Strategy C: Inspect filename parts (e.g. "BVP28082026_rooming" or "Orta Avrupa -BVP_PVB05072026_importSales")
-            if (string.IsNullOrEmpty(tourCode) && !string.IsNullOrEmpty(primaryFileName))
+            // ---------------------------------------------------------
+            // Tier 2: Filename Inspection (Split by '_' or '-')
+            // ---------------------------------------------------------
+            if (!string.IsNullOrEmpty(primaryFileName))
             {
-                var parts = primaryFileName.Split('_');
+                var parts = primaryFileName.Split(new[] { '_', '-' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var part in parts)
                 {
                     var cleaned = part.Replace("importrooming", "", StringComparison.OrdinalIgnoreCase)
@@ -108,22 +111,82 @@ namespace Uno_API.Controllers
 
                     if (!string.IsNullOrEmpty(cleaned) && cleaned.Length >= 3)
                     {
-                        if (cleaned.Any(char.IsDigit) || cleaned.StartsWith("BVP", StringComparison.OrdinalIgnoreCase) || cleaned.StartsWith("PVB", StringComparison.OrdinalIgnoreCase) || cleaned.StartsWith("PRJ", StringComparison.OrdinalIgnoreCase))
+                        if (string.IsNullOrEmpty(tourCode) && (cleaned.Any(char.IsDigit) || cleaned.StartsWith("BVP", StringComparison.OrdinalIgnoreCase) || cleaned.StartsWith("PVB", StringComparison.OrdinalIgnoreCase) || cleaned.StartsWith("PRJ", StringComparison.OrdinalIgnoreCase)))
                         {
                             tourCode = cleaned;
-                            break;
+                        }
+                        else if (string.IsNullOrEmpty(projectName) && !cleaned.Any(char.IsDigit))
+                        {
+                            projectName = cleaned;
                         }
                     }
                 }
-                if (string.IsNullOrEmpty(tourCode) && parts.Length >= 1)
+            }
+
+            // ---------------------------------------------------------
+            // Tier 3: Deep Scan ALL Worksheets (Scan rows 1-5 for headers)
+            // ---------------------------------------------------------
+            if (string.IsNullOrEmpty(tourCode) || string.IsNullOrEmpty(projectName))
+            {
+                foreach (var ws in primaryWb.Worksheets)
                 {
-                    tourCode = parts[0].Trim();
+                    if (ws.RangeUsed() == null) continue;
+                    int maxHeaderRow = Math.Min(ws.RowsUsed().Count(), 5);
+
+                    for (int r = 1; r <= maxHeaderRow; r++)
+                    {
+                        var row = ws.Row(r);
+                        int lastCol = Math.Min(row.LastCellUsed()?.Address.ColumnNumber ?? 1, 20);
+
+                        for (int c = 1; c <= lastCol; c++)
+                        {
+                            var headerVal = row.Cell(c).GetString().Trim();
+                            if (string.IsNullOrEmpty(headerVal)) continue;
+
+                            // Check for Tour Code header
+                            if (string.IsNullOrEmpty(tourCode) && (
+                                headerVal.Equals("Tour Code", StringComparison.OrdinalIgnoreCase) ||
+                                headerVal.Equals("TourCode", StringComparison.OrdinalIgnoreCase) ||
+                                headerVal.Equals("Tour", StringComparison.OrdinalIgnoreCase) ||
+                                headerVal.Equals("Tour No", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                var valBelow = ws.Row(r + 1).Cell(c).GetString().Trim();
+                                if (!string.IsNullOrEmpty(valBelow)) tourCode = valBelow;
+                            }
+
+                            // Check for Project header
+                            if (string.IsNullOrEmpty(projectName) && (
+                                headerVal.Equals("Project", StringComparison.OrdinalIgnoreCase) ||
+                                headerVal.Equals("Project Code", StringComparison.OrdinalIgnoreCase) ||
+                                headerVal.Equals("Project Name", StringComparison.OrdinalIgnoreCase) ||
+                                headerVal.Equals("ProjectCode", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                var valBelow = ws.Row(r + 1).Cell(c).GetString().Trim();
+                                if (!string.IsNullOrEmpty(valBelow)) projectName = valBelow;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(tourCode) && !string.IsNullOrEmpty(projectName)) break;
+                    }
+
+                    if (!string.IsNullOrEmpty(tourCode) && !string.IsNullOrEmpty(projectName)) break;
                 }
             }
 
+            // ---------------------------------------------------------
+            // Tier 4: Clear Diagnostic Error if Tour Code is missing
+            // ---------------------------------------------------------
             if (string.IsNullOrEmpty(tourCode))
             {
-                return BadRequest("Could not identify Tour Code from uploaded file.");
+                var sheetNames = string.Join(", ", primaryWb.Worksheets.Select(w => $"'{w.Name}'"));
+                return BadRequest(new { 
+                    error = $"❌ Could not identify Tour Code from uploaded file '{primaryFileName}'.\n\n" +
+                            $"• Scanned Worksheets: [{sheetNames}]\n" +
+                            $"• Scanned Filename: '{primaryFileName}'\n\n" +
+                            $"Please check:\n" +
+                            $"1. Ensure your Excel file name includes the Tour Code (e.g. 'BVP28082026_rooming.xlsx'), OR\n" +
+                            $"2. Ensure one worksheet ('Tours' or 'Rooming') has a 'Tour Code' column header with the tour code value in row 2."
+                });
             }
 
             // 2. Resolve Project robustly (by Code or Description)
@@ -139,12 +202,26 @@ namespace Uno_API.Controllers
 
             if (project == null)
             {
-                project = await _context.Projects.FirstOrDefaultAsync();
-                if (project == null)
+                if (!string.IsNullOrEmpty(projectName))
                 {
-                    project = new Project { ProjectCode = "PRJ-DEFAULT", Description = "Default Project", ProjectStatusId = 3, ClientId = client.Id };
+                    project = new Project { 
+                        ProjectCode = projectName.Length > 20 ? projectName.Substring(0, 20).Replace(" ", "") : projectName, 
+                        Description = projectName, 
+                        ProjectStatusId = 3, 
+                        ClientId = client.Id 
+                    };
                     _context.Projects.Add(project);
                     await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    project = await _context.Projects.FirstOrDefaultAsync();
+                    if (project == null)
+                    {
+                        project = new Project { ProjectCode = "PRJ-DEFAULT", Description = "Default Project", ProjectStatusId = 3, ClientId = client.Id };
+                        _context.Projects.Add(project);
+                        await _context.SaveChangesAsync();
+                    }
                 }
             }
 
