@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Rewrite;
 using System.Text.Json.Serialization;
 using Uno_API.Data;
+using Uno_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<UnoDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IStorageService, StorageService>();
+builder.Services.AddHostedService<StorageMigrationService>();
 
 // Configure CORS for Next.js UI
 builder.Services.AddCors(options =>

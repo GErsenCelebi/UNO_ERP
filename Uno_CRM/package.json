@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 8000",
     "build": "next build",
+    "postbuild": "powershell -Command \"Copy-Item -Path 'out\\*' -Destination '../Uno_API/Uno_API/wwwroot' -Recurse -Force; Write-Host 'Successfully synced out to wwwroot'\"",
     "start": "next start -p 8000",
     "lint": "next lint"
   },

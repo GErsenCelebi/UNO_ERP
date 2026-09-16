@@ -4,6 +4,7 @@ using ClosedXML.Excel;
 using System.IO;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
@@ -12,10 +13,12 @@ namespace Uno_API.Controllers
     public class ToursController : ControllerBase
     {
         private readonly UnoDbContext _context;
+        private readonly IStorageService _storageService;
 
-        public ToursController(UnoDbContext context)
+        public ToursController(UnoDbContext context, IStorageService storageService)
         {
             _context = context;
+            _storageService = storageService;
         }
 
         // GET: api/Tours?projectId=1
@@ -138,6 +141,11 @@ namespace Uno_API.Controllers
             _context.Tours.Add(tour);
             await _context.SaveChangesAsync();
 
+            // Ensure tour storage folder is created automatically
+            var parentProject = await _context.Projects.FirstOrDefaultAsync(p => p.Id == tour.ProjectId);
+            string projCode = parentProject?.ProjectCode ?? "General-Projects";
+            _storageService.EnsureTourFolders(projCode, tour.TourCode);
+
             return CreatedAtAction(nameof(GetTour), new { id = tour.Id }, tour);
         }
 
@@ -179,6 +187,10 @@ namespace Uno_API.Controllers
 
             existingTour.BaseFee = (existingTour.Adults * existingTour.AdultRate) + (existingTour.Children * existingTour.ChildRate) + (existingTour.Infants * existingTour.InfantRate);
 
+            // Ensure updated tour storage folder exists
+            var updatedProject = await _context.Projects.FirstOrDefaultAsync(p => p.Id == existingTour.ProjectId);
+            string updatedProjCode = updatedProject?.ProjectCode ?? "General-Projects";
+            _storageService.EnsureTourFolders(updatedProjCode, existingTour.TourCode);
             try
             {
                 await _context.SaveChangesAsync();

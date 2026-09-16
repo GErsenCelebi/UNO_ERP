@@ -1,4 +1,4 @@
-const isBuild = process.env.NEXT_BUILD === 'true';
+const isBuild = process.env.NEXT_BUILD === 'true' || process.env.NODE_ENV === 'production' || process.argv.some(arg => arg.includes('build'));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

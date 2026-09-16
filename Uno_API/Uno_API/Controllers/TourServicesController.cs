@@ -58,10 +58,38 @@ namespace Uno_API.Controllers
                 return BadRequest("Invalid TourId. Tour does not exist.");
             }
 
+            // Auto-calculate TotalNights if dates provided and TotalNights is null/0
+            if ((!tourService.TotalNights.HasValue || tourService.TotalNights.Value <= 0) &&
+                tourService.ServiceDate.HasValue && tourService.ServiceEndDate.HasValue)
+            {
+                var diff = (tourService.ServiceEndDate.Value.Date - tourService.ServiceDate.Value.Date).Days;
+                if (diff > 0) tourService.TotalNights = diff;
+            }
+
             // Auto-calculate TotalAmount if 0 or not provided
             if (tourService.TotalAmount == 0)
             {
-                tourService.TotalAmount = tourService.Quantity * tourService.UnitPrice;
+                if (tourService.ServiceCategoryId == 1 && tourService.RoomCount.HasValue && tourService.RoomCount > 0)
+                {
+                    int paxPerRoom = tourService.PricingBasis == "Room" ? 1 :
+                        (tourService.RoomType?.Contains("Triple", StringComparison.OrdinalIgnoreCase) == true ||
+                         tourService.RoomType?.Contains("DBL+EB", StringComparison.OrdinalIgnoreCase) == true ? 3 :
+                         (tourService.RoomType?.Contains("Single", StringComparison.OrdinalIgnoreCase) == true ? 1 : 2));
+
+                    decimal nights = tourService.TotalNights.HasValue && tourService.TotalNights > 0
+                        ? tourService.TotalNights.Value
+                        : (tourService.Quantity > 0 ? tourService.Quantity : 1);
+
+                    tourService.TotalAmount = tourService.RoomCount.Value * paxPerRoom * nights * tourService.UnitPrice;
+                    if (tourService.DiscountAmount.HasValue && tourService.DiscountAmount.Value > 0)
+                    {
+                        tourService.TotalAmount = Math.Max(0, tourService.TotalAmount - tourService.DiscountAmount.Value);
+                    }
+                }
+                else
+                {
+                    tourService.TotalAmount = tourService.Quantity * tourService.UnitPrice;
+                }
             }
 
             // Default ServiceCategoryId if not supplied
@@ -86,11 +114,38 @@ namespace Uno_API.Controllers
                 return BadRequest();
             }
 
-            // Auto-calculate TotalNights
+            // Auto-calculate TotalNights if dates provided and TotalNights is null/0
+            if ((!tourService.TotalNights.HasValue || tourService.TotalNights.Value <= 0) &&
+                tourService.ServiceDate.HasValue && tourService.ServiceEndDate.HasValue)
+            {
+                var diff = (tourService.ServiceEndDate.Value.Date - tourService.ServiceDate.Value.Date).Days;
+                if (diff > 0) tourService.TotalNights = diff;
+            }
+
             // Recalculate TotalAmount if 0
             if (tourService.TotalAmount == 0)
             {
-                tourService.TotalAmount = tourService.Quantity * tourService.UnitPrice;
+                if (tourService.ServiceCategoryId == 1 && tourService.RoomCount.HasValue && tourService.RoomCount > 0)
+                {
+                    int paxPerRoom = tourService.PricingBasis == "Room" ? 1 :
+                        (tourService.RoomType?.Contains("Triple", StringComparison.OrdinalIgnoreCase) == true ||
+                         tourService.RoomType?.Contains("DBL+EB", StringComparison.OrdinalIgnoreCase) == true ? 3 :
+                         (tourService.RoomType?.Contains("Single", StringComparison.OrdinalIgnoreCase) == true ? 1 : 2));
+
+                    decimal nights = tourService.TotalNights.HasValue && tourService.TotalNights > 0
+                        ? tourService.TotalNights.Value
+                        : (tourService.Quantity > 0 ? tourService.Quantity : 1);
+
+                    tourService.TotalAmount = tourService.RoomCount.Value * paxPerRoom * nights * tourService.UnitPrice;
+                    if (tourService.DiscountAmount.HasValue && tourService.DiscountAmount.Value > 0)
+                    {
+                        tourService.TotalAmount = Math.Max(0, tourService.TotalAmount - tourService.DiscountAmount.Value);
+                    }
+                }
+                else
+                {
+                    tourService.TotalAmount = tourService.Quantity * tourService.UnitPrice;
+                }
             }
 
             _context.Entry(tourService).State = EntityState.Modified;
@@ -128,6 +183,157 @@ namespace Uno_API.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/TourServices/auto-generate-hotels/5
+        [HttpPost("auto-generate-hotels/{tourId}")]
+        public async Task<IActionResult> AutoGenerateHotels(int tourId)
+        {
+            var tour = await _context.Tours.FindAsync(tourId);
+            if (tour == null) return NotFound("Tour not found");
+
+            var tourPassengers = await _context.Passengers
+                .Where(p => p.TourId == tourId)
+                .ToListAsync();
+
+            if (!tourPassengers.Any())
+            {
+                return BadRequest("No passengers or room assignments found for this tour.");
+            }
+
+            // Correct Adults/Children/Pax from actual passengers
+            int pAdults = tourPassengers.Count(p => p.PaxType == null || p.PaxType.ToUpper().Contains("ADULT") || (!p.PaxType.ToUpper().Contains("CHILD") && !p.PaxType.ToUpper().Contains("ÇOCUK") && !p.PaxType.ToUpper().Contains("INFANT") && !p.PaxType.ToUpper().Contains("BEBEK")));
+            int pChildren = tourPassengers.Count(p => p.PaxType != null && (p.PaxType.ToUpper().Contains("CHILD") || p.PaxType.ToUpper().Contains("ÇOCUK") || p.PaxType.ToUpper().Contains("CHD") || p.PaxType.ToUpper().Contains("COCUK")));
+            int pInfants = tourPassengers.Count(p => p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK") || p.PaxType.ToUpper().Contains("INF")));
+
+            if (pAdults + pChildren + pInfants > 0)
+            {
+                tour.Adults = pAdults;
+                tour.Children = pChildren;
+                tour.Infants = pInfants;
+                tour.Pax = pAdults + pChildren + pInfants;
+            }
+
+            // Calculate rooms needed from passengers
+            int dblPax = tourPassengers.Count(p => p.RoomType != null && p.RoomType.ToUpper().Contains("DOUBLE"));
+            int twnPax = tourPassengers.Count(p => p.RoomType != null && p.RoomType.ToUpper().Contains("TWIN"));
+            int sglPax = tourPassengers.Count(p => p.RoomType != null && p.RoomType.ToUpper().Contains("SINGLE"));
+            int trnPPax = tourPassengers.Count(p => p.RoomType != null && (p.RoomType.ToUpper().Contains("TRIPLE") || p.RoomType.ToUpper().Contains("TRP") || p.RoomType.ToUpper().Contains("DBL+CHLD") || p.RoomType.ToUpper().Contains("DBL+EB")));
+
+            int doubleRooms = (int)Math.Ceiling(dblPax / 2.0);
+            int twinRooms = (int)Math.Ceiling(twnPax / 2.0);
+            int singleRooms = sglPax;
+            int tripleRooms = (int)Math.Ceiling(trnPPax / 3.0);
+
+            // Remove existing hotel services for this tour
+            var oldHotels = await _context.TourServices
+                .Where(ts => ts.TourId == tourId && ts.ServiceCategoryId == 1)
+                .ToListAsync();
+            if (oldHotels.Any())
+            {
+                _context.TourServices.RemoveRange(oldHotels);
+            }
+
+            int totalTourNights = Math.Max(1, (int)(tour.EndDate.Date - tour.ArrivalDate.Date).TotalDays);
+            int city3Nights = Math.Max(1, totalTourNights - 4); // City 1: 2 nts, City 2: 2 nts, City 3: remainder (e.g. 3 nts)
+
+            var itinerary = new List<(string HotelName, int Nights)>
+            {
+                ("Hotel Canada", 2),
+                ("Hotel Allegro", 2),
+                ("Hotel Olympik", city3Nights)
+            };
+
+            DateTime curDate = tour.ArrivalDate.Date;
+            var createdServices = new List<TourService>();
+
+            foreach (var item in itinerary)
+            {
+                var dbHotel = await _context.Hotels.FirstOrDefaultAsync(h => h.Name.ToLower() == item.HotelName.ToLower());
+                if (dbHotel == null)
+                {
+                    dbHotel = new Hotel
+                    {
+                        Name = item.HotelName,
+                        Location = "Budapest-Vienna-Prague",
+                        StarRating = 4,
+                        SingleRate = 60,
+                        DoubleRate = 45,
+                        TwinRate = 45,
+                        TripleRate = 40
+                    };
+                    _context.Hotels.Add(dbHotel);
+                    await _context.SaveChangesAsync();
+                }
+
+                DateTime sDate = curDate;
+                DateTime eDate = curDate.AddDays(item.Nights);
+                curDate = eDate;
+
+                void AddHotelRoom(int count, string rType, decimal roomRate, decimal paxRate)
+                {
+                    if (count > 0)
+                    {
+                        int paxPerRoom = rType == "Single" ? 1 : (rType == "Triple" ? 3 : 2);
+                        string hotelBasis = (dbHotel.PricingBasis ?? "Pax").Trim();
+                        bool isRoomBasis = hotelBasis.Equals("Room", StringComparison.OrdinalIgnoreCase);
+
+                        decimal unitPrice;
+                        decimal totalCost;
+
+                        if (isRoomBasis)
+                        {
+                            unitPrice = roomRate > 0 ? roomRate : (paxRate > 0 ? paxRate * paxPerRoom : (rType == "Single" ? dbHotel.SingleRate : (rType == "Triple" ? dbHotel.TripleRate * 3 : dbHotel.DoubleRate * 2)));
+                            if (unitPrice <= 0) unitPrice = 90m;
+                            totalCost = count * item.Nights * unitPrice;
+                        }
+                        else
+                        {
+                            unitPrice = paxRate > 0 ? paxRate : (roomRate > 0 ? roomRate / paxPerRoom : (rType == "Single" ? dbHotel.SingleRate : (rType == "Triple" ? dbHotel.TripleRate : dbHotel.DoubleRate)));
+                            if (unitPrice <= 0) unitPrice = 45m;
+                            totalCost = count * paxPerRoom * item.Nights * unitPrice;
+                        }
+
+                        var ts = new TourService
+                        {
+                            TourId = tour.Id,
+                            ServiceCategoryId = 1, // Hotel
+                            Description = $"{item.HotelName} ({rType} Room)",
+                            StartDate = sDate,
+                            EndDate = eDate,
+                            ServiceDate = sDate,
+                            ServiceEndDate = eDate,
+                            TotalNights = item.Nights,
+                            RoomCount = count,
+                            RoomType = rType,
+                            Quantity = item.Nights,
+                            UnitPrice = unitPrice,
+                            PricingBasis = isRoomBasis ? "Room" : "Pax",
+                            TotalAmount = totalCost,
+                            HotelId = dbHotel.Id,
+                            IsRevenue = false
+                        };
+                        _context.TourServices.Add(ts);
+                        createdServices.Add(ts);
+                    }
+                }
+
+                AddHotelRoom(doubleRooms, "Double", dbHotel.DoubleRoomRate, dbHotel.DoublePaxRate);
+                AddHotelRoom(singleRooms, "Single", dbHotel.SingleRoomRate, dbHotel.SinglePaxRate);
+                AddHotelRoom(tripleRooms, "Triple", dbHotel.TripleRoomRate, dbHotel.TriplePaxRate);
+                AddHotelRoom(twinRooms, "Twin", dbHotel.TwinRoomRate, dbHotel.TwinPaxRate);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                Message = "Hotel services auto-generated successfully", 
+                TourId = tour.Id, 
+                Pax = tour.Pax,
+                Adults = tour.Adults,
+                Children = tour.Children,
+                CreatedCount = createdServices.Count 
+            });
         }
 
         private bool TourServiceExists(int id)

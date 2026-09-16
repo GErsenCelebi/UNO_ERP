@@ -166,8 +166,8 @@ export default function FinancePage() {
 
                 {/* Project Budget Summary */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="p-5 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-800">Project Budget Overview</h3>
+                  <div className="px-5 py-2.5 border-b border-slate-100">
+                    <h3 className="font-semibold text-slate-800 text-sm">Project Budget Overview</h3>
                   </div>
                   <div className="divide-y divide-slate-50">
                     {projects.map(proj => {
@@ -195,9 +195,9 @@ export default function FinancePage() {
 
               {/* All Services Table */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b border-slate-200">
-                  <h3 className="text-lg font-semibold text-slate-800">All Tour Services</h3>
-                  <p className="text-sm text-slate-400">Complete service breakdown across all projects and tours</p>
+                <div className="px-6 py-3 border-b border-slate-200">
+                  <h3 className="text-base font-semibold text-slate-800">All Tour Services</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Complete service breakdown across all projects and tours</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">

@@ -42,7 +42,7 @@ export default function AIChatDrawer() {
     {
       id: 'welcome-1',
       sender: 'ai',
-      text: "👋 **Hello! I am your UNO_ERP AI Copilot.**\n\nI can answer **how-to process questions**, guide you through ERP features, query live AppDB tour & master data, or explain Governance Rules (e.g. Rule 4: Separate Money Flows).",
+      text: "👋 **Hello! I am your Uno Smart Agent.**\n\nI can answer **how-to process questions**, guide you through ERP features, query live AppDB tour & master data, or explain Governance Rules (e.g. Rule 4: Separate Money Flows).",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       pills: [
         "How to add a user?",
@@ -123,13 +123,16 @@ export default function AIChatDrawer() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl shadow-xl shadow-purple-500/25 transition-all hover:scale-105 active:scale-95 group font-bold text-sm"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-800 text-white rounded-2xl shadow-xl shadow-purple-500/30 border border-purple-400/30 transition-all hover:scale-105 active:scale-95 group font-bold text-sm"
         >
-          <div className="relative">
-            <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+          <div className="relative flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-white/20 p-1 flex items-center justify-center backdrop-blur-xs shadow-inner">
+              <img src="/logo.png" alt="Uno" className="w-full h-full object-contain" />
+            </div>
+            <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-300 absolute -top-1.5 -right-1.5 drop-shadow" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
           </div>
-          <span>AI Copilot ✨</span>
+          <span className="tracking-wide">Uno Smart Agent ✨</span>
         </button>
       )}
 
@@ -143,12 +146,15 @@ export default function AIChatDrawer() {
           {/* Drawer Header */}
           <div className="p-4 bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white flex items-center justify-between border-b border-purple-900/50">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-amber-300">
-                <Sparkles className="w-5 h-5" />
+              <div className="relative">
+                <div className="w-9 h-9 rounded-xl bg-white/10 border border-purple-400/30 p-1.5 flex items-center justify-center shadow-inner">
+                  <img src="/logo.png" alt="Uno" className="w-full h-full object-contain" />
+                </div>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 absolute -top-1 -right-1 animate-pulse" />
               </div>
               <div>
                 <div className="font-bold text-sm flex items-center gap-1.5">
-                  UNO_ERP AI Copilot
+                  Uno Smart Agent
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30 font-mono">LIVE</span>
                 </div>
                 <div className="text-[11px] text-purple-200/70">Process Flows • AppDB • Rules 1-5</div>
@@ -178,8 +184,8 @@ export default function AIChatDrawer() {
             {messages.map(msg => (
               <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.sender === 'ai' && (
-                  <div className="w-8 h-8 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700 shrink-0 mt-1">
-                    <Bot className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-white border border-purple-200/80 flex items-center justify-center shrink-0 mt-1 p-1 shadow-xs">
+                    <img src="/logo.png" alt="Uno" className="w-5 h-5 object-contain" />
                   </div>
                 )}
 
@@ -240,8 +246,8 @@ export default function AIChatDrawer() {
 
             {loading && (
               <div className="flex gap-3 justify-start items-center">
-                <div className="w-8 h-8 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700 shrink-0">
-                  <Bot className="w-4 h-4 animate-spin" />
+                <div className="w-8 h-8 rounded-xl bg-white border border-purple-200/80 flex items-center justify-center shrink-0 p-1 shadow-xs">
+                  <img src="/logo.png" alt="Uno" className="w-5 h-5 object-contain animate-pulse" />
                 </div>
                 <div className="bg-white p-3 rounded-2xl border border-slate-200 text-slate-400 text-xs flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-purple-600" /> Searching ERP Knowledge Base & AppDB...

@@ -18,11 +18,13 @@ Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.Co
 # Wait a brief moment to ensure ports are freed
 Start-Sleep -Seconds 2
 
+$rootDir = if ($PSScriptRoot) { $PSScriptRoot } else { Get-Location }
+
 Write-Host "Starting UNO ERP Backend (.NET 9 Web API on Port 8001)..." -ForegroundColor Green
-Start-Process -FilePath "dotnet" -ArgumentList "run --project .\Uno_API\Uno_API\Uno_API.csproj --launch-profile http"
+Start-Process -FilePath "dotnet" -ArgumentList "run --project `"$rootDir\Uno_API\Uno_API\Uno_API.csproj`" --launch-profile http" -WorkingDirectory $rootDir
 
 Write-Host "Starting UNO ERP Frontend (Next.js on Port 8000)..." -ForegroundColor Blue
-Start-Process -FilePath "cmd.exe" -ArgumentList "/k cd .\Uno_CRM && npm run dev"
+Start-Process -FilePath "cmd.exe" -ArgumentList "/k npm run dev" -WorkingDirectory "$rootDir\Uno_CRM"
 
 Write-Host "Both applications have been launched in new windows!"
 Write-Host "API: http://localhost:8001/api/projects"

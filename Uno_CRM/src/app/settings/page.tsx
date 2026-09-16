@@ -502,7 +502,7 @@ export default function UserManagementPage() {
 
             {/* User List Table */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h2 className="font-bold text-slate-800 text-base">Active User Accounts</h2>
                 <span className="text-xs font-semibold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-2xs">
                   Total Users: {users.length}
@@ -658,7 +658,7 @@ export default function UserManagementPage() {
 
             {/* Screen Permissions Matrix Table */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <div>
                   <h2 className="font-bold text-slate-800 text-base">
                     Access Rights Matrix for Role: <span className="text-purple-600">{selectedRole}</span>
@@ -798,7 +798,7 @@ export default function UserManagementPage() {
         {(isAddModalOpen || editingUser) && (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-100">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div className="px-6 py-3.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <div className="flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-purple-600" />
                   <h3 className="font-bold text-slate-800 text-lg">

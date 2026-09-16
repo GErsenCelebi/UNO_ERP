@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 
@@ -128,6 +128,18 @@ export default function TourDetailPage() {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const toggleGroup = (catName: string) => setCollapsedGroups(prev => ({ ...prev, [catName]: !prev[catName] }));
 
+  // Pivot breakdown state
+  const [isBreakdownTableExpanded, setIsBreakdownTableExpanded] = useState(false);
+  const [pivotGroupBy, setPivotGroupBy] = useState<'category' | 'bucket'>('category');
+  const [pivotExpandAll, setPivotExpandAll] = useState(true);
+  const [pivotExpandedRows, setPivotExpandedRows] = useState<Record<string, boolean>>({});
+  const togglePivotRow = (groupName: string) => {
+    setPivotExpandedRows(prev => ({
+      ...prev,
+      [groupName]: !(prev[groupName] ?? pivotExpandAll)
+    }));
+  };
+
   // Passenger modal & search state & handlers
   const [bookingSearchQuery, setBookingSearchQuery] = useState('');
   const [isPassengerModalOpen, setIsPassengerModalOpen] = useState(false);
@@ -207,6 +219,11 @@ export default function TourDetailPage() {
   };
 
   const [isAccommodationExpanded, setIsAccommodationExpanded] = useState<boolean>(true);
+  const [isHotelDiscountExpanded, setIsHotelDiscountExpanded] = useState<boolean>(true);
+
+  const isHotelDiscountService = (s: TourService) => {
+    return s.serviceCategoryId === 1003 || s.roomType === 'Hotel Discount' || (s.roomType === 'Discount' && s.hotelId !== null);
+  };
 
   const [newService, setNewService] = useState<any>({
     description: '', quantity: 1, unitPrice: 0, serviceCategoryId: 0,
@@ -320,6 +337,27 @@ export default function TourDetailPage() {
       if (projRes?.ok) setProjects(await projRes.json());
       if (attachRes?.ok) setAttachments(await attachRes.json());
     } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  const [isGeneratingHotels, setIsGeneratingHotels] = useState(false);
+  const handleAutoGenerateHotels = async () => {
+    if (!tourId) return;
+    setIsGeneratingHotels(true);
+    try {
+      const res = await fetch(`${API}/tourservices/auto-generate-hotels/${tourId}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await fetchAll();
+      } else {
+        const err = await res.text();
+        alert(`Failed to auto-generate hotels: ${err}`);
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setIsGeneratingHotels(false);
+    }
   };
 
   const [notesSavedSuccess, setNotesSavedSuccess] = useState(false);
@@ -462,6 +500,25 @@ export default function TourDetailPage() {
     }
     setServiceType(effectiveType);
     
+    if (type === 'Hotel Discount') {
+      setNewService({
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        totalAmount: 0,
+        serviceCategoryId: 1003,
+        isRevenue: false,
+        hotelId: hotels[0]?.id || null,
+        roomType: 'Hotel Discount',
+        startDate: tour?.arrivalDate?.split('T')[0] || '',
+        endDate: tour?.endDate?.split('T')[0] || '',
+        serviceDate: tour?.arrivalDate?.split('T')[0] || '',
+        serviceEndDate: tour?.endDate?.split('T')[0] || ''
+      });
+      setIsServiceModalOpen(true);
+      return;
+    }
+    
     let defaultQty: any = 1;
     if (effectiveType === 'Invoiced Fee' || effectiveType === 'Client Flat Invoice' || effectiveType === 'Tour Package Fee') {
       defaultQty = (tour?.pax || 0) + 0.5 * (tour?.children || 0);
@@ -537,6 +594,49 @@ export default function TourDetailPage() {
          }
       }
 
+      if (serviceType === 'Hotel Discount') {
+        const discAmt = Number(newService.totalAmount !== undefined && newService.totalAmount !== null && Number(newService.totalAmount) > 0 ? newService.totalAmount : newService.unitPrice) || 0;
+        const hotelObj = hotels.find((h: any) => h.id === newService.hotelId);
+        const desc = newService.description || (hotelObj ? `${hotelObj.name} Discount` : 'Hotel Discount');
+        const sDate = newService.startDate || newService.serviceDate || null;
+        const eDate = newService.endDate || newService.serviceEndDate || null;
+
+        const payload: any = {
+          tourId: parseInt(tourId),
+          serviceCategoryId: 1003,
+          hotelId: newService.hotelId || null,
+          description: desc,
+          roomType: 'Hotel Discount',
+          quantity: 1,
+          unitPrice: discAmt,
+          totalAmount: discAmt,
+          isRevenue: false,
+          startDate: sDate ? new Date(sDate).toISOString() : null,
+          endDate: eDate ? new Date(eDate).toISOString() : null,
+          serviceDate: sDate ? new Date(sDate).toISOString() : null,
+          serviceEndDate: eDate ? new Date(eDate).toISOString() : null
+        };
+
+        if (editingServiceId) {
+          await fetch(`${API}/tourservices/${editingServiceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, id: editingServiceId })
+          });
+        } else {
+          await fetch(`${API}/tourservices`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        setIsServiceModalOpen(false);
+        setEditingServiceId(null);
+        fetchAll();
+        return;
+      }
+
       let payloads: any[] = [];
 
       if (serviceType === 'Hotel' && !editingServiceId) {
@@ -547,92 +647,114 @@ export default function TourDetailPage() {
         const q = calculatedNights;
         if (q <= 0) return alert('Check-out date must be after check-in date.');
 
-        const pb = newService.pricingBasis || 'Room';
+        const pb = newService.pricingBasis || 'Pax';
+        const isRoomBasis = pb.toLowerCase().includes('room');
         const discAmt = Number(newService.discountAmount) || 0;
         const discNote = newService.discountNotes || '';
 
+        const matchedHotel = hotels.find((h: any) => h.id === newService.hotelId);
+
         if (newService.singleCount > 0) {
-            const hPrice = newService.singleRate !== undefined && newService.singleRate > 0 ? newService.singleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.singleRate || 0);
-            const totalQty = newService.singleCount * q;
+            const defaultSingle = isRoomBasis 
+              ? (matchedHotel?.singleRoomRate || matchedHotel?.singleRate || 0)
+              : (matchedHotel?.singlePaxRate || matchedHotel?.singleRate || 0);
+            const hPrice = newService.singleRate !== undefined && newService.singleRate > 0 ? newService.singleRate : defaultSingle;
+            const totalAmt = newService.singleCount * q * hPrice;
             payloads.push({ 
               ...basePayload, 
               hotelId: newService.hotelId, 
               roomType: 'Single', 
               roomCount: newService.singleCount, 
-              quantity: totalQty, 
+              quantity: q, 
               unitPrice: hPrice, 
-              totalAmount: hPrice * totalQty,
+              totalAmount: totalAmt,
               pricingBasis: pb,
-              discountAmount: discAmt,
-              discountNotes: discNote,
+              discountAmount: 0,
+              discountNotes: '',
               totalNights: q
             });
         }
         if (newService.doubleCount > 0) {
-            const hPrice = newService.doubleRate !== undefined && newService.doubleRate > 0 ? newService.doubleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.doubleRate || 0);
-            const totalQty = newService.doubleCount * q;
+            const defaultDouble = isRoomBasis
+              ? (matchedHotel?.doubleRoomRate || (matchedHotel?.doublePaxRate ? matchedHotel.doublePaxRate * 2 : 0) || matchedHotel?.doubleRate || 0)
+              : (matchedHotel?.doublePaxRate || (matchedHotel?.doubleRoomRate ? matchedHotel.doubleRoomRate / 2 : 0) || matchedHotel?.doubleRate || 0);
+            const hPrice = newService.doubleRate !== undefined && newService.doubleRate > 0 ? newService.doubleRate : defaultDouble;
+            const multiplier = isRoomBasis ? newService.doubleCount : (newService.doubleCount * 2);
+            const totalAmt = multiplier * q * hPrice;
             payloads.push({ 
               ...basePayload, 
               hotelId: newService.hotelId, 
               roomType: 'Double', 
               roomCount: newService.doubleCount, 
-              quantity: totalQty, 
+              quantity: q, 
               unitPrice: hPrice, 
-              totalAmount: hPrice * totalQty,
+              totalAmount: totalAmt,
               pricingBasis: pb,
-              discountAmount: discAmt,
-              discountNotes: discNote,
+              discountAmount: 0,
+              discountNotes: '',
               totalNights: q
             });
         }
         if (newService.twinCount > 0) {
-            const hPrice = newService.twinRate !== undefined && newService.twinRate > 0 ? newService.twinRate : (hotels.find((h: any) => h.id === newService.hotelId)?.twinRate || 0);
-            const totalQty = newService.twinCount * q;
+            const defaultTwin = isRoomBasis
+              ? (matchedHotel?.twinRoomRate || (matchedHotel?.twinPaxRate ? matchedHotel.twinPaxRate * 2 : 0) || matchedHotel?.twinRate || 0)
+              : (matchedHotel?.twinPaxRate || (matchedHotel?.twinRoomRate ? matchedHotel.twinRoomRate / 2 : 0) || matchedHotel?.twinRate || 0);
+            const hPrice = newService.twinRate !== undefined && newService.twinRate > 0 ? newService.twinRate : defaultTwin;
+            const multiplier = isRoomBasis ? newService.twinCount : (newService.twinCount * 2);
+            const totalAmt = multiplier * q * hPrice;
             payloads.push({ 
               ...basePayload, 
               hotelId: newService.hotelId, 
               roomType: 'Twin', 
               roomCount: newService.twinCount, 
-              quantity: totalQty, 
+              quantity: q, 
               unitPrice: hPrice, 
-              totalAmount: hPrice * totalQty,
+              totalAmount: totalAmt,
               pricingBasis: pb,
-              discountAmount: discAmt,
-              discountNotes: discNote,
+              discountAmount: 0,
+              discountNotes: '',
               totalNights: q
             });
         }
         if (newService.tripleCount > 0) {
-            const hPrice = newService.tripleRate !== undefined && newService.tripleRate > 0 ? newService.tripleRate : (hotels.find((h: any) => h.id === newService.hotelId)?.tripleRate || 0);
-            const totalQty = newService.tripleCount * q;
+            const defaultTriple = isRoomBasis
+              ? (matchedHotel?.tripleRoomRate || (matchedHotel?.triplePaxRate ? matchedHotel.triplePaxRate * 3 : 0) || matchedHotel?.tripleRate || 0)
+              : (matchedHotel?.triplePaxRate || (matchedHotel?.tripleRoomRate ? matchedHotel.tripleRoomRate / 3 : 0) || matchedHotel?.tripleRate || 0);
+            const hPrice = newService.tripleRate !== undefined && newService.tripleRate > 0 ? newService.tripleRate : defaultTriple;
+            const multiplier = isRoomBasis ? newService.tripleCount : (newService.tripleCount * 3);
+            const totalAmt = multiplier * q * hPrice;
             payloads.push({ 
               ...basePayload, 
               hotelId: newService.hotelId, 
               roomType: 'Triple', 
               roomCount: newService.tripleCount, 
-              quantity: totalQty, 
+              quantity: q, 
               unitPrice: hPrice, 
-              totalAmount: hPrice * totalQty,
+              totalAmount: totalAmt,
               pricingBasis: pb,
-              discountAmount: discAmt,
-              discountNotes: discNote,
+              discountAmount: 0,
+              discountNotes: '',
               totalNights: q
             });
         }
         if (newService.dblEbCount > 0) {
-            const hPrice = newService.dblEbRate !== undefined && newService.dblEbRate > 0 ? newService.dblEbRate : (hotels.find((h: any) => h.id === newService.hotelId)?.dblEbRate || 0);
-            const totalQty = newService.dblEbCount * q;
+            const defaultEb = isRoomBasis
+              ? (matchedHotel?.dblEbRoomRate || (matchedHotel?.dblEbPaxRate ? matchedHotel.dblEbPaxRate * 3 : 0) || matchedHotel?.dblEbRate || 0)
+              : (matchedHotel?.dblEbPaxRate || (matchedHotel?.dblEbRoomRate ? matchedHotel.dblEbRoomRate / 3 : 0) || matchedHotel?.dblEbRate || 0);
+            const hPrice = newService.dblEbRate !== undefined && newService.dblEbRate > 0 ? newService.dblEbRate : defaultEb;
+            const multiplier = isRoomBasis ? newService.dblEbCount : (newService.dblEbCount * 3);
+            const totalAmt = multiplier * q * hPrice;
             payloads.push({ 
               ...basePayload, 
               hotelId: newService.hotelId, 
               roomType: 'Double + Extra Bed (DBL+EB)', 
               roomCount: newService.dblEbCount, 
-              quantity: totalQty, 
+              quantity: q, 
               unitPrice: hPrice, 
-              totalAmount: hPrice * totalQty,
+              totalAmount: totalAmt,
               pricingBasis: pb,
-              discountAmount: discAmt,
-              discountNotes: discNote,
+              discountAmount: 0,
+              discountNotes: '',
               totalNights: q
             });
         }
@@ -714,24 +836,53 @@ export default function TourDetailPage() {
             });
         }
 
-        if (payloads.length === 0) return alert('Please enter at least one room type quantity, staff accommodation, or hotel tax selection');
+        // Dedicated Hotel Discount
+        if (discAmt > 0) {
+            const hObj = hotels.find((h: any) => h.id === newService.hotelId);
+            payloads.push({
+              tourId: parseInt(tourId),
+              serviceCategoryId: 1003,
+              hotelId: newService.hotelId || null,
+              roomType: 'Hotel Discount',
+              quantity: 1,
+              unitPrice: discAmt,
+              totalAmount: discAmt,
+              isRevenue: false,
+              description: discNote || (hObj ? `${hObj.name} Discount` : 'Hotel Discount'),
+              startDate: newService.startDate ? new Date(newService.startDate).toISOString() : null,
+              endDate: newService.endDate ? new Date(newService.endDate).toISOString() : null,
+              serviceDate: newService.startDate ? new Date(newService.startDate).toISOString() : null,
+              serviceEndDate: newService.endDate ? new Date(newService.endDate).toISOString() : null,
+            });
+        }
+
+        if (payloads.length === 0) return alert('Please enter at least one room type quantity, hotel discount, staff accommodation, or hotel tax selection');
       } else if (serviceType === 'Hotel' && editingServiceId) {
         const sDate = newService.startDate || newService.serviceDate;
         const eDate = newService.endDate || newService.serviceEndDate;
-        const nights = (sDate && eDate) ? Math.max(1, Math.ceil((new Date(eDate).getTime() - new Date(sDate).getTime()) / (1000 * 3600 * 24))) : 1;
-        const roomOrPaxCount = Number(newService.roomCount) || 1;
-        const totalQty = roomOrPaxCount * nights;
+        const nights = (sDate && eDate) ? Math.max(1, Math.ceil((new Date(eDate).getTime() - new Date(sDate).getTime()) / (1000 * 3600 * 24))) : (Number(newService.totalNights) || Number(newService.quantity) || 1);
+        const roomCount = Number(newService.roomCount) || 1;
         const uPrice = Number(newService.unitPrice) || 0;
+        const pb = newService.pricingBasis || 'Pax';
+        const isPerPax = pb.toLowerCase().includes('pax') || pb.toLowerCase().includes('person');
+        const rType = (newService.roomType || '').toLowerCase();
+        let paxPerRoom = 2;
+        if (rType.includes('single') || rType.includes('guide') || rType.includes('driver') || rType.includes('sgl')) paxPerRoom = 1;
+        else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl')) paxPerRoom = 3;
+        else if (rType.includes('quad') || rType.includes('qdr')) paxPerRoom = 4;
+        const multiplier = isPerPax ? (roomCount * paxPerRoom) : roomCount;
+        const discAmt = Number(newService.discountAmount) || 0;
+        const totalAmount = Math.max(0, (multiplier * nights * uPrice) - discAmt);
         payloads.push({
           ...basePayload,
           hotelId: newService.hotelId,
           roomType: newService.roomType,
-          roomCount: roomOrPaxCount,
-          quantity: totalQty,
+          roomCount: roomCount,
+          quantity: nights,
           unitPrice: uPrice,
-          totalAmount: uPrice * totalQty,
-          pricingBasis: newService.pricingBasis || 'Room',
-          discountAmount: Number(newService.discountAmount) || 0,
+          totalAmount: totalAmount,
+          pricingBasis: pb,
+          discountAmount: discAmt,
           discountNotes: newService.discountNotes || '',
           totalNights: nights
         });
@@ -810,6 +961,29 @@ export default function TourDetailPage() {
   };
 
   const openEditServiceModal = (svc: TourService) => {
+    if (isHotelDiscountService(svc)) {
+      setServiceType('Hotel Discount');
+      setEditingServiceId(svc.id);
+      const sDate = svc.serviceDate?.split('T')[0] || svc.startDate?.split('T')[0] || '';
+      const eDate = svc.serviceEndDate?.split('T')[0] || svc.endDate?.split('T')[0] || '';
+      setNewService({
+        description: svc.description || '',
+        quantity: 1,
+        unitPrice: svc.unitPrice || svc.totalAmount || 0,
+        totalAmount: svc.totalAmount || svc.unitPrice || 0,
+        serviceCategoryId: 1003,
+        isRevenue: false,
+        hotelId: svc.hotelId || null,
+        roomType: 'Hotel Discount',
+        startDate: sDate,
+        endDate: eDate,
+        serviceDate: sDate,
+        serviceEndDate: eDate
+      });
+      setIsServiceModalOpen(true);
+      return;
+    }
+
     const catName = getCategoryName(svc);
     const knownTemplates = ['Hotel', 'Flight', 'Transport', 'Driver', 'Guide', 'Excursion', 'Invoiced Fee'];
     const templateType = knownTemplates.includes(catName) ? catName : 'Other';
@@ -875,6 +1049,7 @@ export default function TourDetailPage() {
   const getCategoryClassification = (svc: TourService): string => svc.serviceCategory?.classification || serviceCategories.find(c => c.id === svc.serviceCategoryId)?.classification || 'Standard';
 
   const isServiceRevenue = (s: TourService) => {
+    if (isHotelDiscountService(s)) return false;
     if (s.isRevenue !== undefined && s.isRevenue !== null) return s.isRevenue;
     const cat = s.serviceCategory || serviceCategories.find(c => c.id === s.serviceCategoryId);
     return cat?.isRevenue === true;
@@ -913,10 +1088,12 @@ export default function TourDetailPage() {
   const getServiceBuckets = (svcList: TourService[]) => {
     const base = svcList.filter(s => (serviceCategories.find(c => c.id === s.serviceCategoryId)?.isBase) || s.id === -999);
     const operational = svcList.filter(s => {
+      if (isHotelDiscountService(s)) return true;
       const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
       return cat?.isOperational && !cat?.isBase && s.id !== -999;
     });
     const other = svcList.filter(s => {
+      if (isHotelDiscountService(s)) return false;
       const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
       return !cat?.isBase && !cat?.isOperational && s.id !== -999;
     });
@@ -927,10 +1104,327 @@ export default function TourDetailPage() {
   const costBuckets = getServiceBuckets(effectiveCostServices);
 
   const totalSales = revenueServices.reduce((s, svc) => s + (svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0), 0);
-  const totalServiceCost = effectiveCostServices.reduce((s, svc) => s + (svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0), 0);
+  const totalServiceCost = effectiveCostServices.reduce((s, svc) => {
+    const amt = svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0;
+    if (isHotelDiscountService(svc)) {
+      return s - Math.abs(amt);
+    }
+    return s + amt;
+  }, 0);
   const totalRevenue = totalSales;
   const profit = totalRevenue - totalServiceCost;
   const costPerPax = tour ? Math.round(totalServiceCost / Math.max(tour.pax || 1, 1)) : 0;
+
+  // Financial Pivot Table Data Computation
+  const getFinancialPivotData = () => {
+    const totalPax = Math.max(tour?.pax || (tour?.adults || 0) + (tour?.children || 0) || 1, 1);
+
+    const calculatedBaseRevenue = (tour?.baseFee && tour.baseFee > 0)
+      ? ((tour.adults || 0) * tour.baseFee) + ((tour.children || 0) * tour.baseFee * 0.5)
+      : Number(tour?.totalFee || 0);
+
+    interface PivotItem {
+      id: string;
+      description: string;
+      categoryName: string;
+      bucketName: string;
+      cost: number;
+      revenue: number;
+      qty: number;
+      unitPrice: number;
+      detailsText?: string;
+      occupants?: number;
+      roomCount?: number | null;
+      pricingBasis?: string;
+      roomType?: string;
+      perPaxPrice?: number;
+    }
+
+    const items: PivotItem[] = [];
+
+    if (calculatedBaseRevenue > 0) {
+      items.push({
+        id: 'base-package-fee',
+        description: `Base Tour Fee (${tour?.adults || 0} Adults, ${tour?.children || 0} Children)`,
+        categoryName: 'Base Package Revenue',
+        bucketName: 'Tour Revenue',
+        cost: 0,
+        revenue: calculatedBaseRevenue,
+        qty: totalPax,
+        unitPrice: Math.round((calculatedBaseRevenue / totalPax) * 100) / 100,
+        detailsText: `${totalPax} Pax @ €${(Math.round((calculatedBaseRevenue / totalPax) * 100) / 100).toFixed(2)}`,
+        occupants: totalPax,
+        pricingBasis: 'Pax',
+        perPaxPrice: Math.round((calculatedBaseRevenue / totalPax) * 100) / 100
+      });
+    }
+
+    const getServiceNights = (s: TourService): number => {
+      if (s.totalNights && s.totalNights > 0) return s.totalNights;
+      const sDate = s.serviceDate || s.startDate || s.serviceStartDate;
+      const eDate = s.serviceEndDate || s.endDate || s.serviceEndDate;
+      if (sDate && eDate) {
+        const diff = Math.round((new Date(eDate).getTime() - new Date(sDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (diff > 0) return diff;
+      }
+      if (s.roomCount && s.roomCount > 0 && s.quantity && s.quantity > s.roomCount && s.quantity % s.roomCount === 0) {
+        return Math.round(s.quantity / s.roomCount);
+      }
+      return Math.max(1, Math.round(s.quantity || 1));
+    };
+
+    revenueServices.forEach((s) => {
+      const catName = getCategoryName(s);
+      const pb = (s.pricingBasis || 'Pax').trim();
+      const isPerPaxBasis = pb.toLowerCase().includes('pax') || pb.toLowerCase().includes('person');
+
+      let itemOccupants = totalPax;
+      let paxPerRoom = 2;
+      const isHotel = (catName.toLowerCase().includes('hotel') || s.hotelId !== null || s.serviceCategoryId === 1) && !isHotelDiscountService(s);
+
+      if (isHotel && s.roomCount && s.roomCount > 0) {
+        const rType = (s.roomType || s.description || '').toLowerCase();
+        if (rType.includes('single') || rType.includes('guide') || rType.includes('driver') || rType.includes('sgl')) paxPerRoom = 1;
+        else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl') || rType.includes('extra bed') || rType.includes('eb')) paxPerRoom = 3;
+        else if (rType.includes('quad') || rType.includes('qdr')) paxPerRoom = 4;
+        else if (rType.includes('double') || rType.includes('twin') || rType.includes('dbl') || rType.includes('twn')) paxPerRoom = 2;
+        itemOccupants = s.roomCount * paxPerRoom;
+      }
+
+      const nights = getServiceNights(s);
+
+      // Flag-based Per Pax Price calculation:
+      // If pricingBasis is Pax, use unitPrice as-is (with safety guard for room-level rates).
+      // If pricingBasis is Room, divide unitPrice by accommodated guest count (paxPerRoom).
+      let perPaxPrice: number;
+      if (isHotel && s.roomCount && s.roomCount > 0) {
+        if (isPerPaxBasis) {
+          if (paxPerRoom > 1 && s.unitPrice > 70) {
+            perPaxPrice = Math.round((s.unitPrice / paxPerRoom) * 100) / 100;
+          } else {
+            perPaxPrice = s.unitPrice;
+          }
+        } else {
+          perPaxPrice = Math.round((s.unitPrice / paxPerRoom) * 100) / 100;
+        }
+      } else {
+        perPaxPrice = totalPax > 0 ? Math.round(((s.totalAmount || (s.unitPrice * (s.quantity || 1))) / totalPax) * 100) / 100 : (s.unitPrice || 0);
+      }
+
+      let revVal: number;
+      if (isHotel && s.roomCount && s.roomCount > 0) {
+        const disc = s.discountAmount || 0;
+        const expectedTotal = (s.roomCount * paxPerRoom * nights * perPaxPrice);
+        if (s.totalAmount && s.totalAmount > 0) {
+          if (paxPerRoom > 1 && Math.abs(s.totalAmount - (expectedTotal * paxPerRoom)) < 0.5) {
+            revVal = expectedTotal - disc;
+          } else if (Math.abs(s.totalAmount - expectedTotal) < 0.5 || Math.abs(s.totalAmount - (expectedTotal - disc)) < 0.5) {
+            revVal = s.totalAmount;
+          } else {
+            revVal = expectedTotal - disc;
+          }
+        } else {
+          revVal = expectedTotal - disc;
+        }
+      } else {
+        revVal = (s.totalAmount !== undefined && s.totalAmount !== null && s.totalAmount !== 0) 
+          ? s.totalAmount 
+          : ((s.unitPrice || 0) * (s.quantity || 1));
+      }
+
+      const roomRate = perPaxPrice * paxPerRoom;
+      const details = isHotel && s.roomCount && s.roomCount > 0
+        ? `${s.roomCount} Rm${s.roomCount > 1 ? 's' : ''} × ${nights} Nt${nights > 1 ? 's' : ''} (${itemOccupants} Pax) @ €${perPaxPrice.toFixed(2)}/pax (€${roomRate.toFixed(2)}/rm)`
+        : `${s.quantity || 1} x €${(s.unitPrice || 0).toFixed(2)}`;
+
+      items.push({
+        id: `rev-${s.id}`,
+        description: s.description || `${catName} Sale`,
+        categoryName: catName.toLowerCase().includes('excursion') ? 'Excursions & Optional Sales' : (catName || 'Other Revenue'),
+        bucketName: 'Tour Revenue',
+        cost: 0,
+        revenue: revVal,
+        qty: s.quantity || 1,
+        unitPrice: s.unitPrice || 0,
+        detailsText: details,
+        occupants: itemOccupants,
+        roomCount: s.roomCount ?? undefined,
+        pricingBasis: pb,
+        roomType: s.roomType ?? undefined,
+        perPaxPrice: perPaxPrice
+      });
+    });
+
+    costServices.forEach((s) => {
+      const catName = getCategoryName(s);
+      const catObj = serviceCategories.find(c => c.id === s.serviceCategoryId);
+      const pb = (s.pricingBasis || 'Pax').trim();
+      const isPerPaxBasis = pb.toLowerCase().includes('pax') || pb.toLowerCase().includes('person');
+
+      let bucket = 'Operational Services';
+      if (catObj?.isBase) bucket = 'Base Services';
+      else if (s.roomType === 'Guide Room' || s.roomType === 'Driver Room' || s.guideId || s.driverId) bucket = 'Staff & Escorts';
+      else if (catObj?.isOperational) bucket = 'Operational Services';
+
+      let itemOccupants = totalPax;
+      let paxPerRoom = 2;
+      const isHotel = (catName.toLowerCase().includes('hotel') || s.hotelId !== null || s.serviceCategoryId === 1) && !isHotelDiscountService(s);
+
+      if (s.roomCount && s.roomCount > 0) {
+        const rType = (s.roomType || s.description || '').toLowerCase();
+        if (rType.includes('single') || rType.includes('guide') || rType.includes('driver') || rType.includes('sgl')) paxPerRoom = 1;
+        else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl') || rType.includes('extra bed') || rType.includes('eb')) paxPerRoom = 3;
+        else if (rType.includes('quad') || rType.includes('qdr')) paxPerRoom = 4;
+        else if (rType.includes('double') || rType.includes('twin') || rType.includes('dbl') || rType.includes('twn')) paxPerRoom = 2;
+        itemOccupants = s.roomCount * paxPerRoom;
+      }
+
+      const nights = getServiceNights(s);
+
+      // Flag-based Per Pax Price calculation:
+      // If pricingBasis is Pax, use unitPrice as-is (with safety guard for room-level rates).
+      // If pricingBasis is Room, divide unitPrice by accommodated guest count (paxPerRoom).
+      let perPaxPrice: number;
+      if (isHotelDiscountService(s)) {
+        perPaxPrice = 0; // calculated below once costVal is determined
+      } else if (isHotel && s.roomCount && s.roomCount > 0) {
+        if (isPerPaxBasis) {
+          if (paxPerRoom > 1 && s.unitPrice > 70) {
+            perPaxPrice = Math.round((s.unitPrice / paxPerRoom) * 100) / 100;
+          } else {
+            perPaxPrice = s.unitPrice;
+          }
+        } else {
+          perPaxPrice = Math.round((s.unitPrice / paxPerRoom) * 100) / 100;
+        }
+      } else {
+        perPaxPrice = totalPax > 0 ? Math.round(((s.totalAmount || (s.unitPrice * (s.quantity || 1))) / totalPax) * 100) / 100 : (s.unitPrice || 0);
+      }
+
+      let costVal: number;
+      if (isHotelDiscountService(s)) {
+        const rawAmt = s.totalAmount || (s.unitPrice * (s.quantity || 1)) || 0;
+        costVal = -Math.abs(rawAmt);
+        perPaxPrice = totalPax > 0 ? -Math.round((Math.abs(costVal) / totalPax) * 100) / 100 : 0;
+      } else if (isHotel && s.roomCount && s.roomCount > 0) {
+        const disc = s.discountAmount || 0;
+        const expectedTotal = (s.roomCount * paxPerRoom * nights * perPaxPrice);
+        if (s.totalAmount && s.totalAmount > 0) {
+          if (paxPerRoom > 1 && Math.abs(s.totalAmount - (expectedTotal * paxPerRoom)) < 0.5) {
+            costVal = expectedTotal - disc;
+          } else if (Math.abs(s.totalAmount - expectedTotal) < 0.5 || Math.abs(s.totalAmount - (expectedTotal - disc)) < 0.5) {
+            costVal = s.totalAmount;
+          } else {
+            costVal = expectedTotal - disc;
+          }
+        } else {
+          costVal = expectedTotal - disc;
+        }
+      } else {
+        costVal = (s.totalAmount !== undefined && s.totalAmount !== null && s.totalAmount !== 0) 
+          ? s.totalAmount 
+          : ((s.unitPrice || 0) * (s.quantity || 1));
+      }
+
+      const roomRate = perPaxPrice * paxPerRoom;
+      const details = isHotel && s.roomCount && s.roomCount > 0
+        ? `${s.roomCount} Rm${s.roomCount > 1 ? 's' : ''} × ${nights} Nt${nights > 1 ? 's' : ''} (${itemOccupants} Pax) @ €${perPaxPrice.toFixed(2)}/pax (€${roomRate.toFixed(2)}/rm)`
+        : `${s.quantity || 1} x €${(s.unitPrice || 0).toFixed(2)}`;
+
+      items.push({
+        id: `cost-${s.id}`,
+        description: s.description || `${catName} Item`,
+        categoryName: isHotelDiscountService(s) ? 'Hotel' : (catName || 'Other Expenses'),
+        bucketName: bucket,
+        cost: costVal,
+        revenue: 0,
+        qty: s.quantity || 1,
+        unitPrice: isHotelDiscountService(s) ? -Math.abs(s.unitPrice || costVal) : (s.unitPrice || 0),
+        detailsText: isHotelDiscountService(s) ? `Hotel Discount: -€${Math.abs(costVal).toFixed(2)}` : details,
+        occupants: itemOccupants,
+        roomCount: s.roomCount ?? undefined,
+        pricingBasis: pb,
+        roomType: s.roomType ?? undefined,
+        perPaxPrice: perPaxPrice
+      });
+    });
+
+    if (guideCommissionAmount > 0) {
+      items.push({
+        id: 'cost-guide-commission',
+        description: `Guide Commission (${guideCommissionRate}% on €${totalExcursionSales.toLocaleString()} Excursion Sales)`,
+        categoryName: 'Guides & Staff',
+        bucketName: 'Staff & Escorts',
+        cost: guideCommissionAmount,
+        revenue: 0,
+        qty: 1,
+        unitPrice: guideCommissionAmount,
+        detailsText: `1 x €${guideCommissionAmount.toFixed(2)} (€${guideCommissionAmount.toLocaleString()})`,
+        perPaxPrice: Math.round((guideCommissionAmount / totalPax) * 100) / 100
+      });
+    }
+
+    const groupedMap: Record<string, {
+      groupName: string;
+      bucketName: string;
+      items: PivotItem[];
+      totalCost: number;
+      totalRevenue: number;
+      netMargin: number;
+      costPerPax: number;
+      revenuePerPax: number;
+      marginPct: number;
+    }> = {};
+
+    items.forEach((item) => {
+      const groupKey = pivotGroupBy === 'category' ? item.categoryName : item.bucketName;
+      if (!groupedMap[groupKey]) {
+        groupedMap[groupKey] = {
+          groupName: groupKey,
+          bucketName: item.bucketName,
+          items: [],
+          totalCost: 0,
+          totalRevenue: 0,
+          netMargin: 0,
+          costPerPax: 0,
+          revenuePerPax: 0,
+          marginPct: 0
+        };
+      }
+      groupedMap[groupKey].items.push(item);
+      groupedMap[groupKey].totalCost += item.cost;
+      groupedMap[groupKey].totalRevenue += item.revenue;
+    });
+
+    let grandTotalCost = 0;
+    let grandTotalRevenue = 0;
+
+    Object.values(groupedMap).forEach((grp) => {
+      grp.netMargin = grp.totalRevenue - grp.totalCost;
+      grp.costPerPax = Math.round((grp.totalCost / totalPax) * 100) / 100;
+      grp.revenuePerPax = Math.round((grp.totalRevenue / totalPax) * 100) / 100;
+      grp.marginPct = grp.totalRevenue > 0 ? (grp.netMargin / grp.totalRevenue) * 100 : 0;
+
+      grandTotalCost += grp.totalCost;
+      grandTotalRevenue += grp.totalRevenue;
+    });
+
+    const grandNetMargin = grandTotalRevenue - grandTotalCost;
+    const grandCostPerPax = Math.round((grandTotalCost / totalPax) * 100) / 100;
+    const grandRevenuePerPax = Math.round((grandTotalRevenue / totalPax) * 100) / 100;
+    const grandMarginPct = grandTotalRevenue > 0 ? (grandNetMargin / grandTotalRevenue) * 100 : 0;
+
+    return {
+      totalPax,
+      groups: Object.values(groupedMap),
+      grandTotalCost,
+      grandTotalRevenue,
+      grandNetMargin,
+      grandCostPerPax,
+      grandRevenuePerPax,
+      grandMarginPct
+    };
+  };
 
   const handleSaveInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1170,14 +1664,65 @@ export default function TourDetailPage() {
             {new Date(tour.arrivalDate).toLocaleDateString()} → {new Date(tour.endDate).toLocaleDateString()} | {tour.pax} Pax | {tour.tourStatus?.name || ''}
           </p>
         </div>
-        <div className="flex gap-2">
-          <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-semibold">
-            Total Expense: €{totalServiceCost.toLocaleString()}
-          </span>
-          <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-sm font-semibold">
-            Cost/Pax: €{costPerPax.toLocaleString()}
-          </span>
-        </div>
+        {/* Top Bar Financial Metric Summary Cards */}
+        {(() => {
+          const pivot = getFinancialPivotData();
+          const totalPax = pivot.totalPax;
+
+          return (
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* 1. Pax Breakdown */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">Pax Breakdown</p>
+                <p className="text-xs font-bold text-slate-800 leading-tight">
+                  {tour.adults || 0} A, {tour.children || 0} C, {tour.infants || 0} I
+                </p>
+                <p className="text-[9px] text-slate-400 font-normal leading-tight">({totalPax} Total)</p>
+              </div>
+
+              {/* 2. Base Fee */}
+              <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[80px]">
+                <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-tight">Base Fee</p>
+                <p className="text-xs font-bold text-emerald-800 leading-tight">
+                  €{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}
+                </p>
+                <p className="text-[9px] text-emerald-600 font-medium leading-tight">Per adult fee</p>
+              </div>
+
+              {/* 3. Cost / Pax */}
+              <div className="bg-rose-50/80 border border-rose-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
+                <p className="text-[10px] font-semibold text-rose-700 uppercase tracking-tight">Cost / Pax</p>
+                <p className="text-xs font-bold text-rose-800 leading-tight">€{pivot.grandCostPerPax.toFixed(2)}</p>
+                <p className="text-[9px] text-rose-600 font-medium leading-tight">Total: €{pivot.grandTotalCost.toLocaleString()}</p>
+              </div>
+
+              {/* 4. Revenue / Pax */}
+              <div className="bg-sky-50/80 border border-sky-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
+                <p className="text-[10px] font-semibold text-sky-700 uppercase tracking-tight">Revenue / Pax</p>
+                <p className="text-xs font-bold text-sky-800 leading-tight">€{pivot.grandRevenuePerPax.toFixed(2)}</p>
+                <p className="text-[9px] text-sky-600 font-medium leading-tight">Total: €{pivot.grandTotalRevenue.toLocaleString()}</p>
+              </div>
+
+              {/* 5. Guide Commission */}
+              <div className="bg-purple-50/80 border border-purple-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[85px]">
+                <p className="text-[10px] font-semibold text-purple-700 uppercase tracking-tight">Guide Comm.</p>
+                <p className="text-xs font-bold text-purple-800 leading-tight">
+                  {tour.guideCommission !== undefined ? tour.guideCommission : 10}%
+                </p>
+                <p className="text-[9px] text-purple-600 font-medium leading-tight">(€{guideCommissionAmount.toLocaleString()})</p>
+              </div>
+
+              {/* 6. Net Profit / Pax */}
+              <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[95px]">
+                <p className="text-[10px] font-semibold text-indigo-700 uppercase tracking-tight">Net Profit / Pax</p>
+                <p className={`text-xs font-bold leading-tight ${pivot.grandNetMargin >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  €{(pivot.grandNetMargin / totalPax).toFixed(2)}
+                </p>
+                <p className="text-[9px] text-indigo-600 font-bold leading-tight">{pivot.grandMarginPct.toFixed(1)}% Margin</p>
+              </div>
+            </div>
+          );
+        })()}
       </header>
 
       {/* Tabs */}
@@ -1192,20 +1737,20 @@ export default function TourDetailPage() {
 
         {/* ──── TOUR INFO TAB ──── */}
         {activeTab === 'info' && (
-          <div className="p-6 max-w-7xl mx-auto space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="p-4 sm:p-6 max-w-[1680px] w-full mx-auto space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
               
-              {/* LEFT COLUMN (7-8 Cols): Tour Information & Hotel Reservations */}
-              <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+              {/* LEFT COLUMN: Main Tour Information & Financial Breakdown (Expanded to 8-9 Cols) */}
+              <div className="lg:col-span-8 xl:col-span-9 space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
+                  <div className="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
                     <div>
-                      <h2 className="text-xl font-bold text-slate-800">Tour Information</h2>
-                      <p className="text-sm text-slate-500 mt-1">View and edit tour details</p>
+                      <h2 className="text-base md:text-lg font-bold text-slate-800">Tour Information</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">View and edit tour details</p>
                     </div>
                     {!isEditing && (
-                      <button onClick={() => setIsEditing(true)} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5">
-                        <Edit className="w-4 h-4" /> Edit
+                      <button onClick={() => setIsEditing(true)} className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors gap-1.5">
+                        <Edit className="w-3.5 h-3.5" /> Edit
                       </button>
                     )}
                   </div>
@@ -1361,28 +1906,233 @@ export default function TourDetailPage() {
                           </div>
                         </div>
                         
-                        <div className="col-span-4">
-                          <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Pricing & Passenger Breakdown</p>
-                          <div className="grid grid-cols-4 gap-4">
-                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
-                              <p className="text-xs text-slate-500 mb-1">Pax Breakdown</p>
-                              <p className="text-sm font-bold text-slate-800">
-                                {tour.adults || 0} A, {tour.children || 0} C, {tour.infants || 0} I <span className="text-slate-400 font-normal">({tour.pax || 0} Total)</span>
-                              </p>
-                            </div>
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
-                              <p className="text-xs text-emerald-600 mb-1">Base Fee</p>
-                              <p className="text-sm font-bold text-emerald-700">€{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}</p>
-                            </div>
-                            <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5">
-                              <p className="text-xs text-purple-600 mb-1">Guide Commission</p>
-                              <p className="text-sm font-bold text-purple-700">{tour.guideCommission !== undefined ? tour.guideCommission : 10}% (€{guideCommissionAmount.toLocaleString()})</p>
-                            </div>
-                            <div className="bg-sky-50 border border-sky-100 rounded-xl p-3.5">
-                              <p className="text-xs text-sky-600 mb-1">Dynamic Total</p>
-                              <p className="text-sm font-bold text-sky-700">€{Number(tour.totalFee || 0).toLocaleString()}</p>
-                            </div>
-                          </div>
+                        <div className="col-span-4 space-y-4">
+
+                          {/* INLINE PER-PAX COLLAPSIBLE BREAKDOWN TABLE AT THIS SPOT */}
+                          {(() => {
+                            const pivot = getFinancialPivotData();
+                            const totalPax = pivot.totalPax;
+
+                            return (
+                              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
+                                  {/* HEADER BAR (CLICKABLE TO COLLAPSE/EXPAND TABLE) */}
+                                  <div 
+                                    onClick={() => setIsBreakdownTableExpanded(prev => !prev)}
+                                    className="p-3 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 text-xs font-bold cursor-pointer hover:bg-slate-800 transition-colors select-none"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <button type="button" className="p-0.5 rounded bg-slate-800 text-slate-300">
+                                        {isBreakdownTableExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                      </button>
+                                      <FileSpreadsheet className="w-4 h-4 text-indigo-400" />
+                                      <span>Services Cost &amp; Revenue Breakdown (per Pax)</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                      {/* Quick Summary Pill when collapsed */}
+                                      {!isBreakdownTableExpanded && (
+                                        <div className="hidden sm:flex items-center gap-2 text-[10px] font-semibold text-slate-300">
+                                          <span className="bg-slate-800 px-2 py-0.5 rounded text-rose-300">Cost: €{pivot.grandTotalCost.toLocaleString()}</span>
+                                          <span className="bg-slate-800 px-2 py-0.5 rounded text-sky-300">Rev: €{pivot.grandTotalRevenue.toLocaleString()}</span>
+                                          <span className={`px-2 py-0.5 rounded font-bold ${pivot.grandNetMargin >= 0 ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
+                                            Profit: €{pivot.grandNetMargin.toLocaleString()} ({pivot.grandMarginPct.toFixed(1)}%)
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Grouping Selector when expanded */}
+                                      {isBreakdownTableExpanded && (
+                                        <div className="bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-[10px] flex items-center">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setPivotGroupBy('category'); }}
+                                            className={`px-2 py-0.5 rounded ${pivotGroupBy === 'category' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-300 hover:text-white'}`}
+                                          >
+                                            By Category
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setPivotGroupBy('bucket'); }}
+                                            className={`px-2 py-0.5 rounded ${pivotGroupBy === 'bucket' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-300 hover:text-white'}`}
+                                          >
+                                            By Bucket
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* EXPANDED BREAKDOWN TABLE CONTENT */}
+                                  {isBreakdownTableExpanded && (
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-xs text-left border-collapse table-fixed">
+                                        <colgroup>
+                                          <col className="w-[36%]" />
+                                          <col className="w-[34%]" />
+                                          <col className="w-[15%]" />
+                                          <col className="w-[15%]" />
+                                        </colgroup>
+                                        <thead className="bg-slate-100/90 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200">
+                                          <tr>
+                                            <th className="px-3 py-2">Service Category / Line Item</th>
+                                            <th className="px-2.5 py-2">Details</th>
+                                            <th className="px-2.5 py-2 text-right bg-rose-50/60 text-rose-700">Cost / Pax</th>
+                                            <th className="px-2.5 py-2 text-right bg-sky-50/60 text-sky-700">Revenue / Pax</th>
+                                          </tr>
+                                        </thead>
+
+                                        <tbody className="divide-y divide-slate-100">
+                                          {pivot.groups.length === 0 ? (
+                                            <tr>
+                                              <td colSpan={4} className="p-6 text-center text-slate-400">
+                                                <div className="italic text-sm">No services or financial items linked to this tour yet.</div>
+                                                {(tour?.passengers?.length || 0) > 0 && (
+                                                  <div className="mt-3">
+                                                    <button
+                                                      type="button"
+                                                      onClick={handleAutoGenerateHotels}
+                                                      disabled={isGeneratingHotels}
+                                                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-100 transition-all cursor-pointer"
+                                                    >
+                                                      <Sparkles className="w-4 h-4 text-amber-300" />
+                                                      {isGeneratingHotels ? 'Generating Stays...' : '✨ Auto-Generate Hotel Stays from Rooming'}
+                                                    </button>
+                                                    <p className="text-[11px] text-slate-400 mt-1.5 font-normal">
+                                                      Builds hotel accommodation for Budapest (2 Nts), Vienna (2 Nts), and Prague (3 Nts) matching passenger room allocations.
+                                                    </p>
+                                                  </div>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ) : (
+                                            pivot.groups.map((group) => {
+                                              const isExpanded = pivotExpandedRows[group.groupName] ?? pivotExpandAll;
+
+                                              return (
+                                                <React.Fragment key={group.groupName}>
+                                                  <tr
+                                                    onClick={() => togglePivotRow(group.groupName)}
+                                                    className="bg-slate-50/90 hover:bg-slate-100 transition-colors cursor-pointer select-none font-bold text-slate-800 text-[11px] border-b border-slate-200/80"
+                                                  >
+                                                    <td className="px-3 py-2 truncate">
+                                                      <div className="flex items-center gap-1.5">
+                                                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
+                                                        <span className="flex items-center gap-1.5 text-slate-900 font-extrabold truncate">
+                                                          {group.groupName.includes('Hotel') && <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                                                          {group.groupName.includes('Transport') && <Truck className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                                                          {group.groupName.includes('Excursion') && <Compass className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                                          {group.groupName.includes('Guide') && <PersonStanding className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
+                                                          {group.groupName.includes('Revenue') && <DollarSign className="w-3.5 h-3.5 text-sky-600 shrink-0" />}
+                                                          <span className="truncate">{group.groupName}</span>
+                                                        </span>
+                                                        <span className="bg-white border border-slate-200 text-slate-500 px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0">
+                                                          {group.items.length}
+                                                        </span>
+                                                      </div>
+                                                    </td>
+
+                                                    <td className="px-2.5 py-2 text-slate-400 font-normal text-[10px] truncate">
+                                                      {group.bucketName}
+                                                    </td>
+
+                                                    <td className="px-2.5 py-2 text-right font-bold text-rose-700 bg-rose-50/40 whitespace-nowrap">
+                                                      {group.totalCost > 0 ? (
+                                                        <div>
+                                                          <span>€{group.costPerPax.toFixed(2)}</span>
+                                                          <span className="block text-[9px] text-slate-400 font-normal">Total: €{group.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                      ) : '—'}
+                                                    </td>
+
+                                                    <td className="px-2.5 py-2 text-right font-bold text-sky-700 bg-sky-50/40 whitespace-nowrap">
+                                                      {group.totalRevenue > 0 ? (
+                                                        <div>
+                                                          <span>€{group.revenuePerPax.toFixed(2)}</span>
+                                                          <span className="block text-[9px] text-slate-400 font-normal">Total: €{group.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                      ) : '—'}
+                                                    </td>
+                                                  </tr>
+
+                                                  {isExpanded && group.items.map((item) => {
+                                                    const itemCostPerPax = item.perPaxPrice !== undefined
+                                                      ? item.perPaxPrice
+                                                      : (item.cost > 0 ? Math.round((item.cost / totalPax) * 100) / 100 : 0);
+                                                    const itemRevenuePerPax = item.perPaxPrice !== undefined
+                                                      ? item.perPaxPrice
+                                                      : (item.revenue > 0 ? Math.round((item.revenue / totalPax) * 100) / 100 : 0);
+
+                                                    return (
+                                                      <tr key={item.id} className="hover:bg-slate-50 transition-colors text-[11px] bg-white border-b border-slate-100">
+                                                        <td className="px-3 py-1.5 pl-6 text-slate-700 font-medium">
+                                                          <div className="flex items-center gap-1.5">
+                                                            <span className="w-1 h-1 rounded-full bg-slate-400 shrink-0"></span>
+                                                            <span className="break-words leading-tight">{item.description}</span>
+                                                          </div>
+                                                        </td>
+
+                                                        <td className="px-2.5 py-1.5 text-slate-500 text-[10px] leading-snug break-words whitespace-normal">
+                                                          {item.detailsText || `${item.qty} x €${item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                        </td>
+
+                                                        <td className="px-2.5 py-1.5 text-right text-rose-600 font-semibold bg-rose-50/20 whitespace-nowrap">
+                                                          {item.cost !== 0 ? (
+                                                            <div>
+                                                              <span className={item.cost < 0 ? "text-emerald-600 font-bold" : ""}>
+                                                                {item.cost < 0 ? `-€${Math.abs(itemCostPerPax).toFixed(2)}` : `€${itemCostPerPax.toFixed(2)}`}
+                                                              </span>
+                                                              <span className="block text-[9px] text-slate-400 font-normal">
+                                                                Total: {item.cost < 0 ? `-€${Math.abs(item.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `€${item.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                              </span>
+                                                            </div>
+                                                          ) : '—'}
+                                                        </td>
+
+                                                        <td className="px-2.5 py-1.5 text-right text-sky-600 font-semibold bg-sky-50/20 whitespace-nowrap">
+                                                          {item.revenue > 0 ? (
+                                                            <div>
+                                                              <span>€{itemRevenuePerPax.toFixed(2)}</span>
+                                                              <span className="block text-[9px] text-slate-400 font-normal">Total: €{item.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                            </div>
+                                                          ) : '—'}
+                                                        </td>
+                                                      </tr>
+                                                    );
+                                                  })}
+                                                </React.Fragment>
+                                              );
+                                            })
+                                          )}
+                                        </tbody>
+
+                                        <tfoot className="bg-slate-900 text-white font-bold text-[11px]">
+                                          <tr>
+                                            <td className="px-3 py-2 uppercase tracking-wider text-slate-200">
+                                              Total ({totalPax} Pax)
+                                            </td>
+                                            <td className="px-2.5 py-2 text-slate-400 font-normal text-[10px]">
+                                              Summary
+                                            </td>
+                                            <td className="px-2.5 py-2 text-right text-rose-300 bg-rose-950/40 whitespace-nowrap">
+                                              <div>
+                                                <span>€{pivot.grandCostPerPax.toFixed(2)}</span>
+                                                <span className="block text-[9px] text-rose-200/70 font-normal">Total: €{pivot.grandTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                              </div>
+                                            </td>
+                                            <td className="px-2.5 py-2 text-right text-sky-300 bg-sky-950/40 whitespace-nowrap">
+                                              <div>
+                                                <span>€{pivot.grandRevenuePerPax.toFixed(2)}</span>
+                                                <span className="block text-[9px] text-sky-200/70 font-normal">Total: €{pivot.grandTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        </tfoot>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                            );
+                          })()}
                         </div>
                       </div>
                       <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
@@ -1425,13 +2175,17 @@ export default function TourDetailPage() {
                             };
                           }
                           
-                          if (svc.roomType && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax') {
-                            hotelReservationsMap[key].rooms.push(`${svc.roomCount}x ${svc.roomType}`);
-                          } else if (svc.description && !svc.description.includes('City Tax') && !svc.description.includes('Hotel Tax')) {
-                            hotelReservationsMap[key].rooms.push(svc.description);
+                          if (isHotelDiscountService(svc)) {
+                            hotelReservationsMap[key].rooms.push(`Discount: -€${Math.abs(svc.totalAmount || svc.unitPrice || 0)}`);
+                            hotelReservationsMap[key].totalCost -= Math.abs(svc.totalAmount || (svc.unitPrice * (svc.quantity || 1)) || 0);
+                          } else {
+                            if (svc.roomType && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax') {
+                              hotelReservationsMap[key].rooms.push(`${svc.roomCount}x ${svc.roomType}`);
+                            } else if (svc.description && !svc.description.includes('City Tax') && !svc.description.includes('Hotel Tax')) {
+                              hotelReservationsMap[key].rooms.push(svc.description);
+                            }
+                            hotelReservationsMap[key].totalCost += (svc.totalAmount || (svc.unitPrice * (svc.quantity || 1)) || 0);
                           }
-                          
-                          hotelReservationsMap[key].totalCost += (svc.totalAmount || (svc.unitPrice * (svc.quantity || 1)) || 0);
                         });
 
                         const hotelReservationsList = Object.values(hotelReservationsMap);
@@ -1514,16 +2268,16 @@ export default function TourDetailPage() {
                 <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
               </div>
 
-              {/* RIGHT COLUMN (4-5 Cols): Standalone Operational Remarks & Special Tour Notes Card */}
-              <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 sticky top-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    Operational Remarks & Notes
+              {/* RIGHT COLUMN (3-4 Cols): Compact Operational Remarks & Special Tour Notes Card */}
+              <div className="lg:col-span-4 xl:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-3 sticky top-6">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    Operational Remarks
                   </h3>
                   <div className="flex items-center gap-2">
                     {notesSavedSuccess && (
-                      <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold animate-pulse">
+                      <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">
                         ✓ Saved!
                       </span>
                     )}
@@ -1531,22 +2285,22 @@ export default function TourDetailPage() {
                       type="button"
                       onClick={handleSaveNotes}
                       disabled={saving}
-                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                     >
-                      {saving ? 'Saving...' : '💾 Save Notes'}
+                      {saving ? 'Saving...' : '💾 Save'}
                     </button>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 font-medium leading-normal">
-                  Enter special tour instructions, guide/driver remarks, flight arrival notes, or client preferences:
+                <p className="text-[11px] text-slate-400 font-medium leading-tight">
+                  Special tour instructions, guide/driver remarks, flight arrival notes, or client preferences:
                 </p>
 
                 <textarea
-                  rows={14}
+                  rows={10}
                   value={tourNotes}
                   onChange={e => setTourNotes(e.target.value)}
-                  className="w-full p-4 bg-slate-50/90 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium leading-relaxed resize-y"
+                  className="w-full p-3 bg-slate-50/90 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium leading-relaxed resize-y"
                   placeholder="Type special tour instructions, client preferences, operational remarks, guide notes, flight arrival/departure details..."
                 />
               </div>
@@ -1561,10 +2315,10 @@ export default function TourDetailPage() {
             
             {/* Services Revenue */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-4">
+              <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">Services Revenue</h2>
-                  <p className="text-sm text-slate-400">Sales and billable items</p>
+                  <h2 className="text-base md:text-lg font-bold text-slate-800">Services Revenue</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Sales and billable items</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
                   {serviceCategories.filter(c => c.isRevenue).map(cat => (
@@ -1621,10 +2375,10 @@ export default function TourDetailPage() {
 
             {/* Services Cost */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-4">
+              <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">Services Cost</h2>
-                  <p className="text-sm text-slate-400">Expenses and supplier costs</p>
+                  <h2 className="text-base md:text-lg font-bold text-slate-800">Services Cost</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Expenses and supplier costs</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
                   {serviceCategories.filter(c => c.isCost).map(cat => (
@@ -1635,6 +2389,16 @@ export default function TourDetailPage() {
                   <button onClick={() => openServiceModal('Other', false)} className="flex items-center px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-600 rounded-lg text-xs font-medium transition-colors gap-1">
                     <Plus className="w-3 h-3" /> Other
                   </button>
+                  {services.filter(s => s.serviceCategoryId === 1).length === 0 && (tour?.passengers?.length || 0) > 0 && (
+                    <button 
+                      onClick={handleAutoGenerateHotels} 
+                      disabled={isGeneratingHotels}
+                      className="flex items-center px-3 py-1.5 bg-indigo-50 border border-indigo-200 shadow-sm hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition-colors gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      {isGeneratingHotels ? 'Generating...' : 'Auto-Generate Hotels'}
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="p-6 space-y-8">
@@ -1662,10 +2426,13 @@ export default function TourDetailPage() {
                     }, 0);
 
                     const passengerAndOtherTotal = costBuckets.operational
-                      .filter(s => s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room')
+                      .filter(s => s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room' && !isHotelDiscountService(s))
                       .reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0);
 
-                    const opGrandTotal = passengerAndOtherTotal + staffTotal;
+                    const hotelDiscountServices = costBuckets.operational.filter(s => isHotelDiscountService(s));
+                    const hotelDiscountTotal = hotelDiscountServices.reduce((sum, s) => sum + Math.abs(s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0);
+
+                    const opGrandTotal = passengerAndOtherTotal + staffTotal - hotelDiscountTotal;
 
                     return (
                       <>
@@ -1680,7 +2447,84 @@ export default function TourDetailPage() {
                         </div>
 
                         {/* Main Operational Services Table (without inline subtotal tfoot) */}
-                        {renderServiceTable(costBuckets.operational.filter(s => s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room'), false)}
+                        {renderServiceTable(costBuckets.operational.filter(s => s.roomType !== 'Guide Room' && s.roomType !== 'Driver Room' && !isHotelDiscountService(s)), false)}
+
+                        {/* Expandable Hotel Discounts Subsection */}
+                        <div className="mt-4 border border-emerald-200 rounded-2xl bg-emerald-50/20 overflow-hidden shadow-sm">
+                          <button 
+                            type="button"
+                            onClick={() => setIsHotelDiscountExpanded(!isHotelDiscountExpanded)} 
+                            className="w-full p-4 bg-gradient-to-r from-emerald-50 to-teal-50/60 hover:from-emerald-100/70 hover:to-teal-100/70 transition-all flex items-center justify-between font-bold text-slate-800 text-sm border-b border-emerald-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Tag className="w-4 h-4 text-emerald-600" />
+                              <span className="text-emerald-950 font-extrabold">Hotel Discounts</span>
+                              <span className="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                                {hotelDiscountServices.length} {hotelDiscountServices.length === 1 ? 'Discount' : 'Discounts'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-slate-600">
+                                Total Hotel Discount: <strong className="text-emerald-800 font-extrabold">-€{hotelDiscountTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                              </span>
+                              {isHotelDiscountExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                            </div>
+                          </button>
+
+                          {isHotelDiscountExpanded && (
+                            <div className="p-4 space-y-3 bg-white/90">
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Tag className="w-3.5 h-3.5 text-emerald-600" /> Hotel Discounts & Deductions
+                                </h5>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    openServiceModal('Hotel Discount', false);
+                                  }}
+                                  className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-all"
+                                >
+                                  <Plus className="w-3 h-3" /> Add Hotel Discount
+                                </button>
+                              </div>
+
+                              {hotelDiscountServices.length === 0 ? (
+                                <p className="text-xs text-slate-400 italic">No hotel discount entries.</p>
+                              ) : (
+                                <div className="divide-y divide-emerald-100 border border-emerald-200 rounded-xl overflow-hidden bg-emerald-50/30">
+                                  {hotelDiscountServices.map(s => {
+                                    const h = hotels.find(x => x.id === s.hotelId);
+                                    const amt = Math.abs(s.totalAmount || s.unitPrice * (s.quantity || 1) || 0);
+                                    return (
+                                      <div key={s.id} className="p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div>
+                                          <span className="font-bold text-emerald-950">{h?.name || 'General Hotel Discount'}</span>
+                                          <span className="ml-2 text-emerald-700 font-medium">{s.description || 'Hotel Discount'}</span>
+                                          {s.startDate && s.endDate && (
+                                            <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <div className="font-bold text-emerald-800">
+                                            Discount: <span className="text-emerald-700 font-extrabold">-€{amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <button type="button" onClick={() => openEditServiceModal(s)} className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit Hotel Discount">
+                                              <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button type="button" onClick={() => handleDeleteService(s.id)} className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded-lg transition-colors" title="Delete Hotel Discount">
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
                         {/* Expandable Staff Accommodation Subsection */}
                         <div className="mt-4 border border-amber-200 rounded-2xl bg-amber-50/20 overflow-hidden shadow-sm">
@@ -1895,10 +2739,10 @@ export default function TourDetailPage() {
           return (
             <div className="p-6 max-w-6xl mx-auto">
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-slate-50 flex flex-wrap items-center justify-between gap-4">
+                <div className="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-slate-50 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-bold text-slate-800">Passenger & Booking List</h2>
-                    <p className="text-sm text-slate-500 mt-1">Manage passengers, rooming assignments, and booking details for this tour.</p>
+                    <h2 className="text-base md:text-lg font-bold text-slate-800">Passenger & Booking List</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Manage passengers, rooming assignments, and booking details for this tour.</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     {/* Search Bar */}
@@ -2018,9 +2862,9 @@ export default function TourDetailPage() {
       {isPassengerModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
-              <h2 className="text-xl font-bold text-slate-800">{editingPassengerId ? 'Edit' : 'Add'} Passenger / Booking</h2>
-              <button onClick={() => setIsPassengerModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
+              <h2 className="text-base font-bold text-slate-800">{editingPassengerId ? 'Edit' : 'Add'} Passenger / Booking</h2>
+              <button onClick={() => setIsPassengerModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2125,7 +2969,7 @@ export default function TourDetailPage() {
                           const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
                           const basis = h?.pricingBasis === 'Room' ? 'Room' : 'Pax';
                           
-                          // Auto-calculate rooming list counts from passengers
+                          // Rooming list counts from passengers
                           const passList = tour?.passengers || [];
                           const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
                           const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
@@ -2133,17 +2977,17 @@ export default function TourDetailPage() {
                           const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
                           const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
 
-                          const sCount = basis === 'Room' ? sPass : sPass;
-                          const dCount = basis === 'Room' ? Math.ceil(dPass / 2) : dPass;
-                          const twCount = basis === 'Room' ? Math.ceil(twPass / 2) : twPass;
-                          const trCount = basis === 'Room' ? Math.ceil(trPass / 3) : trPass;
-                          const ebCount = basis === 'Room' ? Math.ceil(ebPass / 3) : ebPass;
+                          const sCount = sPass;
+                          const dCount = Math.ceil(dPass / 2);
+                          const twCount = Math.ceil(twPass / 2);
+                          const trCount = Math.ceil(trPass / 3);
+                          const ebCount = Math.ceil(ebPass / 3);
 
                           const sRate = basis === 'Room' ? (h?.singleRoomRate || h?.singleRate || 0) : (h?.singlePaxRate || h?.singleRate || 0);
-                          const dRate = basis === 'Room' ? (h?.doubleRoomRate || (h?.doubleRate ? h?.doubleRate * 2 : 0)) : (h?.doublePaxRate || h?.doubleRate || 0);
-                          const twRate = basis === 'Room' ? (h?.twinRoomRate || (h?.twinRate ? h?.twinRate * 2 : 0)) : (h?.twinPaxRate || h?.twinRate || 0);
-                          const trRate = basis === 'Room' ? (h?.tripleRoomRate || (h?.tripleRate ? h?.tripleRate * 3 : 0)) : (h?.triplePaxRate || h?.tripleRate || 0);
-                          const ebRate = basis === 'Room' ? (h?.dblEbRoomRate || h?.dblEbRate || 0) : (h?.dblEbPaxRate || h?.dblEbRate || 0);
+                          const dRate = basis === 'Room' ? (h?.doubleRoomRate || (h?.doublePaxRate ? h.doublePaxRate * 2 : 0) || (h?.doubleRate ? h.doubleRate * 2 : 0)) : (h?.doublePaxRate || (h?.doubleRoomRate ? h.doubleRoomRate / 2 : 0) || h?.doubleRate || 0);
+                          const twRate = basis === 'Room' ? (h?.twinRoomRate || (h?.twinPaxRate ? h.twinPaxRate * 2 : 0) || (h?.twinRate ? h.twinRate * 2 : 0)) : (h?.twinPaxRate || (h?.twinRoomRate ? h.twinRoomRate / 2 : 0) || h?.twinRate || 0);
+                          const trRate = basis === 'Room' ? (h?.tripleRoomRate || (h?.triplePaxRate ? h.triplePaxRate * 3 : 0) || (h?.tripleRate ? h.tripleRate * 3 : 0)) : (h?.triplePaxRate || (h?.tripleRoomRate ? h.tripleRoomRate / 3 : 0) || h?.tripleRate || 0);
+                          const ebRate = basis === 'Room' ? (h?.dblEbRoomRate || (h?.dblEbPaxRate ? h.dblEbPaxRate * 3 : 0) || (h?.dblEbRate ? h.dblEbRate * 3 : 0)) : (h?.dblEbPaxRate || (h?.dblEbRoomRate ? h.dblEbRoomRate / 3 : 0) || h?.dblEbRate || 0);
 
                           setNewService({ 
                             ...newService, 
@@ -2179,26 +3023,17 @@ export default function TourDetailPage() {
                             onClick={() => {
                               const newBasis = 'Room';
                               const h = hotels.find((x: any) => x.id === newService.hotelId);
-                              const passList = tour?.passengers || [];
-                              const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
-                              const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
-                              const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
-                              const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
-                              const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
+                              const prevBasis = newService.pricingBasis || 'Pax';
+                              const isFromPax = prevBasis === 'Pax';
 
                               setNewService({
                                 ...newService,
                                 pricingBasis: newBasis,
-                                singleCount: sPass,
-                                doubleCount: Math.ceil(dPass / 2),
-                                twinCount: Math.ceil(twPass / 2),
-                                tripleCount: Math.ceil(trPass / 3),
-                                dblEbCount: Math.ceil(ebPass / 3),
-                                singleRate: h?.singleRoomRate || h?.singleRate || newService.singleRate || 0,
-                                doubleRate: h?.doubleRoomRate || (h?.doubleRate ? h?.doubleRate * 2 : 0) || newService.doubleRate || 0,
-                                twinRate: h?.twinRoomRate || (h?.twinRate ? h?.twinRate * 2 : 0) || newService.twinRate || 0,
-                                tripleRate: h?.tripleRoomRate || (h?.tripleRate ? h?.tripleRate * 3 : 0) || newService.tripleRate || 0,
-                                dblEbRate: h?.dblEbRoomRate || h?.dblEbRate || newService.dblEbRate || 0,
+                                singleRate: h?.singleRoomRate || (h?.singlePaxRate ? h.singlePaxRate : (newService.singleRate || 0)),
+                                doubleRate: h?.doubleRoomRate || (h?.doublePaxRate ? h.doublePaxRate * 2 : (newService.doubleRate ? (isFromPax ? newService.doubleRate * 2 : newService.doubleRate) : 0)),
+                                twinRate: h?.twinRoomRate || (h?.twinPaxRate ? h.twinPaxRate * 2 : (newService.twinRate ? (isFromPax ? newService.twinRate * 2 : newService.twinRate) : 0)),
+                                tripleRate: h?.tripleRoomRate || (h?.triplePaxRate ? h.triplePaxRate * 3 : (newService.tripleRate ? (isFromPax ? newService.tripleRate * 3 : newService.tripleRate) : 0)),
+                                dblEbRate: h?.dblEbRoomRate || (h?.dblEbPaxRate ? h.dblEbPaxRate * 3 : (newService.dblEbRate ? (isFromPax ? newService.dblEbRate * 3 : newService.dblEbRate) : 0)),
                               });
                             }}
                             className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${newService.pricingBasis === 'Room' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-blue-600'}`}
@@ -2210,26 +3045,17 @@ export default function TourDetailPage() {
                             onClick={() => {
                               const newBasis = 'Pax';
                               const h = hotels.find((x: any) => x.id === newService.hotelId);
-                              const passList = tour?.passengers || [];
-                              const sPass = passList.filter((p: any) => p.roomType === 'Single').length;
-                              const dPass = passList.filter((p: any) => p.roomType === 'Double').length;
-                              const twPass = passList.filter((p: any) => p.roomType === 'Twin').length;
-                              const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
-                              const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
+                              const prevBasis = newService.pricingBasis || 'Room';
+                              const isFromRoom = prevBasis === 'Room';
 
                               setNewService({
                                 ...newService,
                                 pricingBasis: newBasis,
-                                singleCount: sPass,
-                                doubleCount: dPass,
-                                twinCount: twPass,
-                                tripleCount: trPass,
-                                dblEbCount: ebPass,
-                                singleRate: h?.singlePaxRate || h?.singleRate || newService.singleRate || 0,
-                                doubleRate: h?.doublePaxRate || h?.doubleRate || newService.doubleRate || 0,
-                                twinRate: h?.twinPaxRate || h?.twinRate || newService.twinRate || 0,
-                                tripleRate: h?.triplePaxRate || h?.tripleRate || newService.tripleRate || 0,
-                                dblEbRate: h?.dblEbPaxRate || h?.dblEbRate || newService.dblEbRate || 0,
+                                singleRate: h?.singlePaxRate || (h?.singleRoomRate ? h.singleRoomRate : (newService.singleRate || 0)),
+                                doubleRate: h?.doublePaxRate || (h?.doubleRoomRate ? h.doubleRoomRate / 2 : (newService.doubleRate ? (isFromRoom ? newService.doubleRate / 2 : newService.doubleRate) : 0)),
+                                twinRate: h?.twinPaxRate || (h?.twinRoomRate ? h.twinRoomRate / 2 : (newService.twinRate ? (isFromRoom ? newService.twinRate / 2 : newService.twinRate) : 0)),
+                                tripleRate: h?.triplePaxRate || (h?.tripleRoomRate ? h.tripleRoomRate / 3 : (newService.tripleRate ? (isFromRoom ? newService.tripleRate / 3 : newService.tripleRate) : 0)),
+                                dblEbRate: h?.dblEbPaxRate || (h?.dblEbRoomRate ? h.dblEbRoomRate / 3 : (newService.dblEbRate ? (isFromRoom ? newService.dblEbRate / 3 : newService.dblEbRate) : 0)),
                               });
                             }}
                             className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${newService.pricingBasis === 'Pax' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-indigo-600'}`}
@@ -2251,14 +3077,13 @@ export default function TourDetailPage() {
                             const trPass = passList.filter((p: any) => p.roomType === 'Triple').length;
                             const ebPass = passList.filter((p: any) => (p.roomType || '').includes('Extra Bed') || (p.roomType || '').includes('DBL+EB')).length;
 
-                            const isRoom = newService.pricingBasis === 'Room';
                             setNewService({
                               ...newService,
-                              singleCount: isRoom ? sPass : sPass,
-                              doubleCount: isRoom ? Math.ceil(dPass / 2) : dPass,
-                              twinCount: isRoom ? Math.ceil(twPass / 2) : twPass,
-                              tripleCount: isRoom ? Math.ceil(trPass / 3) : trPass,
-                              dblEbCount: isRoom ? Math.ceil(ebPass / 3) : ebPass,
+                              singleCount: sPass,
+                              doubleCount: Math.ceil(dPass / 2),
+                              twinCount: Math.ceil(twPass / 2),
+                              tripleCount: Math.ceil(trPass / 3),
+                              dblEbCount: Math.ceil(ebPass / 3),
                             });
                           }}
                           className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1"
@@ -2301,9 +3126,8 @@ export default function TourDetailPage() {
                     const trC = newService.tripleCount || 0;
                     const ebC = newService.dblEbCount || 0;
 
-                    const accomPax = isRoom 
-                      ? (sC * 1 + dC * 2 + twC * 2 + trC * 3 + ebC * 3) 
-                      : (sC + dC + twC + trC + ebC);
+                    const accomPax = sC * 1 + dC * 2 + twC * 2 + trC * 3 + ebC * 3;
+                    const totalRooms = sC + dC + twC + trC + ebC;
                     const totalTourPax = (tour?.pax || 0);
                     const isMatched = accomPax === totalTourPax || totalTourPax === 0;
 
@@ -2312,12 +3136,12 @@ export default function TourDetailPage() {
                         <div className="flex items-center gap-2">
                           <span className="text-base">{isMatched ? '🟢' : '🟡'}</span>
                           <span>
-                            Accommodating <strong>{accomPax} Pax</strong> {isRoom ? `in ${sC + dC + twC + trC + ebC} Rooms` : 'on Pax Basis'}
+                            Accommodating <strong>{accomPax} Pax</strong> in <strong>{totalRooms} Rooms</strong>
                             {isMatched ? ' — Matched with Tour Bookings' : ` (Tour Total: ${totalTourPax} Pax)`}
                           </span>
                         </div>
-                        <span className="text-[10px] uppercase font-extrabold tracking-wider opacity-80">
-                          {isRoom ? 'Room Mode' : 'Pax Mode'}
+                        <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-white/70 border border-current shadow-2xs">
+                          {isRoom ? '🏢 Room Pricing Mode' : '👤 Pax Pricing Mode'}
                         </span>
                       </div>
                     );
@@ -2327,19 +3151,19 @@ export default function TourDetailPage() {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                          {newService.pricingBasis === 'Pax' ? 'Passenger Counts & Nightly Rates (€/pax/night) [All Editable]' : 'Room Allocation & Nightly Rates (€/room/night) [All Editable]'}
+                          {newService.pricingBasis === 'Pax' ? 'Room Allocation & Nightly Pax Rates (€/pax/night) [All Editable]' : 'Room Allocation & Nightly Room Rates (€/room/night) [All Editable]'}
                         </label>
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                           {/* Single */}
                           <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-xs font-bold text-slate-800 block">Single</span>
+                            <span className="text-xs font-bold text-slate-800 block">Single (1 Pax)</span>
                             <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '# Pax' : '# Rooms'}</label>
+                                <label className="block text-[9px] font-semibold text-slate-400"># Rooms</label>
                                 <input type="number" min="0" value={newService.singleCount || 0} onChange={e => setNewService({ ...newService, singleCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '€/Pax/Nt' : '€/Rm/Nt'}</label>
                                 <input type="number" step="0.01" value={newService.singleRate !== undefined ? newService.singleRate : ''} onChange={e => setNewService({ ...newService, singleRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="100" />
                               </div>
                             </div>
@@ -2347,14 +3171,14 @@ export default function TourDetailPage() {
 
                           {/* Double */}
                           <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-xs font-bold text-slate-800 block">Double</span>
+                            <span className="text-xs font-bold text-slate-800 block">Double (2 Pax)</span>
                             <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '# Pax' : '# Rooms'}</label>
+                                <label className="block text-[9px] font-semibold text-slate-400"># Rooms</label>
                                 <input type="number" min="0" value={newService.doubleCount || 0} onChange={e => setNewService({ ...newService, doubleCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '€/Pax/Nt' : '€/Rm/Nt'}</label>
                                 <input type="number" step="0.01" value={newService.doubleRate !== undefined ? newService.doubleRate : ''} onChange={e => setNewService({ ...newService, doubleRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
                               </div>
                             </div>
@@ -2362,14 +3186,14 @@ export default function TourDetailPage() {
 
                           {/* Twin */}
                           <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-xs font-bold text-slate-800 block">Twin</span>
+                            <span className="text-xs font-bold text-slate-800 block">Twin (2 Pax)</span>
                             <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '# Pax' : '# Rooms'}</label>
+                                <label className="block text-[9px] font-semibold text-slate-400"># Rooms</label>
                                 <input type="number" min="0" value={newService.twinCount || 0} onChange={e => setNewService({ ...newService, twinCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '€/Pax/Nt' : '€/Rm/Nt'}</label>
                                 <input type="number" step="0.01" value={newService.twinRate !== undefined ? newService.twinRate : ''} onChange={e => setNewService({ ...newService, twinRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="140" />
                               </div>
                             </div>
@@ -2377,14 +3201,14 @@ export default function TourDetailPage() {
 
                           {/* Triple */}
                           <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs space-y-1">
-                            <span className="text-xs font-bold text-slate-800 block">Triple</span>
+                            <span className="text-xs font-bold text-slate-800 block">Triple (3 Pax)</span>
                             <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '# Pax' : '# Rooms'}</label>
+                                <label className="block text-[9px] font-semibold text-slate-400"># Rooms</label>
                                 <input type="number" min="0" value={newService.tripleCount || 0} onChange={e => setNewService({ ...newService, tripleCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '€/Pax/Nt' : '€/Rm/Nt'}</label>
                                 <input type="number" step="0.01" value={newService.tripleRate !== undefined ? newService.tripleRate : ''} onChange={e => setNewService({ ...newService, tripleRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700" placeholder="180" />
                               </div>
                             </div>
@@ -2392,14 +3216,14 @@ export default function TourDetailPage() {
 
                           {/* DBL + EB */}
                           <div className="bg-white p-2 rounded-lg border border-purple-200 shadow-2xs space-y-1 ring-1 ring-purple-100">
-                            <span className="text-xs font-bold text-purple-900 block truncate" title="Double + Extra Bed">DBL + EB</span>
+                            <span className="text-xs font-bold text-purple-900 block truncate" title="Double + Extra Bed (3 Pax)">DBL + EB (3 Pax)</span>
                             <div className="grid grid-cols-2 gap-1">
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '# Pax' : '# Rooms'}</label>
+                                <label className="block text-[9px] font-semibold text-slate-400"># Rooms</label>
                                 <input type="number" min="0" value={newService.dblEbCount || 0} onChange={e => setNewService({ ...newService, dblEbCount: parseInt(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-slate-800" />
                               </div>
                               <div>
-                                <label className="block text-[9px] font-semibold text-slate-400">Rate (€)</label>
+                                <label className="block text-[9px] font-semibold text-slate-400">{newService.pricingBasis === 'Pax' ? '€/Pax/Nt' : '€/Rm/Nt'}</label>
                                 <input type="number" step="0.01" value={newService.dblEbRate !== undefined ? newService.dblEbRate : ''} onChange={e => setNewService({ ...newService, dblEbRate: parseFloat(e.target.value) || 0 })} className="w-full px-1.5 py-0.5 bg-purple-50/50 border border-purple-200 rounded text-xs font-bold text-purple-700" placeholder="170" />
                               </div>
                             </div>
@@ -2409,7 +3233,12 @@ export default function TourDetailPage() {
 
                       {/* ──── HOTEL DISCOUNT & NOTES FIELDS ──── */}
                       <div className="bg-rose-50/60 p-3 rounded-xl border border-rose-200/80 space-y-2">
-                        <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider block">Hotel Discount & Notes (Informational)</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-rose-900 uppercase tracking-wider block">Hotel Discount & Notes</span>
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/90 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            {Number(newService.discountAmount) > 0 ? `Applied: -€${Number(newService.discountAmount).toFixed(2)}` : 'Processed as Hotel Discount'}
+                          </span>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div>
                             <label className="block text-[9px] font-bold text-rose-800">Discount Amount (€)</label>
@@ -2696,6 +3525,8 @@ export default function TourDetailPage() {
                               (newService.tripleCount * (newService.tripleRate || 0) * safeQty) +
                               (newService.dblEbCount * (newService.dblEbRate || 0) * safeQty)
                             );
+                            const discAmt = Number(newService.discountAmount) || 0;
+                            const packageTotal = Math.max(0, passengerTotal + gTotal + dTotal + taxTotal - discAmt);
 
                             return (
                               <div className="bg-indigo-50/80 border border-indigo-100 p-3 rounded-xl space-y-1.5 h-full flex flex-col justify-between">
@@ -2710,11 +3541,17 @@ export default function TourDetailPage() {
                                     {gNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Guide Room ({gNights}N × €{newService.guideRate || 0})</span> <span>€{gTotal.toLocaleString()}</span></div>}
                                     {dNights > 0 && <div className="flex justify-between text-amber-800 font-medium"><span>Driver Room ({dNights}N × €{newService.driverRate || 0})</span> <span>€{dTotal.toLocaleString()}</span></div>}
                                     {newService.includeHotelTax && (newService.hotelTaxRate || 0) > 0 && <div className="flex justify-between text-blue-800 font-medium"><span>Hotel Tax ({tour?.pax || 0} Pax × {safeQty}N × €{newService.hotelTaxRate})</span> <span>€{taxTotal.toLocaleString()}</span></div>}
+                                    {discAmt > 0 && (
+                                      <div className="flex justify-between text-emerald-700 font-bold bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-200">
+                                        <span>Hotel Discount ({newService.discountNotes || 'Discount'})</span>
+                                        <span>-€{discAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="pt-2 border-t border-indigo-200 flex justify-between font-bold text-xs text-indigo-900">
                                   <span>Total Package Cost</span>
-                                  <span>€{(passengerTotal + gTotal + dTotal + taxTotal).toLocaleString()}</span>
+                                  <span>€{packageTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                               </div>
                             );
@@ -3003,6 +3840,84 @@ export default function TourDetailPage() {
                 </>
               )}
 
+              {/* Hotel Discount */}
+              {serviceType === 'Hotel Discount' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Hotel (Optional)</label>
+                    <select 
+                      value={newService.hotelId || ''} 
+                      onChange={e => {
+                        const hid = e.target.value ? parseInt(e.target.value) : null;
+                        const h = hotels.find((x: any) => x.id === hid);
+                        setNewService({
+                          ...newService,
+                          hotelId: hid,
+                          description: newService.description || (h ? `${h.name} Discount` : '')
+                        });
+                      }} 
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm"
+                    >
+                      <option value="">General / All Hotels</option>
+                      {hotels.map((h: any) => (
+                        <option key={h.id} value={h.id}>{h.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Description / Rationale</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={newService.description} 
+                      onChange={e => setNewService({ ...newService, description: e.target.value })} 
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" 
+                      placeholder="e.g. 1 room free for 15 Double Room, Early Booking 10%, etc." 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Start Date</label>
+                      <input 
+                        type="date" 
+                        value={newService.startDate ? newService.startDate.split('T')[0] : ''} 
+                        onChange={e => setNewService({ ...newService, startDate: e.target.value, serviceDate: e.target.value })} 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">End Date</label>
+                      <input 
+                        type="date" 
+                        value={newService.endDate ? newService.endDate.split('T')[0] : ''} 
+                        onChange={e => setNewService({ ...newService, endDate: e.target.value, serviceEndDate: e.target.value })} 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Discount Amount (€)</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400">€</span>
+                      <input 
+                        required 
+                        type="number" 
+                        step="0.01" 
+                        min="0.01" 
+                        value={newService.unitPrice || newService.totalAmount || ''} 
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setNewService({ ...newService, unitPrice: val, totalAmount: val, quantity: 1 });
+                        }} 
+                        className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-bold text-emerald-700" 
+                        placeholder="e.g. 50.00" 
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">This discount will be deducted from Hotel costs and Operational Services total.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Invoiced Fee */}
               {serviceType === 'Invoiced Fee' && (
                 <>
@@ -3043,7 +3958,13 @@ export default function TourDetailPage() {
               )}
 
               {/* Cost preview */}
-              {newService.unitPrice > 0 && serviceType !== 'Invoiced Fee' && serviceType !== 'Hotel' && (
+              {serviceType === 'Hotel Discount' && (newService.unitPrice > 0 || newService.totalAmount > 0) && (
+                <div className="p-3 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-between">
+                  <span>Total Hotel Discount:</span>
+                  <strong className="text-base font-black text-emerald-700">-€{(newService.totalAmount || newService.unitPrice || 0).toFixed(2)}</strong>
+                </div>
+              )}
+              {newService.unitPrice > 0 && serviceType !== 'Invoiced Fee' && serviceType !== 'Hotel' && serviceType !== 'Hotel Discount' && (
                 <div className={`p-3 rounded-xl text-sm font-medium ${serviceType === 'Excursion' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
                   Total: {newService.quantity} × €{newService.unitPrice}{newService.roomCount > 1 && serviceType === 'Hotel' ? ` × ${newService.roomCount} rooms` : ''} = <strong>€{(newService.quantity * newService.unitPrice * (serviceType === 'Hotel' ? newService.roomCount : 1)).toLocaleString()}</strong>
                 </div>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
@@ -10,10 +11,12 @@ namespace Uno_API.Controllers
     public class ProjectsController : ControllerBase
     {
         private readonly UnoDbContext _context;
+        private readonly IStorageService _storageService;
 
-        public ProjectsController(UnoDbContext context)
+        public ProjectsController(UnoDbContext context, IStorageService storageService)
         {
             _context = context;
+            _storageService = storageService;
         }
 
         [HttpGet("debug-env")]
@@ -107,6 +110,12 @@ namespace Uno_API.Controllers
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
+            // Ensure project storage folder is created automatically
+            if (!string.IsNullOrWhiteSpace(project.ProjectCode))
+            {
+                _storageService.EnsureProjectFolder(project.ProjectCode);
+            }
+
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
         }
 
@@ -124,6 +133,10 @@ namespace Uno_API.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                if (!string.IsNullOrWhiteSpace(project.ProjectCode))
+                {
+                    _storageService.EnsureProjectFolder(project.ProjectCode);
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
