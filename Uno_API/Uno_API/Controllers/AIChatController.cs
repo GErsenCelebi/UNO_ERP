@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 using System.Text.RegularExpressions;
 
 namespace Uno_API.Controllers
@@ -11,6 +12,7 @@ namespace Uno_API.Controllers
         public string Query { get; set; } = string.Empty;
         public string? ContextUrl { get; set; }
         public string? Role { get; set; }
+        public string? Category { get; set; }
     }
 
     public class AIChatResponse
@@ -18,7 +20,9 @@ namespace Uno_API.Controllers
         public string Answer { get; set; } = string.Empty;
         public List<QuickActionLink>? RecommendedLinks { get; set; }
         public List<string>? SuggestedPills { get; set; }
-        public string Mode { get; set; } = "Hybrid-Knowledge-AppDB";
+        public string Mode { get; set; } = "Local-Hybrid-RAG";
+        public string? SourceDocument { get; set; }
+        public string? Category { get; set; }
     }
 
     public class QuickActionLink
@@ -32,10 +36,14 @@ namespace Uno_API.Controllers
     public class AIChatController : ControllerBase
     {
         private readonly UnoDbContext _context;
+        private readonly IKnowledgeRetrievalService _retrievalService;
+        private readonly ITourProjectLookupService _entityLookupService;
 
-        public AIChatController(UnoDbContext context)
+        public AIChatController(UnoDbContext context, IKnowledgeRetrievalService retrievalService, ITourProjectLookupService entityLookupService)
         {
             _context = context;
+            _retrievalService = retrievalService;
+            _entityLookupService = entityLookupService;
         }
 
         [HttpPost("chat")]
@@ -46,175 +54,60 @@ namespace Uno_API.Controllers
                 return BadRequest(new { error = "Query text is required." });
             }
 
+            // 0. Specific Entity Live Database Lookup (Specific Tour, Project, Current City, Guide, Hotel, Margin, Pax)
+            try
+            {
+                var specificEntityResponse = await _entityLookupService.TryHandleSpecificEntityQueryAsync(request.Query, request.ContextUrl, request.Role);
+                if (specificEntityResponse != null)
+                {
+                    return Ok(specificEntityResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AIChatController] Error during entity lookup: {ex}");
+            }
+
             var q = request.Query.Trim().ToLower();
             var response = new AIChatResponse();
             var links = new List<QuickActionLink>();
 
-            // 1. Dynamic AppDB AI Knowledge Base Search (Trained from Workspace .md User Manuals)
-            var terms = q.Split(new[] { ' ', '?', ',', '.', '!' }, StringSplitOptions.RemoveEmptyEntries);
-            var activeItems = await _context.AiKnowledgeItems.Where(k => k.IsActive).ToListAsync();
-
-            AiKnowledgeItem? bestMatch = null;
-            int maxMatchCount = 0;
-
-            foreach (var item in activeItems)
-            {
-                int score = 0;
-                var kwList = item.Keywords.ToLower().Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
-                var pattern = item.QuestionPattern.ToLower();
-
-                foreach (var term in terms)
-                {
-                    if (term.Length < 3) continue;
-                    if (kwList.Any(k => k.Contains(term))) score += 4;
-                    if (pattern.Contains(term)) score += 3;
-                    if (item.AnswerMarkdown.ToLower().Contains(term)) score += 1;
-                }
-
-                // Boost dedicated User Manuals & Workflow Guides over generic Release Notes
-                var source = item.SourceFile?.ToLower() ?? "";
-                if (source.Contains("guide") || source.Contains("usermanual") || item.Category == "User Manual")
-                {
-                    score += 6;
-                }
-                if (source.Contains("release_notes"))
-                {
-                    score -= 4;
-                }
-
-                if (score > maxMatchCount && score >= 4)
-                {
-                    maxMatchCount = score;
-                    bestMatch = item;
-                }
-            }
-
-            if (bestMatch != null)
-            {
-                response.Answer = bestMatch.AnswerMarkdown;
-                if (!string.IsNullOrEmpty(bestMatch.TargetUrl))
-                {
-                    links.Add(new QuickActionLink { Label = bestMatch.ActionLabel ?? "Open Link", Path = bestMatch.TargetUrl });
-                }
-                response.Mode = "AppDB-Repository-Knowledge";
-                response.RecommendedLinks = links;
-                response.SuggestedPills = new List<string>
-                {
-                    "How to add a user?",
-                    "What is Rule 4?",
-                    "Summarize active tours",
-                    "Tour status transition criteria",
-                    "How to configure role access?"
-                };
-                return Ok(response);
-            }
-
-            // 2. Fallback Governance Rules Questions
-            if (q.Contains("rule 4") || q.Contains("separate money") || q.Contains("cash handover") || q.Contains("expense deduction"))
-            {
-                response.Answer = "**Governance Rule 4: SEPARATE MONEY FLOWS**\n\n" +
-                    "• **Rule Principle**: Gross excursion sales cash collected by the guide must be remitted in full to the Operator first.\n" +
-                    "• **No Netting**: Guides must **never** deduct commission or local expenses directly from excursion sales cash.\n" +
-                    "• **Reimbursement**: Guide expenses are submitted with receipts and reimbursed separately after full remittance validation.";
-                links.Add(new QuickActionLink { Label = "View Access & User Settings", Path = "/settings" });
-            }
-            else if (q.Contains("rule 1") || q.Contains("one programme"))
-            {
-                response.Answer = "**Governance Rule 1: ONE PROGRAMME**\n\n" +
-                    "Operate only the current authorised programme version and price list. No guide-created itineraries or undocumented discounts are permitted.";
-            }
-            else if (q.Contains("rule 2") || q.Contains("free choice"))
-            {
-                response.Answer = "**Governance Rule 2: FREE CHOICE**\n\n" +
-                    "Optional excursions are strictly voluntary. A passenger declining an optional tour must never experience reduced service quality or negative treatment on the core tour.";
-            }
-            else if (q.Contains("rule 3") || q.Contains("full traceability"))
-            {
-                response.Answer = "**Governance Rule 3: FULL TRACEABILITY**\n\n" +
-                    "Every participant, payment, expense, voucher, and cash handover must be backed by documented evidence and audit logs.";
-            }
-            else if (q.Contains("rule 5") || q.Contains("accountable operator"))
-            {
-                response.Answer = "**Governance Rule 5: ONE ACCOUNTABLE OPERATOR**\n\n" +
-                    "While local subcontractors (hotels, drivers, guides) deliver services, UNO (as destination Operator) remains fully accountable for quality and passenger welfare.";
-            }
-
-            // 3. How-To Navigation & User Guide Questions
-            else if (q.Contains("add user") || q.Contains("create user") || q.Contains("new user") || q.Contains("add account"))
-            {
-                response.Answer = "**How to Add a New User Account**:\n\n" +
-                    "1. Navigate to **[User Accounts & Role Management](/settings)**.\n" +
-                    "2. Click the purple **+ Add New User** button at top right.\n" +
-                    "3. Enter Full Name, Email, Password, and select Role (`Administrator`, `TourAdmin`, `Manager`).\n" +
-                    "4. Click **Create Account** to save.";
-                links.Add(new QuickActionLink { Label = "Go to User Accounts", Path = "/settings" });
-            }
-            else if (q.Contains("password") || q.Contains("reveal password") || q.Contains("show password"))
-            {
-                response.Answer = "**Password Masking & Viewing Rules**:\n\n" +
-                    "• All user account passwords are strictly masked (`••••••••`) by default.\n" +
-                    "• **Administrators Only**: An eye button (`👁`) is rendered next to the password column to toggle plain text view.\n" +
-                    "• Non-admin users (`TourAdmin`, `Manager`) see bullets only with no toggle option.";
-                links.Add(new QuickActionLink { Label = "User Accounts & Privacy", Path = "/settings" });
-            }
-            else if (q.Contains("access right") || q.Contains("role permission") || q.Contains("matrix") || q.Contains("configure role"))
-            {
-                response.Answer = "**How to Configure Screen Access Rights**:\n\n" +
-                    "1. Go to **[User & Role Access Management](/settings)**.\n" +
-                    "2. Click the **Screen Access Rights Matrix** tab.\n" +
-                    "3. Select the role (`Administrator`, `TourAdmin`, `Manager`, or create a custom role).\n" +
-                    "4. Check or uncheck **View, Entry (Create), Update (Edit), Delete** for each screen.\n" +
-                    "5. Click **Save Permissions Matrix**.";
-                links.Add(new QuickActionLink { Label = "Open Access Rights Matrix", Path = "/settings" });
-            }
-            else if (q.Contains("audit log") || q.Contains("system history") || q.Contains("who changed") || q.Contains("change log"))
-            {
-                response.Answer = "**Audit Logs & System History**:\n\n" +
-                    "• View complete change history at **[Audit Logs](/audit-logs)**.\n" +
-                    "• Tracks all user creations, updates, role changes, and deletions with timestamps and user email details.\n" +
-                    "• You can also view project-specific history directly in the **Activity History** tab inside any Project page.";
-                links.Add(new QuickActionLink { Label = "View System Audit Logs", Path = "/audit-logs" });
-            }
-
-            // 4. Live AppDB Queries & Data Intelligence
-            else if ((q.Contains("how many tour") || q.Contains("summarize tour") || q.Contains("active tour count")) && !q.Contains("import") && !q.Contains("excel"))
+            // 1. Live AppDB Queries & Data Intelligence (Dynamic Stats)
+            if (((q.Contains("tour") && (q.Contains("summar") || q.Contains("how many") || q.Contains("count") || q.Contains("overview") || q.Contains("statistics"))) || (q.Contains("active") && q.Contains("tour"))) && !q.Contains("import") && !q.Contains("excel") && !q.Contains("checkpoint") && !q.Contains("gate") && !q.Contains("transition"))
             {
                 var tourCount = await _context.Tours.CountAsync();
                 var confirmedTours = await _context.Tours.Where(t => t.TourStatusId == 3).CountAsync();
                 var totalRev = await _context.Tours.SumAsync(t => (decimal?)t.TotalFee) ?? 0m;
 
-                response.Answer = $"**Live AppDB Tour Summary**:\n\n" +
-                    $"• **Total Tours Registered**: `{tourCount}`\n" +
-                    $"• **Confirmed Status Tours**: `{confirmedTours}`\n" +
+                response.Answer = "👋 **Live Tour Operational Summary**:\n\n" +
+                    $"• **Total Tours Registered**: `{tourCount}` departures\n" +
+                    $"• **Confirmed Status Tours**: `{confirmedTours}` active groups\n" +
                     $"• **Combined Tour Package Revenue**: `€{totalRev:N2}`\n\n" +
-                    $"View all operational details in the Tours management grid.";
-                links.Add(new QuickActionLink { Label = "Open Tours Grid", Path = "/tours" });
+                    "Would you like to inspect specific departures on the Tours board or verify upcoming status gate checkpoints?";
+
+                links.Add(new QuickActionLink { Label = "Open Tours Board", Path = "/tours" });
+                response.RecommendedLinks = links;
+                response.SuggestedPills = new List<string> { "Tour status transition criteria", "How to advance to Confirmed?", "Rooming list import" };
+                response.Category = "Tours";
+                return Ok(response);
             }
-            else if (q.Contains("project") || q.Contains("active project") || q.Contains("how many project"))
+            else if (q.Contains("active project") || q.Contains("how many project") || (q.Contains("summarize") && q.Contains("project")))
             {
                 var projectCount = await _context.Projects.CountAsync();
                 var activeProjects = await _context.Projects.Where(p => p.ProjectStatusId == 3).CountAsync();
                 var totalBudget = await _context.Projects.SumAsync(p => (decimal?)p.ApproxBudget) ?? 0m;
 
-                response.Answer = $"**Live AppDB Projects Summary**:\n\n" +
-                    $"• **Total Projects**: `{projectCount}`\n" +
-                    $"• **Active Projects**: `{activeProjects}`\n" +
-                    $"• **Combined Approx Budget**: `€{totalBudget:N2}`";
-                links.Add(new QuickActionLink { Label = "Open Projects Dashboard", Path = "/projects" });
-            }
-            else if (q.Contains("hotel") || q.Contains("guide") || q.Contains("driver") || q.Contains("master data"))
-            {
-                var hotelCount = await _context.Hotels.CountAsync();
-                var guideCount = await _context.Guides.CountAsync();
-                var driverCount = await _context.Drivers.CountAsync();
-                var transportCount = await _context.TransportCompanies.CountAsync();
+                response.Answer = "👋 **Live Commercial Projects Summary**:\n\n" +
+                    $"• **Total Master Projects**: `{projectCount}` contracts\n" +
+                    $"• **Active Operational Projects**: `{activeProjects}` contracts\n" +
+                    $"• **Combined Approx Budget**: `€{totalBudget:N2}`\n\n" +
+                    "All individual tour departures roll up their financial performance into these parent projects.";
 
-                response.Answer = $"**Live Master Data Overview**:\n\n" +
-                    $"• **Contracted Hotels**: `{hotelCount}`\n" +
-                    $"• **Registered Tour Guides**: `{guideCount}`\n" +
-                    $"• **Transport Drivers**: `{driverCount}`\n" +
-                    $"• **Transport Companies**: `{transportCount}`";
-                links.Add(new QuickActionLink { Label = "Open Master Data Screen", Path = "/master-data" });
+                links.Add(new QuickActionLink { Label = "Open Projects Dashboard", Path = "/projects" });
+                response.RecommendedLinks = links;
+                response.SuggestedPills = new List<string> { "Why are Projects needed?", "How to create a project?", "Executive KPI Dashboard" };
+                response.Category = "Projects";
+                return Ok(response);
             }
             else if (q.Contains("recent change") || q.Contains("what happened") || q.Contains("latest log"))
             {
@@ -222,39 +115,140 @@ namespace Uno_API.Controllers
                 if (recentLogs.Count > 0)
                 {
                     var logSummaries = string.Join("\n", recentLogs.Select(l => $"• **[{l.Timestamp:HH:mm}]** `{l.UserEmail}`: {l.Summary}"));
-                    response.Answer = $"**Recent AppDB Activity Logs**:\n\n{logSummaries}";
+                    response.Answer = $"👋 **Recent System Audit History**:\n\n{logSummaries}\n\nAll changes to rates, dates, and access permissions are logged with full traceability.";
                 }
                 else
                 {
-                    response.Answer = "No recent audit logs found in the database.";
+                    response.Answer = "👋 No recent audit logs found in the database.";
                 }
                 links.Add(new QuickActionLink { Label = "View Full Audit Logs", Path = "/audit-logs" });
+                response.RecommendedLinks = links;
+                response.SuggestedPills = new List<string> { "How to configure role access?", "How to view user change logs?" };
+                return Ok(response);
             }
-            else
-            {
-                // Default Intelligent Fallback
-                response.Answer = $"**UNO_ERP Assistant Response**:\n\n" +
-                    $"I searched the ERP Process Knowledge Base and live database for **\"{request.Query}\"**.\n\n" +
-                    $"Here are recommended quick actions for your query:\n" +
-                    $"• Manage user credentials and role access rights at **[User Accounts](/settings)**.\n" +
-                    $"• View live project & tour operations at **[Projects](/projects)** & **[Tours](/tours)**.\n" +
-                    $"• Inspect master data suppliers (Hotels, Guides, Transport) at **[Master Data](/master-data)**.";
 
-                links.Add(new QuickActionLink { Label = "Projects Overview", Path = "/projects" });
-                links.Add(new QuickActionLink { Label = "User & Access Management", Path = "/settings" });
+            // 2. Intelligent Hybrid Knowledge Base Search (Local RAG)
+            var matchResult = await _retrievalService.SearchBestMatchAsync(request.Query, request.Category);
+
+            if (matchResult != null && matchResult.Score >= 8.0)
+            {
+                var item = matchResult.Item;
+                response.Answer = FormatAgenticResponse(item, request.Query);
+
+                // Only cite actual external documents (PDF, Word, PowerPoint), never internal .md files
+                if (!string.IsNullOrEmpty(item.SourceFile) &&
+                    (item.SourceFile.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
+                     item.SourceFile.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ||
+                     item.SourceFile.EndsWith(".doc", StringComparison.OrdinalIgnoreCase) ||
+                     item.SourceFile.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase)))
+                {
+                    response.SourceDocument = item.SourceFile;
+                }
+                else
+                {
+                    response.SourceDocument = null;
+                }
+
+                response.Category = item.Category;
+
+                if (!string.IsNullOrEmpty(item.TargetUrl))
+                {
+                    links.Add(new QuickActionLink
+                    {
+                        Label = item.ActionLabel ?? "Open Link",
+                        Path = item.TargetUrl
+                    });
+                }
+
+                // Dynamic Pills from Trigger Queries or SubTopics
+                var pills = new List<string>();
+                if (!string.IsNullOrEmpty(item.TriggerQueries))
+                {
+                    var trigList = item.TriggerQueries.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(t => t.Trim())
+                        .Where(t => !string.Equals(t, request.Query, StringComparison.OrdinalIgnoreCase))
+                        .Take(4)
+                        .ToList();
+                    pills.AddRange(trigList);
+                }
+
+                if (pills.Count == 0)
+                {
+                    pills = GetCategoryDefaultPills(item.Category);
+                }
+
+                response.RecommendedLinks = links;
+                response.SuggestedPills = pills;
+                return Ok(response);
             }
+
+            // 3. Fallback Helpful Agent Guidance
+            response.Answer = $"👋 **I searched the UNO ERP Knowledge Base for \"{request.Query}\"**.\n\n" +
+                "While I couldn't find an exact step-by-step match, here are the primary operational hubs you can explore:\n\n" +
+                "• 🚌 **Tours & Departures**: Manage rooming manifests, status gates, and hotel costing at **[Tours](/tours)**.\n" +
+                "• 📁 **Commercial Contracts**: Group departures and monitor gross budgets at **[Projects](/projects)**.\n" +
+                "• ⚙️ **Master Data & Catalog**: Configure contracted hotels, guides, transport, and excursions at **[Master Data](/master-data)**.\n" +
+                "• 🛡️ **Role Permissions & Security**: Manage user roles and screen access permissions at **[Settings](/settings)**.";
+
+            links.Add(new QuickActionLink { Label = "Tours Board", Path = "/tours" });
+            links.Add(new QuickActionLink { Label = "Master Data Hub", Path = "/master-data" });
 
             response.RecommendedLinks = links;
             response.SuggestedPills = new List<string>
             {
-                "How to add a user?",
-                "What is Rule 4?",
-                "Summarize active tours",
-                "How to configure role access?",
-                "Recent system changes"
+                "How to advance from Draft to Confirmed?",
+                "Tour status transition criteria",
+                "How is hotel cost calculated?",
+                "What are the 5 Excel import scenarios?"
             };
 
             return Ok(response);
+        }
+
+        private static string FormatAgenticResponse(AiKnowledgeItem item, string query)
+        {
+            var header = !string.IsNullOrWhiteSpace(item.SubTopic) && !item.SubTopic.Equals("User Manual", StringComparison.OrdinalIgnoreCase)
+                ? item.SubTopic
+                : item.Category;
+
+            var cleanBody = item.AnswerMarkdown.Trim();
+
+            // Check if AnswerMarkdown starts with a header
+            if (cleanBody.StartsWith("#"))
+            {
+                // Remove redundant top markdown header if desired
+                var firstLineEnd = cleanBody.IndexOf('\n');
+                if (firstLineEnd > 0)
+                {
+                    cleanBody = cleanBody.Substring(firstLineEnd).Trim();
+                }
+            }
+
+            var responseText = !string.IsNullOrWhiteSpace(header)
+                ? $"👋 **Operational Guide: {header}**:\n\n{cleanBody}"
+                : $"👋 **Operational Guidance**:\n\n{cleanBody}";
+
+            // Only append source document reference if it is an external docx/pdf/pptx file (never .md files)
+            if (!string.IsNullOrEmpty(item.SourceFile) &&
+                (item.SourceFile.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
+                 item.SourceFile.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ||
+                 item.SourceFile.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase)))
+            {
+                responseText += $"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📄 **Document Reference**: `{item.SourceFile}`";
+            }
+
+            return responseText;
+        }
+
+        private static List<string> GetCategoryDefaultPills(string category)
+        {
+            return category?.ToLower() switch
+            {
+                "projects" => new List<string> { "Why are Projects needed?", "How to create a project?", "Executive KPI Dashboard" },
+                "tours" => new List<string> { "Tour status transition criteria", "How is hotel cost calculated?", "How to import Orta Avrupa excel?" },
+                "metadata" => new List<string> { "Hotels Master Data", "Role access permissions", "How to add a user?" },
+                _ => new List<string> { "How to advance to Confirmed?", "How to import Excel rooming list?", "Tour status transition criteria" }
+            };
         }
     }
 }

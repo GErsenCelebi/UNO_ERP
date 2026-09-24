@@ -3,8 +3,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Filter, Loader2, Calendar as CalendarIcon, MapPin, Users, AlertTriangle, User, Search, ChevronDown, Check, Briefcase } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatDate } from '@/lib/utils';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const API = '/api';
+const API = getApiUrl();
+
+interface HotelStay {
+  hotelId: number;
+  hotelName: string;
+  city: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 interface TourEvent {
   tourId: number;
@@ -19,16 +29,179 @@ interface TourEvent {
   assignedGuideNames: string[];
   guideAssignments: any[];
   hasGuideConflict: boolean;
+  hotelStays?: HotelStay[];
+  cities?: string[];
+  missingMainServices?: string[];
+  hasMissingServices?: boolean;
 }
 
-const getTourColor = (tourCode: string) => {
-  if (!tourCode) return '#334155';
-  let hash = 0;
-  for (let i = 0; i < tourCode.length; i++) {
-    hash = tourCode.charCodeAt(i) + ((hash << 5) - hash);
+const getStayForEventAndDate = (event: TourEvent, date?: Date | null): HotelStay | null => {
+  if (!event.hotelStays || event.hotelStays.length === 0) return null;
+  if (date) {
+    const d = new Date(date);
+    d.setHours(12, 0, 0, 0); // midday
+    // Check if date falls in [startDate, endDate)
+    const stay = event.hotelStays.find(h => {
+      if (!h.startDate || !h.endDate) return false;
+      const s = new Date(h.startDate); s.setHours(0, 0, 0, 0);
+      const e = new Date(h.endDate); e.setHours(0, 0, 0, 0);
+      return d >= s && d < e;
+    });
+    if (stay) return stay;
+
+    // Check if date matches the checkout day of the final stay
+    const finalStay = event.hotelStays[event.hotelStays.length - 1];
+    if (finalStay && finalStay.endDate) {
+      const fe = new Date(finalStay.endDate); fe.setHours(0, 0, 0, 0);
+      const cd = new Date(date); cd.setHours(0, 0, 0, 0);
+      if (cd.getTime() === fe.getTime()) {
+        return finalStay;
+      }
+    }
+  } else {
+    // If no date provided (e.g. general overview), check if today matches any stay
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const currentStay = event.hotelStays.find(h => {
+      if (!h.startDate || !h.endDate) return false;
+      const s = new Date(h.startDate); s.setHours(0, 0, 0, 0);
+      const e = new Date(h.endDate); e.setHours(0, 0, 0, 0);
+      return today >= s && today <= e;
+    });
+    if (currentStay) return currentStay;
   }
-  const h = Math.abs(hash) % 360;
-  return `hsl(${h}, 75%, 40%)`; 
+  return null;
+};
+
+const getCityForEventAndDate = (event: TourEvent, date?: Date | null): string => {
+  const stay = getStayForEventAndDate(event, date);
+  if (stay && stay.city) return stay.city;
+
+  // Fallback: list of distinct cities or destination
+  if (event.cities && event.cities.length > 0) {
+    return event.cities.join(' - ');
+  }
+  return event.destination || '';
+};
+
+interface TourTheme {
+  name: string;
+  bg: string;
+  border: string;
+  leftBorder: string;
+  titleColor: string;
+  subtextColor: string;
+  accent: string;
+}
+
+const TOUR_PALETTE: TourTheme[] = [
+  {
+    name: 'blue',
+    bg: 'bg-blue-100',
+    border: 'border-blue-300',
+    leftBorder: 'border-l-blue-600',
+    titleColor: 'text-blue-950',
+    subtextColor: 'text-blue-800',
+    accent: '#2563eb'
+  },
+  {
+    name: 'amber',
+    bg: 'bg-amber-100',
+    border: 'border-amber-300',
+    leftBorder: 'border-l-amber-600',
+    titleColor: 'text-amber-950',
+    subtextColor: 'text-amber-800',
+    accent: '#d97706'
+  },
+  {
+    name: 'emerald',
+    bg: 'bg-emerald-100',
+    border: 'border-emerald-300',
+    leftBorder: 'border-l-emerald-600',
+    titleColor: 'text-emerald-950',
+    subtextColor: 'text-emerald-800',
+    accent: '#059669'
+  },
+  {
+    name: 'rose',
+    bg: 'bg-rose-100',
+    border: 'border-rose-300',
+    leftBorder: 'border-l-rose-600',
+    titleColor: 'text-rose-950',
+    subtextColor: 'text-rose-800',
+    accent: '#e11d48'
+  },
+  {
+    name: 'purple',
+    bg: 'bg-purple-100',
+    border: 'border-purple-300',
+    leftBorder: 'border-l-purple-600',
+    titleColor: 'text-purple-950',
+    subtextColor: 'text-purple-800',
+    accent: '#7c3aed'
+  },
+  {
+    name: 'orange',
+    bg: 'bg-orange-100',
+    border: 'border-orange-300',
+    leftBorder: 'border-l-orange-600',
+    titleColor: 'text-orange-950',
+    subtextColor: 'text-orange-800',
+    accent: '#ea580c'
+  },
+  {
+    name: 'teal',
+    bg: 'bg-teal-100',
+    border: 'border-teal-300',
+    leftBorder: 'border-l-teal-600',
+    titleColor: 'text-teal-950',
+    subtextColor: 'text-teal-800',
+    accent: '#0d9488'
+  },
+  {
+    name: 'pink',
+    bg: 'bg-pink-100',
+    border: 'border-pink-300',
+    leftBorder: 'border-l-pink-600',
+    titleColor: 'text-pink-950',
+    subtextColor: 'text-pink-800',
+    accent: '#db2777'
+  },
+  {
+    name: 'lime',
+    bg: 'bg-lime-100',
+    border: 'border-lime-400',
+    leftBorder: 'border-l-lime-600',
+    titleColor: 'text-lime-950',
+    subtextColor: 'text-lime-800',
+    accent: '#65a30d'
+  },
+  {
+    name: 'indigo',
+    bg: 'bg-indigo-100',
+    border: 'border-indigo-300',
+    leftBorder: 'border-l-indigo-600',
+    titleColor: 'text-indigo-950',
+    subtextColor: 'text-indigo-800',
+    accent: '#4f46e5'
+  }
+];
+
+const getTourTheme = (tourId?: number, tourCode?: string): TourTheme => {
+  if (tourId) {
+    const idx = Math.abs(tourId) % TOUR_PALETTE.length;
+    return TOUR_PALETTE[idx];
+  }
+  let h = 0;
+  for (let i = 0; i < (tourCode || '').length; i++) {
+    h = ((h << 5) - h) + (tourCode || '').charCodeAt(i);
+  }
+  const idx = Math.abs(h) % TOUR_PALETTE.length;
+  return TOUR_PALETTE[idx];
+};
+
+const getTourColor = (tourCode?: string, tourId?: number) => {
+  return getTourTheme(tourId, tourCode).accent;
 };
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; gradient: string; dot: string; text: string }> = {
@@ -115,7 +288,7 @@ export default function TourCalendarPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
-  const [hoveredEvent, setHoveredEvent] = useState<TourEvent | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<{ event: TourEvent; date?: Date | null } | null>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -229,23 +402,52 @@ export default function TourCalendarPage() {
     });
   };
 
-  const renderEventCard = (event: TourEvent) => {
-    const style = STATUS_COLORS[event.statusName] || STATUS_COLORS['Draft'];
+  const renderEventCard = (event: TourEvent, date?: Date | null) => {
+    const theme = getTourTheme(event.tourId, event.tourCode);
+    const isInProgress = event.statusName === 'In Progress';
+    const dayCity = isInProgress ? getCityForEventAndDate(event, date) : null;
+    const hasMissing = Boolean(event.hasMissingServices || (event.missingMainServices && event.missingMainServices.length > 0));
+
     return (
       <div 
         key={event.tourId} 
-        className={`relative group px-1.5 py-1 text-[10px] rounded border ${style.bg} ${style.border} ${style.text} cursor-pointer truncate shadow-sm font-medium hover:shadow hover:z-10 hover:-translate-y-px transition-all my-0.5`}
-        onMouseEnter={() => setHoveredEvent(event)}
-        onMouseLeave={() => setHoveredEvent(null)}
+        className={`relative group px-1.5 py-1 text-[10px] rounded border border-l-[4px] ${theme.bg} ${theme.border} ${theme.leftBorder} ${hasMissing ? 'ring-1 ring-red-400' : ''} cursor-pointer truncate shadow-2xs font-medium hover:shadow-md hover:z-10 hover:-translate-y-px transition-all my-0.5`}
+        onMouseEnter={() => setHoveredItem({ event, date })}
+        onMouseLeave={() => setHoveredItem(null)}
         onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)}
       >
-        <div className="flex items-center justify-between gap-1">
-          <span className="truncate flex-1 font-bold" style={{ color: getTourColor(event.tourCode) }}>
-            {event.tourCode} {event.destination && `- ${event.destination}`}
-          </span>
-          {event.hasGuideConflict && (
-            <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />
-          )}
+        <div className="flex items-center justify-between gap-1 overflow-hidden">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <span className={`font-bold shrink-0 ${theme.titleColor}`}>
+              {event.tourCode}
+            </span>
+            {isInProgress && dayCity ? (
+              <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-white/95 text-slate-900 rounded font-bold text-[9px] truncate border border-slate-300 shadow-2xs">
+                <MapPin className="w-2.5 h-2.5 inline shrink-0 text-slate-700" />
+                <span className="truncate">{dayCity}</span>
+              </span>
+            ) : (
+              event.destination && (
+                <span className={`truncate font-semibold text-[9.5px] ${theme.subtextColor}`}>
+                  - {event.destination}
+                </span>
+              )
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {hasMissing && (
+              <span 
+                className="px-1 py-0.2 bg-red-600 text-white rounded font-black text-[8px] tracking-wider uppercase flex items-center gap-0.5 shadow-2xs animate-pulse"
+                title={`Missing: ${(event.missingMainServices || []).join(', ')}`}
+              >
+                <AlertTriangle className="w-2.5 h-2.5 text-white" />
+                MISSING
+              </span>
+            )}
+            {event.hasGuideConflict && (
+              <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />
+            )}
+          </div>
         </div>
       </div>
     );
@@ -282,7 +484,7 @@ export default function TourCalendarPage() {
                     </span>
                   </div>
                   <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar pb-1 px-0.5">
-                    {dayEvents.map(renderEventCard)}
+                    {dayEvents.map(event => renderEventCard(event, date))}
                   </div>
                 </>
               )}
@@ -312,7 +514,7 @@ export default function TourCalendarPage() {
               </h3>
               <div className="flex-1 overflow-y-auto space-y-1 pr-1">
                 {mEvents.length === 0 && <p className="text-xs text-slate-400 italic">No tours</p>}
-                {mEvents.map(renderEventCard)}
+                {mEvents.map(event => renderEventCard(event, null))}
               </div>
             </div>
           );
@@ -344,7 +546,7 @@ export default function TourCalendarPage() {
                 <div className={`mt-1 text-sm ${isToday ? 'font-bold' : ''}`}>{date.getDate()}</div>
               </div>
               <div className="flex-1 p-1 overflow-y-auto space-y-1">
-                {dayEvents.map(renderEventCard)}
+                {dayEvents.map(event => renderEventCard(event, date))}
               </div>
             </div>
           );
@@ -373,18 +575,42 @@ export default function TourCalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               {dayEvents.map(event => {
                 const style = STATUS_COLORS[event.statusName] || STATUS_COLORS['Draft'];
+                const theme = getTourTheme(event.tourId, event.tourCode);
+                const isInProgress = event.statusName === 'In Progress';
+                const dayCity = isInProgress ? getCityForEventAndDate(event, currentDate) : null;
                 return (
-                  <div key={event.tourId} onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)} className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow`}>
+                  <div key={event.tourId} onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)} className={`bg-white border ${theme.border} border-l-4 ${theme.leftBorder} rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow`}>
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-bold text-lg text-slate-800" style={{ color: getTourColor(event.tourCode) }}>{event.tourCode}</h3>
-                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-1"><MapPin className="w-3.5 h-3.5"/> {event.destination}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className={`font-bold text-lg ${theme.titleColor}`}>{event.tourCode}</h3>
+                          {isInProgress && dayCity && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-100 text-violet-800 border border-violet-300">
+                              <MapPin className="w-3.5 h-3.5 text-violet-600" />
+                              {dayCity}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3.5 h-3.5"/> {event.destination}
+                          {event.cities && event.cities.length > 0 && (
+                            <span className="text-xs text-slate-400 font-normal">({event.cities.join(' → ')})</span>
+                          )}
+                        </p>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text}`}>{event.statusName}</span>
+                      <div className="flex items-center gap-2">
+                        {event.missingMainServices && event.missingMainServices.length > 0 && (
+                          <span className="bg-red-100 border border-red-300 text-red-700 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                            Missing: {event.missingMainServices.join(', ')}
+                          </span>
+                        )}
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text}`}>{event.statusName}</span>
+                      </div>
                     </div>
                     
                     <div className="flex items-center gap-4 text-sm text-slate-600 mb-4 bg-slate-50 p-2 rounded-lg">
-                      <div className="flex items-center gap-1.5"><CalendarIcon className="w-4 h-4 text-blue-500" /> {new Date(event.arrivalDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}</div>
+                      <div className="flex items-center gap-1.5"><CalendarIcon className="w-4 h-4 text-blue-500" /> {formatDate(event.arrivalDate)} - {formatDate(event.endDate)}</div>
                       <div className="w-px h-4 bg-slate-300"></div>
                       <div className="flex items-center gap-1.5"><Users className="w-4 h-4 text-indigo-500" /> {event.pax} Pax</div>
                     </div>
@@ -489,6 +715,7 @@ export default function TourCalendarPage() {
           />
 
           <div className="ml-auto flex items-center gap-3 text-[10px] text-slate-500">
+             <div className="flex items-center gap-1.5 text-red-600 font-bold"><span className="px-1 py-0.2 bg-red-600 text-white rounded text-[8px] font-black uppercase">MISSING</span> Missing Services</div>
              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-indigo-50 border border-indigo-200 rounded block"></span> Confirmed</div>
              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-violet-50 border border-violet-200 rounded block"></span> In Progress</div>
              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-50 border border-emerald-200 rounded block"></span> Completed</div>
@@ -509,60 +736,118 @@ export default function TourCalendarPage() {
         {viewMode === 'week' && renderWeekView()}
         {viewMode === 'day' && renderDayView()}
 
-        {hoveredEvent && (
-          <div 
-            className="fixed z-50 bg-white rounded-lg shadow-2xl border border-slate-200 p-4 w-72 pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-10px] ml-[100px]"
-            style={{ left: '50%', top: '50%' }}
-          >
-            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-slate-200 rotate-45"></div>
-            
-            <div className="flex items-start justify-between mb-3 relative z-10">
-              <div>
-                <h4 className="font-bold text-slate-800">{hoveredEvent.tourCode}</h4>
-                <p className="text-xs font-medium text-slate-500">{hoveredEvent.statusName}</p>
-              </div>
-              {hoveredEvent.hasGuideConflict && (
-                <div className="bg-red-50 text-red-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-red-100">
-                  <AlertTriangle className="w-3 h-3" /> Conflict
+        {hoveredItem && (() => {
+          const hoveredEvent = hoveredItem.event;
+          const hoveredDate = hoveredItem.date;
+          const activeStay = getStayForEventAndDate(hoveredEvent, hoveredDate);
+          const dayCity = getCityForEventAndDate(hoveredEvent, hoveredDate);
+          const theme = getTourTheme(hoveredEvent.tourId, hoveredEvent.tourCode);
+
+          return (
+            <div 
+              className="fixed z-50 bg-white rounded-lg shadow-2xl border border-slate-200 p-4 w-80 pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-10px] ml-[100px]"
+              style={{ left: '50%', top: '50%' }}
+            >
+              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-slate-200 rotate-45"></div>
+              
+              <div className="flex items-start justify-between mb-3 relative z-10">
+                <div>
+                  <h4 className={`font-bold ${theme.titleColor}`}>{hoveredEvent.tourCode}</h4>
+                  <p className="text-xs font-medium text-slate-500">{hoveredEvent.statusName}</p>
                 </div>
-              )}
-            </div>
-            
-            <div className="space-y-2 text-xs relative z-10">
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span className="truncate">{hoveredEvent.destination || 'No destination'}</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
-                <span>
-                  {new Date(hoveredEvent.arrivalDate).toLocaleDateString()} - {new Date(hoveredEvent.endDate).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
-                <span>{hoveredEvent.pax} Pax</span>
+                <div className="flex items-center gap-1">
+                  {hoveredEvent.missingMainServices && hoveredEvent.missingMainServices.length > 0 && (
+                    <div className="bg-red-600 text-white px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs animate-pulse">
+                      <AlertTriangle className="w-2.5 h-2.5" /> Action Required
+                    </div>
+                  )}
+                  {hoveredEvent.hasGuideConflict && (
+                    <div className="bg-red-50 text-red-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-red-100">
+                      <AlertTriangle className="w-3 h-3" /> Conflict
+                    </div>
+                  )}
+                </div>
               </div>
               
-              {hoveredEvent.guideAssignments && hoveredEvent.guideAssignments.length > 0 && (
-                <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
-                  <div className="text-xs font-semibold text-slate-500 mb-1">Assigned Guides:</div>
-                  {hoveredEvent.guideAssignments.map((ga: any, i: number) => (
-                    <div key={i} className="flex flex-col gap-0.5 text-slate-700 font-medium">
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-blue-500" />
-                        <span>{ga.guideName}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-normal ml-5">
-                        {ga.startDate ? new Date(ga.startDate).toLocaleDateString() : '-'} to {ga.endDate ? new Date(ga.endDate).toLocaleDateString() : '-'}
-                      </span>
+              <div className="space-y-2 text-xs relative z-10">
+                {hoveredEvent.missingMainServices && hoveredEvent.missingMainServices.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 p-2.5 rounded-md space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-red-900">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                      <span>Missing Main Services ({hoveredEvent.missingMainServices.length})</span>
                     </div>
-                  ))}
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {hoveredEvent.missingMainServices.map((svc: string, idx: number) => (
+                        <span key={idx} className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-2xs">
+                          {svc}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-red-600 font-medium pt-0.5">
+                      Blocked from Confirmed & In Progress until resolved.
+                    </p>
+                  </div>
+                )}
+                {/* Specific calendar day & 1 city for this day */}
+                {hoveredDate && (
+                  <div className="flex items-center justify-between text-slate-500 font-medium pb-1.5 border-b border-slate-100">
+                    <span className="flex items-center gap-1.5 text-[11px]">
+                      <CalendarIcon className="w-3.5 h-3.5 text-blue-500" />
+                      {hoveredDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+
+                {/* 1 City and Hotel for that specific day */}
+                {dayCity && (
+                  <div className="flex items-center justify-between p-2 bg-violet-50 text-violet-900 rounded-md border border-violet-200">
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <MapPin className="w-4 h-4 text-violet-600 shrink-0" />
+                      <span>City: {dayCity}</span>
+                    </div>
+                    {activeStay?.hotelName && (
+                      <span className="text-[10.5px] text-violet-700 font-semibold truncate max-w-[130px]" title={activeStay.hotelName}>
+                        {activeStay.hotelName}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 text-slate-600">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="truncate">{hoveredEvent.destination || 'No destination'}</span>
                 </div>
-              )}
+                <div className="flex items-center gap-2 text-slate-600">
+                  <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
+                  <span>
+                    {formatDate(hoveredEvent.arrivalDate)} - {formatDate(hoveredEvent.endDate)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Users className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{hoveredEvent.pax} Pax</span>
+                </div>
+
+                {hoveredEvent.guideAssignments && hoveredEvent.guideAssignments.length > 0 && (
+                  <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
+                    <div className="text-xs font-semibold text-slate-500 mb-1">Assigned Guides:</div>
+                    {hoveredEvent.guideAssignments.map((ga: any, i: number) => (
+                      <div key={i} className="flex flex-col gap-0.5 text-slate-700 font-medium">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-blue-500" />
+                          <span>{ga.guideName}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-normal ml-5">
+                          {ga.startDate ? formatDate(ga.startDate) : '-'} to {ga.endDate ? formatDate(ga.endDate) : '-'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

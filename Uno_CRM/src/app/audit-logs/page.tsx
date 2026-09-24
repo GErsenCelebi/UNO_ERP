@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { History, Search, Filter, Shield, User, Clock, CheckCircle2, RefreshCw, Calendar } from 'lucide-react';
 import { getCurrentUser, canViewAuditLogs } from '@/lib/auth';
 import { getApiUrl } from '@/lib/apiConfig';
+import { formatDateTime } from '@/lib/utils';
 
 interface AuditLogRecord {
   id: number;
@@ -194,7 +195,7 @@ export default function AuditLogsPage() {
                       </td>
 
                       <td className="py-3.5 px-4 text-right font-mono text-slate-400">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {formatDateTime(log.timestamp)}
                       </td>
                     </tr>
                   );

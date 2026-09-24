@@ -1,103 +1,102 @@
-# 📊 Excel Import Master Guide: Complete Step-by-Step Instructions for New & Existing Items
+---
+id: tours-excel-import-master-guide
+title: Comprehensive Excel Import Master Guide (Scenarios 1-5, Naming Conventions & Column Specifications)
+category: Tours
+subTopic: Excel Import
+targetUrl: /master-data?tab=excelImport
+actionLabel: Open Excel Import Hub
+applicableRoles: [Administrator, TourAdmin]
+tags: [excel import, scenario 1, scenario 2, scenario 3, scenario 4, scenario 5, filename conventions, notation, rooming list, sales import, master data template]
+triggerQueries:
+  - "How can I import sales excel file and rooming lists?"
+  - "How to import a new tour, new project, or rooming list via Excel template?"
+  - "What are the 5 Excel import scenarios?"
+  - "What is Scenario 1: New Tour & New Project?"
+  - "What is Scenario 2: New Tour for Existing Project?"
+  - "What is Scenario 3: Refresh Rooming Data?"
+  - "What is Scenario 4: Import Master Data?"
+  - "What is Scenario 5: Import Excursion Sales?"
+  - "What filename conventions are required for Excel import?"
+  - "What worksheets and columns are required in the Excel import file?"
+---
 
-This comprehensive guide details the exact filename conventions, worksheet naming rules, column definitions, and step-by-step procedures for importing Projects, Tours, Rooming Lists, Master Data (Hotels, Guides, Transport, Excursions), and Sales Files into UNO ERP.
+# 📊 Excel Import Master Guide: Scenarios, Conventions & Specifications
+
+## 💡 Executive Summary & Core Purpose
+**UNO ERP** features an intelligent Excel ingestion pipeline that parses multi-sheet workbooks to instantiate projects, configure departures, populate passenger manifests, and reconcile optional excursion sales.
+
+Following exact **filename notations** and **sheet structures** guarantees zero import errors and seamless data linkage.
 
 ---
 
 ## 📁 1. Filename Conventions & Naming Notation
 
-UNO ERP uses intelligent filename parsing alongside sheet cell scanning. Follow these exact filename patterns:
+The backend indexer and Excel parser use filename patterns to automatically detect the import context:
 
-| Import Case | Filename Notation Template | Concrete Example |
+| Import Operational Case | Filename Template | Concrete Example |
 | :--- | :--- | :--- |
-| **New or Existing Project + New Tour** | `{ProjectName}_{TourCode}_rooming.xlsx` | **`Project1_Tour1_rooming.xlsx`** *(or `Orta Avrupa BVP_BVP28082026_rooming.xlsx`)* |
-| **Existing Tour Rooming Update** | `{TourCode}_rooming.xlsx` | **`Tour1_rooming.xlsx`** *(or `BVP28082026_rooming.xlsx`)* |
-| **Excursion Sales & Base Fees** | `{ProjectName}_{TourCode}_importSales.xlsx` | **`Project1_Tour1_importSales.xlsx`** |
-| **Master Data Catalog** | `MasterData_Import_Template.xlsx` | **`MasterData_Import_Template.xlsx`** |
+| **Scenario 1: New Project + New Tour** | `{ProjectName}_{TourCode}_rooming.xlsx` | **`Project1_Tour1_rooming.xlsx`** *(or `Orta Avrupa BVP_BVP28082026_rooming.xlsx`)* |
+| **Scenario 2: Existing Project + New Tour** | `{ProjectName}_{TourCode}_rooming.xlsx` | **`Project1_Tour2_rooming.xlsx`** |
+| **Scenario 3: Existing Tour Rooming Refresh** | `{TourCode}_rooming.xlsx` | **`Tour1_rooming.xlsx`** *(or `BVP28082026_rooming.xlsx`)* |
+| **Scenario 4: Master Data Catalog** | `MasterData_Import_Template.xlsx` | **`MasterData_Import_Template.xlsx`** |
+| **Scenario 5: Excursion Sales File** | `{ProjectName}_{TourCode}_importSales.xlsx` | **`Project1_Tour1_importSales.xlsx`** |
 
 ---
 
-## 📊 2. Worksheet Names & Column Specifications
+## 📊 2. Worksheet Names & Required Column Specifications
 
-### 🔹 **Sheet A: `Tours` (or `Tour`, `tour`, `tours`, `TourData`)**
-* **Col A (`Cell 1`)**: `Tour Code` (e.g. `Tour1` or `BVP28082026`). *[Required]*
-* **Col B (`Cell 2`)**: `Project Code / Name` (e.g. `Project1` or `Orta Avrupa BVP`).
-* **Col C (`Cell 3`)**: `Destination` (e.g. `Prague-Vienna-Budapest`).
-* **Col D (`Cell 4`)**: `Arrival Date` (e.g. `28.08.2026`).
-* **Col E (`Cell 5`)**: `End Date` (e.g. `04.09.2026`).
-* **Col F-I (`Cells 6-9`)**: `Adults`, `Children`, `Infants`, `Pax`.
+### 🔹 Sheet 1: `Tours` (or `Tour`, `TourData`)
+* **Col A**: `Tour Code` (e.g. `Tour1` or `BVP28082026`) *[Required]*
+* **Col B**: `Project Code / Name` (e.g. `Project1` or `Orta Avrupa BVP`)
+* **Col C**: `Destination` (e.g. `Prague-Vienna-Budapest`)
+* **Col D**: `Arrival Date` (Format: `dd/mm/yyyy` or `dd.mm.yyyy`)
+* **Col E**: `End Date` (Format: `dd/mm/yyyy` or `dd.mm.yyyy`)
+* **Cols F-I**: `Adults`, `Children`, `Infants`, `Pax`
 
-### 🔹 **Sheet B: `Projects` (or `Project`, `project`, `projects`)**
-* **Col A (`Cell 1`)**: `Project Code / Name` (e.g. `Project1`).
-* **Col B (`Cell 2`)**: `Client Name` (e.g. `UNO DMC`).
+### 🔹 Sheet 2: `Projects` (or `Project`)
+* **Col A**: `Project Code / Name` (e.g. `Project1`)
+* **Col B**: `Client Name` (e.g. `UNO DMC`, `Orta Avrupa BVP`)
 
-### 🔹 **Sheet C: `Rooming` (or `Rooms`, `rooming`, `rooms`, `Passengers`)**
-* **Col A (`Cell 1`)**: `Passenger Full Name` (e.g. `John Doe`).
-* **Col B (`Cell 2`)**: `Gender` (`M` / `F`).
-* **Col C (`Cell 3`)**: `Pax Type` (`Adult`, `Child` / `CHD`, `Infant`).
-* **Col D (`Cell 4`)**: `Booking Ref` (e.g. `BKG-01`, `BKG-02`).
-* **Col E (`Cell 5`)**: `Room Number` (e.g. `101`, `102`).
-* **Col F (`Cell 6`)**: `Room Type` (`Single`, `Double`, `Twin`, `Triple`).
+### 🔹 Sheet 3: `Rooming` (or `Rooms`, `Passengers`)
+* **Col A**: `Passenger Full Name` (e.g. `John Doe`)
+* **Col B**: `Gender` (`M` / `F`)
+* **Col C**: `Pax Type` (`Adult` [12+ yrs], `Child` [<12 yrs], `Infant`)
+* **Col D**: `Booking Ref` (e.g. `BKG-01`, `BKG-02`)
+* **Col E**: `Room Number` (e.g. `101`, `102`)
+* **Col F**: `Room Type` (`Single`, `Double`, `Twin`, `Triple`)
 
-### 🔹 **Sheet D: `Flights`**
-* **Row 2**: Arrival Flight No (`Cell 1`), Arrival Airport (`Cell 3`), Arrival Date (`Cell 4`).
-* **Row 3**: Departure Flight No (`Cell 1`), Departure Airport (`Cell 2`), Departure Date (`Cell 4`).
-
-### 🔹 **Sheet E: `Hotels` (Master Data File)**
-* **Col A**: Hotel Name | **Col B**: Location | **Col C**: Star Rating | **Col D**: Contact Name | **Col E**: Role | **Col F**: Email | **Col G**: Phone | **Cols H-O**: Nightly Room & Pax Rates (Single, Double, Twin, Triple) | **Col P**: Pricing Basis (`Pax` vs `Room`).
+### 🔹 Sheet 4: `Hotels` (Master Data File)
+* Hotel Name, Location, Star Rating, Contact Email/Phone, Nightly Room & Pax Rates, Pricing Basis (`Pax` vs `Room`).
 
 ---
 
-## 🛠️ 3. Step-by-Step Import Scenarios (Both NEW and EXISTING Cases)
+## 🛠️ 3. Step-by-Step Import Scenarios
 
-### **Scenario 1: How to Import a NEW Tour for a NEW Project**
-1. **Filename**: Name your file **`Project1_Tour1_rooming.xlsx`**.
-2. **Projects Sheet**: In sheet `Projects`, set Col A = `Project1`, Col B = `Client Name`.
-3. **Tours Sheet**: In sheet `Tours`, set Col A = `Tour1`, Col B = `Project1`, Col C = `Prague`, Col D = `28.08.2026`.
-4. **Rooming Sheet**: In sheet `Rooming`, list passenger names, booking references (`BKG-01`), room numbers (`101`), and pax types.
-5. **Execution**: Go to **Tours** or **Projects** screen → Click **Import Rooming List** → Select file.
-6. **Result**:
-   * UNO ERP automatically creates **`Project1`** on the fly with status **`Active`**.
-   * UNO ERP creates **`Tour1`** linked to `Project1` and initializes status to **`Draft`** (first Kanban column).
-   * All passengers and family rooming bookings are attached.
+### 🔹 Scenario 1: Import a NEW Tour for a NEW Project
+1. Name file: `{ProjectName}_{TourCode}_rooming.xlsx` (e.g. `Project1_Tour1_rooming.xlsx`).
+2. Set `Projects` sheet Col A = `Project1`, Col B = `Client Name`.
+3. Set `Tours` sheet Col A = `Tour1`, Col B = `Project1`, Col C = destination, Col D = arrival date.
+4. List passenger names and room numbers in `Rooming` sheet.
+5. Go to **Tours** or **Projects** $\rightarrow$ Click **Import Rooming List** $\rightarrow$ Upload file.
+6. **Result**: Creates `Project1` (`Active`), creates `Tour1` in **`Draft`** status, and attaches all passenger bookings.
 
----
+### 🔹 Scenario 2: Import a NEW Tour for an EXISTING Project
+1. Name file: `Project1_Tour2_rooming.xlsx` (matching existing project name `Project1`).
+2. Click **Import Rooming List** $\rightarrow$ Upload file.
+3. **Result**: Reuses existing `Project1`, instantiates `Tour2` in **`Draft`** status, and binds it under `Project1`.
 
-### **Scenario 2: How to Import a NEW Tour for an EXISTING Project**
-1. **Filename**: Name your file **`Project1_Tour1_rooming.xlsx`** (or set `Tours` sheet Col B = `Project1`).
-2. **Projects Sheet**: Optional (or leave Col A = `Project1`).
-3. **Tours Sheet**: Set Col A = `Tour1`, Col B = `Project1`.
-4. **Execution**: Click **Import Rooming List** → Select file.
-5. **Result**:
-   * UNO ERP searches the database, matches existing project **`Project1`**, creates **`Tour1`** in **`Draft`** status, and binds `Tour1` directly under `Project1`.
+### 🔹 Scenario 3: Refresh Rooming Data for an EXISTING Tour
+1. Name file: `{TourCode}_rooming.xlsx` (e.g. `Tour1_rooming.xlsx`).
+2. Update passenger names, room numbers (`101`, `102`), or booking codes in `Rooming` sheet.
+3. Click **Import Rooming List** $\rightarrow$ Upload file.
+4. **Result**: Refreshes passenger rooming list and pax counts, while **preserving all existing hotel accommodations, guide assignments, and transport services**.
 
----
+### 🔹 Scenario 4: Import Master Data (Hotels, Guides, Transport, Drivers)
+1. Use `MasterData_Import_Template.xlsx`.
+2. Navigate to **[Master Data](/master-data)** $\rightarrow$ Click **Import Master Data** $\rightarrow$ Upload file.
+3. **Result**: Ingests new supplier records and contract rates without creating duplicate supplier entries.
 
-### **Scenario 3: How to Import / Refresh Rooming Data for an EXISTING Tour**
-1. **Filename**: Name your file **`Tour1_rooming.xlsx`** (or `BVP28082026_rooming.xlsx`).
-2. **Rooming Sheet**: Update passenger names, room numbers (`101`, `102`), or booking codes.
-3. **Execution**: Click **Import Rooming List** → Select file.
-4. **Result**:
-   * UNO ERP matches existing tour **`Tour1`**.
-   * Refreshes passenger rooming list and passenger counts (`Pax`, `Adults`, `Children`).
-   * **Preserves all existing hotel accommodation lines, guide assignments, and transport services** attached to the tour.
-
----
-
-### **Scenario 4: How to Import NEW vs EXISTING Master Data (Hotels, Guides, Transport, Excursions)**
-1. **Filename**: Name your file **`MasterData_Import_Template.xlsx`**.
-2. **Worksheets**: Fill `Hotels`, `Guides`, `Transport`, `Drivers`, `Excursions` sheets.
-3. **Execution**: Go to **Master Data** screen → Click **Import Master Data** → Select file.
-4. **Result**:
-   * **For NEW Items**: Creates new supplier records in the Master Data catalog.
-   * **For EXISTING Items**: Updates contract rates, contact numbers, or star ratings without duplicating records.
-
----
-
-### **Scenario 5: How to Import Excursion Sales for an EXISTING Tour**
-1. **Prerequisite**: Rooming list must already be uploaded so passenger IDs exist.
-2. **Filename**: Download template **`Project1_Tour1_importSales.xlsx`** from Tour Detail page.
-3. **Sales Sheet**: Mark excursion checkboxes (`☑`) for participating passengers.
-4. **Execution**: Click **Import Tour Sales & Base Services** → Select file.
-5. **Result**:
-   * Creates optional excursion sales lines and calculates 10% guide commission and net operator revenue.
+### 🔹 Scenario 5: Import Excursion Sales for an EXISTING Tour
+1. Download template `{ProjectName}_{TourCode}_importSales.xlsx` from Tour Detail page.
+2. Mark excursion participation checkboxes (`☑`) for passengers and upload.
+3. **Result**: Creates optional excursion sales lines, calculates 10% guide commission, and updates net tour profitability.

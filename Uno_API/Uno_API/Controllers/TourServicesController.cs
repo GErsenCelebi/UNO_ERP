@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
@@ -102,6 +103,23 @@ namespace Uno_API.Controllers
             _context.TourServices.Add(tourService);
             await _context.SaveChangesAsync();
 
+            // Synchronize parent Tour BaseFee flag if this is a Base Fee / Invoiced Fee revenue service
+            var svcCat = await _context.ServiceCategories.FirstOrDefaultAsync(sc => sc.Id == tourService.ServiceCategoryId);
+            bool isBaseFeeService = tourService.ServiceCategoryId == 8 ||
+                (svcCat != null && svcCat.IsBase && svcCat.IsRevenue && !svcCat.IsOperational) ||
+                (tourService.Description != null && tourService.Description.StartsWith("Base Tour Fee"));
+
+            if (isBaseFeeService && tourService.IsRevenue == true)
+            {
+                var tour = await _context.Tours.FirstOrDefaultAsync(t => t.Id == tourService.TourId);
+                if (tour != null)
+                {
+                    tour.BaseFee = tourService.UnitPrice;
+                    tour.TotalFee = tourService.TotalAmount;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             return CreatedAtAction(nameof(GetTourService), new { id = tourService.Id }, tourService);
         }
 
@@ -153,6 +171,23 @@ namespace Uno_API.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                // Synchronize parent Tour BaseFee flag if this is a Base Fee / Invoiced Fee revenue service
+                var putSvcCat = await _context.ServiceCategories.FirstOrDefaultAsync(sc => sc.Id == tourService.ServiceCategoryId);
+                bool isBaseFee = tourService.ServiceCategoryId == 8 ||
+                    (putSvcCat != null && putSvcCat.IsBase && putSvcCat.IsRevenue && !putSvcCat.IsOperational) ||
+                    (tourService.Description != null && tourService.Description.StartsWith("Base Tour Fee"));
+
+                if (isBaseFee && tourService.IsRevenue == true)
+                {
+                    var tour = await _context.Tours.FirstOrDefaultAsync(t => t.Id == tourService.TourId);
+                    if (tour != null)
+                    {
+                        tour.BaseFee = tourService.UnitPrice;
+                        tour.TotalFee = tourService.TotalAmount;
+                        await _context.SaveChangesAsync();
+                    }
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -173,14 +208,40 @@ namespace Uno_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTourService(int id)
         {
-            var tourService = await _context.TourServices.FindAsync(id);
+            var tourService = await _context.TourServices
+                .Include(ts => ts.ServiceCategory)
+                .FirstOrDefaultAsync(ts => ts.Id == id);
             if (tourService == null)
             {
                 return NotFound();
             }
 
+            bool isBaseFeeService = tourService.ServiceCategoryId == 8 ||
+                (tourService.ServiceCategory != null && tourService.ServiceCategory.IsBase && tourService.ServiceCategory.IsRevenue && !tourService.ServiceCategory.IsOperational) ||
+                (tourService.Description != null && tourService.Description.StartsWith("Base Tour Fee"));
+
+            int tourId = tourService.TourId;
+            int deletedSvcId = tourService.Id;
+
             _context.TourServices.Remove(tourService);
             await _context.SaveChangesAsync();
+
+            if (isBaseFeeService)
+            {
+                var remainingBaseSvc = await _context.TourServices
+                    .AnyAsync(ts => ts.TourId == tourId && ts.Id != deletedSvcId &&
+                        (ts.ServiceCategoryId == 8 || (ts.ServiceCategory != null && ts.ServiceCategory.IsBase && ts.ServiceCategory.IsRevenue && !ts.ServiceCategory.IsOperational)));
+                if (!remainingBaseSvc)
+                {
+                    var tour = await _context.Tours.FirstOrDefaultAsync(t => t.Id == tourId);
+                    if (tour != null)
+                    {
+                        tour.BaseFee = 0;
+                        tour.TotalFee = 0;
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
 
             return NoContent();
         }
@@ -201,9 +262,10 @@ namespace Uno_API.Controllers
                 return BadRequest("No passengers or room assignments found for this tour.");
             }
 
-            // Correct Adults/Children/Pax from actual passengers
-            int pAdults = tourPassengers.Count(p => p.PaxType == null || p.PaxType.ToUpper().Contains("ADULT") || (!p.PaxType.ToUpper().Contains("CHILD") && !p.PaxType.ToUpper().Contains("ÇOCUK") && !p.PaxType.ToUpper().Contains("INFANT") && !p.PaxType.ToUpper().Contains("BEBEK")));
-            int pChildren = tourPassengers.Count(p => p.PaxType != null && (p.PaxType.ToUpper().Contains("CHILD") || p.PaxType.ToUpper().Contains("ÇOCUK") || p.PaxType.ToUpper().Contains("CHD") || p.PaxType.ToUpper().Contains("COCUK")));
+            // Correct Adults/Children/Pax from actual passengers using 12-year-old criteria
+            DateTime refDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
+            int pChildren = tourPassengers.Count(p => PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, refDate));
+            int pAdults = tourPassengers.Count(p => !PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, refDate) && !(p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK"))));
             int pInfants = tourPassengers.Count(p => p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK") || p.PaxType.ToUpper().Contains("INF")));
 
             if (pAdults + pChildren + pInfants > 0)
@@ -212,6 +274,10 @@ namespace Uno_API.Controllers
                 tour.Children = pChildren;
                 tour.Infants = pInfants;
                 tour.Pax = pAdults + pChildren + pInfants;
+                if (tour.BaseFee > 0)
+                {
+                    tour.TotalFee = (tour.Adults * tour.BaseFee) + (tour.Children * tour.BaseFee * 0.5m);
+                }
             }
 
             // Calculate rooms needed from passengers

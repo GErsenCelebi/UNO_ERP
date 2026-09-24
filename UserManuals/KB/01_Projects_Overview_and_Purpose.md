@@ -31,4 +31,4 @@ When creating or viewing a Project in UNO ERP, the following key fields are requ
 ## 🔗 **Relationship to Tours & Metadata**
 
 * **Projects → Tours**: One Project contains many Tours (`1 : N` relationship).
-* **Projects → Metadata**: Project status flows, status checkpoints, and role access permissions are governed by central **Metadata & Governance Rules**.
+* **Projects → Metadata**: Project status flows, status checkpoints, and role access permissions are governed by central **Metadata Configuration & Status Checkpoints**.

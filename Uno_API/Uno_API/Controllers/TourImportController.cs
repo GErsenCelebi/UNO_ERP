@@ -635,6 +635,9 @@ namespace Uno_API.Controllers
                             assignedRoomNumber = rm;
                         }
 
+                        DateTime refDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
+                        string computedPaxType = PassengerAgeHelper.DeterminePaxType(dob, paxType, refDate);
+
                         var passenger = new Passenger
                         {
                             TourId = tour.Id,
@@ -644,7 +647,7 @@ namespace Uno_API.Controllers
                             NationalId = tc,
                             RoomType = roomType,
                             RoomNumber = assignedRoomNumber,
-                            PaxType = !string.IsNullOrEmpty(paxType) ? paxType : "Adult",
+                            PaxType = computedPaxType,
                             DateOfBirth = dob,
                             Phone = phone,
                             PassportNo = passportNo,
@@ -663,31 +666,28 @@ namespace Uno_API.Controllers
                                     || firstName.Equals("ŞÖFÖR", StringComparison.OrdinalIgnoreCase)
                                     || (lastName != null && (lastName.Equals("DRIVER", StringComparison.OrdinalIgnoreCase) || lastName.Equals("GUIDE", StringComparison.OrdinalIgnoreCase) || lastName.Equals("REHBER", StringComparison.OrdinalIgnoreCase)));
 
-                        if (!isStaff && !string.IsNullOrEmpty(paxType))
+                        if (!isStaff)
                         {
-                            var pt = paxType.Trim().ToUpperInvariant();
-                            if (pt.Contains("ADULT") || pt.Contains("YETISKIN") || pt.Contains("YETİŞKİN")) pAdults++;
-                            else if (pt.Contains("CHILD") || pt.Contains("CHD") || pt.Contains("ÇOCUK") || pt.Contains("COCUK")) pChildren++;
-                            else if (pt.Contains("INFANT") || pt.Contains("INF") || pt.Contains("BEBEK")) pInfants++;
+                            if (computedPaxType.Equals("Children", StringComparison.OrdinalIgnoreCase)) pChildren++;
+                            else if (computedPaxType.Equals("Infant", StringComparison.OrdinalIgnoreCase)) pInfants++;
                             else pAdults++;
                         }
                     }
 
-                    var pAdultsCount = await _context.Passengers.CountAsync(p => p.TourId == tour.Id 
-                        && !p.FirstName.ToUpper().Contains("DRIVER") 
-                        && !p.FirstName.ToUpper().Contains("GUIDE")
-                        && !p.FirstName.ToUpper().Contains("REHBER")
-                        && !p.FirstName.ToUpper().Contains("KAPTAN")
-                        && !p.FirstName.ToUpper().Contains("SOFOR")
-                        && !p.FirstName.ToUpper().Contains("SOFÖR")
-                        && !p.FirstName.ToUpper().Contains("ŞÖFÖR")
-                        && (p.PaxType == null || (!p.PaxType.ToUpper().Contains("CHILD") && !p.PaxType.ToUpper().Contains("ÇOCUK") && !p.PaxType.ToUpper().Contains("INFANT") && !p.PaxType.ToUpper().Contains("BEBEK"))));
+                    DateTime tourRefDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
+                    var allTourPassengers = await _context.Passengers.Where(p => p.TourId == tour.Id).ToListAsync();
+                    var payingPax = allTourPassengers.Where(p => 
+                        !p.FirstName.ToUpper().Contains("DRIVER") &&
+                        !p.FirstName.ToUpper().Contains("GUIDE") &&
+                        !p.FirstName.ToUpper().Contains("REHBER") &&
+                        !p.FirstName.ToUpper().Contains("KAPTAN") &&
+                        !p.FirstName.ToUpper().Contains("SOFOR") &&
+                        !p.FirstName.ToUpper().Contains("SOFÖR") &&
+                        !p.FirstName.ToUpper().Contains("ŞÖFÖR")).ToList();
 
-                    var pChildrenCount = await _context.Passengers.CountAsync(p => p.TourId == tour.Id
-                        && p.PaxType != null && (p.PaxType.ToUpper().Contains("CHILD") || p.PaxType.ToUpper().Contains("ÇOCUK") || p.PaxType.ToUpper().Contains("CHD") || p.PaxType.ToUpper().Contains("COCUK")));
-
-                    var pInfantsCount = await _context.Passengers.CountAsync(p => p.TourId == tour.Id
-                        && p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK") || p.PaxType.ToUpper().Contains("INF")));
+                    int pAdultsCount = payingPax.Count(p => !PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, tourRefDate) && !(p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK"))));
+                    int pChildrenCount = payingPax.Count(p => PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, tourRefDate));
+                    int pInfantsCount = payingPax.Count(p => p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK") || p.PaxType.ToUpper().Contains("INF")));
 
                     if (pAdultsCount + pChildrenCount + pInfantsCount > 0)
                     {
@@ -695,6 +695,10 @@ namespace Uno_API.Controllers
                         tour.Children = pChildrenCount;
                         tour.Infants = pInfantsCount;
                         tour.Pax = pAdultsCount + pChildrenCount + pInfantsCount;
+                        if (tour.BaseFee > 0)
+                        {
+                            tour.TotalFee = (tour.Adults * tour.BaseFee) + (tour.Children * tour.BaseFee * 0.5m);
+                        }
                     }
                     await _context.SaveChangesAsync();
                 }

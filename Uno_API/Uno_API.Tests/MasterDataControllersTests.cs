@@ -33,6 +33,7 @@ namespace Uno_API.Tests
             var result = await controller.GetHotels();
 
             // Assert
+            Assert.NotNull(result.Value);
             Assert.Empty(result.Value);
         }
 

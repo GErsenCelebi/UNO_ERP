@@ -66,6 +66,7 @@ namespace Uno_API.Controllers
                     t.Notes,
                     TourStatus = t.TourStatus != null ? new { t.TourStatus.Id, t.TourStatus.Name, t.TourStatus.OrderIndex } : null,
                     Project = t.Project != null ? new { t.Project.Id, t.Project.ProjectCode, Client = t.Project.Client != null ? new { t.Project.Client.Id, t.Project.Client.Name } : null } : null,
+                    MissingMainServices = MainServicesHelper.GetMissingMainServices(t, t.TourServices),
                     TourServices = (t.TourServices ?? new List<TourService>()).Select(ts => new
                     {
                         ts.Id,
@@ -105,6 +106,7 @@ namespace Uno_API.Controllers
                 return NotFound();
             }
 
+            tour.MissingMainServices = MainServicesHelper.GetMissingMainServices(tour, tour.TourServices);
             return tour;
         }
 
@@ -134,17 +136,51 @@ namespace Uno_API.Controllers
                 tour.EndDate = tour.ArrivalDate.AddDays(7);
             }
 
-            // Compute BaseFee
-            tour.BaseFee = (tour.Adults * tour.AdultRate) + (tour.Children * tour.ChildRate) + (tour.Infants * tour.InfantRate);
-            if (tour.GuideCommission <= 0) tour.GuideCommission = 10.00m;
+            // Compute BaseFee if not explicitly set
+            if (tour.BaseFee == 0 && (tour.AdultRate > 0 || tour.ChildRate > 0 || tour.InfantRate > 0))
+            {
+                tour.BaseFee = (tour.Adults * tour.AdultRate) + (tour.Children * tour.ChildRate) + (tour.Infants * tour.InfantRate);
+            }
+            // Ensure Pax is populated if Adults/Children exist
+            if (tour.Pax == 0 && (tour.Adults > 0 || tour.Children > 0))
+            {
+                tour.Pax = tour.Adults + tour.Children;
+            }
 
             _context.Tours.Add(tour);
             await _context.SaveChangesAsync();
 
+            // If tour has BaseFee, also ensure a corresponding TourService (Invoiced Fee / Base Services) is created
+            if (tour.BaseFee > 0)
+            {
+                var invoicedFeeCategory = await _context.ServiceCategories.FirstOrDefaultAsync(sc => sc.Id == 8 || (sc.IsBase && sc.IsRevenue && !sc.IsOperational));
+                int catId = invoicedFeeCategory?.Id ?? 8;
+                decimal qty = tour.Adults + (0.5m * tour.Children);
+                if (qty <= 0) qty = tour.Pax > 0 ? tour.Pax : 1;
+                decimal total = qty * tour.BaseFee;
+
+                var baseService = new TourService
+                {
+                    TourId = tour.Id,
+                    ServiceCategoryId = catId,
+                    Description = $"Base Tour Fee ({tour.Adults} Adults, {tour.Children} Children)",
+                    Quantity = qty,
+                    UnitPrice = tour.BaseFee,
+                    TotalAmount = total,
+                    IsRevenue = true
+                };
+                _context.TourServices.Add(baseService);
+                if (tour.TotalFee == 0)
+                {
+                    tour.TotalFee = total;
+                }
+                await _context.SaveChangesAsync();
+            }
+
             // Ensure tour storage folder is created automatically
             var parentProject = await _context.Projects.FirstOrDefaultAsync(p => p.Id == tour.ProjectId);
             string projCode = parentProject?.ProjectCode ?? "General-Projects";
-            _storageService.EnsureTourFolders(projCode, tour.TourCode);
+            _storageService?.EnsureTourFolders(projCode, tour.TourCode);
 
             return CreatedAtAction(nameof(GetTour), new { id = tour.Id }, tour);
         }
@@ -170,8 +206,12 @@ namespace Uno_API.Controllers
             if (tour.EndDate != default) existingTour.EndDate = tour.EndDate;
             if (tour.Pax > 0) existingTour.Pax = tour.Pax;
             if (tour.Adults > 0) existingTour.Adults = tour.Adults;
-            if (tour.Children > 0) existingTour.Children = tour.Children;
-            if (tour.Infants > 0) existingTour.Infants = tour.Infants;
+            if (tour.Children >= 0) existingTour.Children = tour.Children;
+            if (tour.Infants >= 0) existingTour.Infants = tour.Infants;
+            if (existingTour.Pax == 0 && (existingTour.Adults > 0 || existingTour.Children > 0))
+            {
+                existingTour.Pax = existingTour.Adults + existingTour.Children;
+            }
             if (tour.AdultRate > 0) existingTour.AdultRate = tour.AdultRate;
             if (tour.GuideCommission >= 0) existingTour.GuideCommission = tour.GuideCommission > 0 ? tour.GuideCommission : 10.00m;
             if (tour.ChildRate > 0) existingTour.ChildRate = tour.ChildRate;
@@ -180,17 +220,95 @@ namespace Uno_API.Controllers
             if (!string.IsNullOrEmpty(tour.DepartureFlight)) existingTour.DepartureFlight = tour.DepartureFlight;
             if (!string.IsNullOrEmpty(tour.ArrivalAirport)) existingTour.ArrivalAirport = tour.ArrivalAirport;
             if (!string.IsNullOrEmpty(tour.DepartureAirport)) existingTour.DepartureAirport = tour.DepartureAirport;
-            if (tour.TourStatusId > 0) existingTour.TourStatusId = tour.TourStatusId;
+            if (tour.TourStatusId > 0 && tour.TourStatusId != existingTour.TourStatusId)
+            {
+                // In case main services are missing (Guide, Hotel booking, transportation, flight #),
+                // it won't be possible to move this tour to Confirmed (3), In progress (4), or Completed (5)
+                if (tour.TourStatusId >= 3)
+                {
+                    var tourServices = await _context.TourServices
+                        .Include(ts => ts.ServiceCategory)
+                        .Where(ts => ts.TourId == id)
+                        .ToListAsync();
+
+                    var tourForValidation = new Tour
+                    {
+                        Id = existingTour.Id,
+                        ArrivalFlight = !string.IsNullOrEmpty(tour.ArrivalFlight) ? tour.ArrivalFlight : existingTour.ArrivalFlight,
+                        DepartureFlight = !string.IsNullOrEmpty(tour.DepartureFlight) ? tour.DepartureFlight : existingTour.DepartureFlight
+                    };
+
+                    var missingServices = MainServicesHelper.GetMissingMainServices(tourForValidation, tourServices);
+                    if (missingServices.Count > 0)
+                    {
+                        var targetStatus = await _context.TourStatuses.FindAsync(tour.TourStatusId);
+                        string statusName = targetStatus?.Name ?? $"Status #{tour.TourStatusId}";
+                        return BadRequest(new
+                        {
+                            message = $"Cannot move tour to '{statusName}'. Missing main services: {string.Join(", ", missingServices)}. Please assign Guide, Hotel booking, Transportation, and Flight # first.",
+                            missingServices
+                        });
+                    }
+                }
+                existingTour.TourStatusId = tour.TourStatusId;
+            }
             if (tour.ProjectId > 0) existingTour.ProjectId = tour.ProjectId;
             if (tour.TotalFee > 0) existingTour.TotalFee = tour.TotalFee;
             existingTour.Notes = tour.Notes;
 
-            existingTour.BaseFee = (existingTour.Adults * existingTour.AdultRate) + (existingTour.Children * existingTour.ChildRate) + (existingTour.Infants * existingTour.InfantRate);
+            if (tour.BaseFee >= 0)
+            {
+                existingTour.BaseFee = tour.BaseFee;
+            }
+
+            // Synchronize with TourServices Base Fee item
+            var invoicedFeeCategory = await _context.ServiceCategories.FirstOrDefaultAsync(sc => sc.Id == 8 || (sc.IsBase && sc.IsRevenue && !sc.IsOperational));
+            int baseCatId = invoicedFeeCategory?.Id ?? 8;
+
+            var existingBaseService = await _context.TourServices
+                .FirstOrDefaultAsync(ts => ts.TourId == id && (ts.ServiceCategoryId == baseCatId || (ts.ServiceCategory != null && ts.ServiceCategory.IsBase && ts.ServiceCategory.IsRevenue && !ts.ServiceCategory.IsOperational) || ts.Description.StartsWith("Base Tour Fee")));
+
+            if (existingTour.BaseFee > 0)
+            {
+                decimal qty = existingTour.Adults + (0.5m * existingTour.Children);
+                if (qty <= 0) qty = existingTour.Pax > 0 ? existingTour.Pax : 1;
+                decimal total = existingTour.TotalFee > 0 ? existingTour.TotalFee : (qty * existingTour.BaseFee);
+                existingTour.TotalFee = total;
+
+                if (existingBaseService != null)
+                {
+                    existingBaseService.Quantity = qty;
+                    existingBaseService.UnitPrice = existingTour.BaseFee;
+                    existingBaseService.TotalAmount = total;
+                    existingBaseService.Description = $"Base Tour Fee ({existingTour.Adults} Adults, {existingTour.Children} Children)";
+                    existingBaseService.IsRevenue = true;
+                    _context.Entry(existingBaseService).State = EntityState.Modified;
+                }
+                else
+                {
+                    var newBaseService = new TourService
+                    {
+                        TourId = existingTour.Id,
+                        ServiceCategoryId = baseCatId,
+                        Description = $"Base Tour Fee ({existingTour.Adults} Adults, {existingTour.Children} Children)",
+                        Quantity = qty,
+                        UnitPrice = existingTour.BaseFee,
+                        TotalAmount = total,
+                        IsRevenue = true
+                    };
+                    _context.TourServices.Add(newBaseService);
+                }
+            }
+            else if (tour.BaseFee == 0 && existingBaseService != null)
+            {
+                _context.TourServices.Remove(existingBaseService);
+                existingTour.TotalFee = 0;
+            }
 
             // Ensure updated tour storage folder exists
             var updatedProject = await _context.Projects.FirstOrDefaultAsync(p => p.Id == existingTour.ProjectId);
             string updatedProjCode = updatedProject?.ProjectCode ?? "General-Projects";
-            _storageService.EnsureTourFolders(updatedProjCode, existingTour.TourCode);
+            _storageService?.EnsureTourFolders(updatedProjCode, existingTour.TourCode);
             try
             {
                 await _context.SaveChangesAsync();
@@ -351,7 +469,7 @@ namespace Uno_API.Controllers
             foreach (var p in sortedPassengers)
             {
                 string pName = $"{p.FirstName} {p.LastName}".Trim();
-                bool isChild = p.DateOfBirth.HasValue && (tour.ArrivalDate - p.DateOfBirth.Value).TotalDays < 18 * 365.25;
+                bool isChild = PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, tour.ArrivalDate);
 
                 if (isChild)
                 {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Can from '@/components/Can';
 import { getCurrentUser } from '@/lib/auth';
+import { formatDate } from '@/lib/utils';
 import { 
   Users, 
   UserPlus, 
@@ -547,7 +548,7 @@ export default function UserManagementPage() {
                               <div className="font-bold text-slate-800">{u.name || 'Unnamed User'}</div>
                               {u.createdAt && (
                                 <div className="text-[10px] text-slate-400 font-normal">
-                                  Added {new Date(u.createdAt).toLocaleDateString()}
+                                  Added {formatDate(u.createdAt)}
                                 </div>
                               )}
                             </div>

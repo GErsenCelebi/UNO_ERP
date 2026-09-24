@@ -21,6 +21,11 @@ namespace Uno_API.Models
         [StringLength(100)]
         public string Category { get; set; } = "General"; // "Governance", "Process Flow", "How-To", "System Specification"
 
+        [StringLength(100)]
+        public string? SubTopic { get; set; } // e.g. "Statuses & Gates", "Services & Costing", "Excel Import"
+
+        public string? TriggerQueries { get; set; } // Pipe or newline separated explicit queries
+
         [Required]
         [StringLength(500)]
         public string QuestionPattern { get; set; } = string.Empty; // e.g. "How to set tour status as completed?"

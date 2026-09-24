@@ -67,7 +67,7 @@
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
-  <Target Name="BuildUnoCrmTarget" BeforeTargets="BeforeBuild;ComputeFilesToPublish" Condition="'$(UnoCrmHasBuilt)' != 'true' and Exists('$(UnoCrmProjectDir)\package.json')">
+  <Target Name="BuildUnoCrmTarget" BeforeTargets="BeforeBuild;ComputeFilesToPublish" Condition="('$(BuildUnoCrmOnBuild)' == 'true') and '$(UnoCrmHasBuilt)' != 'true' and Exists('$(UnoCrmProjectDir)\package.json')">
     <Message Text="Building Uno_CRM SPA for Uno_API..." Importance="high" />
     <Exec WorkingDirectory="$(UnoCrmProjectDir)" Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$env:NEXT_BUILD='true'; npm run build&quot;" IgnoreExitCode="true" />
     

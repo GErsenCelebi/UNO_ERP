@@ -3,8 +3,9 @@ import React, { useEffect, useState, FormEvent, useRef, useCallback } from 'reac
 import { Search, Bell, LayoutDashboard, Briefcase, Users, CalendarDays, LineChart, Settings, Plus, X, Trash2, Edit2, Database, MapPin, Star, Phone, FileText, Truck, Clock, DollarSign, BarChart3, TrendingUp, Target, Activity, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, Loader2, LayoutTemplate, Sparkles, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getCurrentUser, UserSession } from '@/lib/auth';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const API = '/api';
+const API = getApiUrl();
 
 type TabType = 'projectStatuses' | 'clients' | 'excelImport' | 'hotels' | 'guides' | 'transports' | 'drivers' | 'vendors' | 'excursions' | 'tourStatuses' | 'serviceCategories' | 'aiKnowledge' | 'kpis';
 
@@ -16,7 +17,7 @@ interface GenericData {
 const TAB_CONFIG: Record<string, { title: string; icon: any; endpoint: string; fields: { key: string; label: string; type: string; optionsEndpoint?: string; optionLabel?: string; required?: boolean }[] }> = {
   projectStatuses: { title: 'Project Statuses', icon: Briefcase, endpoint: 'ProjectStatuses', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'orderIndex', label: 'Order Index', type: 'number' }] },
   clients: { title: 'Clients', icon: Users, endpoint: 'Clients', fields: [{ key: 'avatarUrl', label: 'Logo', type: 'image' }, { key: 'name', label: 'Name', type: 'text' }, { key: 'location', label: 'Location', type: 'text' }, { key: 'contactName', label: 'Contact Name', type: 'text' }, { key: 'contactRole', label: 'Contact Role', type: 'text' }, { key: 'phone', label: 'Phone', type: 'text' }, { key: 'email', label: 'Email', type: 'text' }] },
-  hotels: { title: 'Hotels', icon: MapPin, endpoint: 'Hotels', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'location', label: 'Location', type: 'text' }, { key: 'contactName', label: 'Contact Name', type: 'text' }, { key: 'contactRole', label: 'Contact Role', type: 'text' }, { key: 'phone', label: 'Phone', type: 'text' }, { key: 'email', label: 'Email', type: 'text' }, { key: 'starRating', label: 'Star (1-5)', type: 'number' }, { key: 'singleRoomRate', label: 'Sgl Room (€)', type: 'number' }, { key: 'singlePaxRate', label: 'Sgl Pax (€)', type: 'number' }, { key: 'doubleRoomRate', label: 'Dbl Room (€)', type: 'number' }, { key: 'doublePaxRate', label: 'Dbl Pax (€)', type: 'number' }, { key: 'twinRoomRate', label: 'Twn Room (€)', type: 'number' }, { key: 'twinPaxRate', label: 'Twn Pax (€)', type: 'number' }, { key: 'tripleRoomRate', label: 'Trp Room (€)', type: 'number' }, { key: 'triplePaxRate', label: 'Trp Pax (€)', type: 'number' }, { key: 'dblEbRoomRate', label: 'Dbl+EB Room (€)', type: 'number' }, { key: 'dblEbPaxRate', label: 'Dbl+EB Pax (€)', type: 'number' }, { key: 'pricingBasis', label: 'Basis (Pax/Room)', type: 'text' }] },
+  hotels: { title: 'Hotels', icon: MapPin, endpoint: 'Hotels', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'location', label: 'Location', type: 'text' }, { key: 'contactName', label: 'Contact Name', type: 'text' }, { key: 'contactRole', label: 'Contact Role', type: 'text' }, { key: 'phone', label: 'Phone', type: 'text' }, { key: 'email', label: 'Email', type: 'text' }, { key: 'starRating', label: 'Star (1-5)', type: 'number' }, { key: 'singleRoomRate', label: 'Sgl Room (€)', type: 'number' }, { key: 'singlePaxRate', label: 'Sgl Pax (€)', type: 'number' }, { key: 'doubleRoomRate', label: 'Dbl Room (€)', type: 'number' }, { key: 'doublePaxRate', label: 'Dbl Pax (€)', type: 'number' }, { key: 'twinRoomRate', label: 'Twn Room (€)', type: 'number' }, { key: 'twinPaxRate', label: 'Twn Pax (€)', type: 'number' }, { key: 'tripleRoomRate', label: 'Trp Room (€)', type: 'number' }, { key: 'triplePaxRate', label: 'Trp Pax (€)', type: 'number' }, { key: 'dblEbRoomRate', label: 'Dbl+EB Room (€)', type: 'number' }, { key: 'dblEbPaxRate', label: 'Dbl+EB Pax (€)', type: 'number' }] },
   guides: { title: 'Guides', icon: Users, endpoint: 'Guides', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'language', label: 'Language', type: 'text' }, { key: 'phoneNumber', label: 'Phone Number', type: 'text' }, { key: 'dailyRate', label: 'Daily Rate (€)', type: 'number' }] },
   transports: { title: 'Transport', icon: Truck, endpoint: 'TransportCompanies', fields: [{ key: 'name', label: 'Company Name', type: 'text' }, { key: 'contactName', label: 'Contact Name', type: 'text' }, { key: 'contactRole', label: 'Contact Role', type: 'text' }, { key: 'phone', label: 'Phone', type: 'text' }, { key: 'email', label: 'Email', type: 'text' }, { key: 'fleetSize', label: 'Fleet Size', type: 'number' }] },
   drivers: { title: 'Drivers', icon: FileText, endpoint: 'Drivers', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'phoneNumber', label: 'Phone Number', type: 'text' }, { key: 'transportCompanyId', label: 'Transport Company', type: 'select', optionsEndpoint: 'TransportCompanies', optionLabel: 'name' }] },
@@ -24,7 +25,7 @@ const TAB_CONFIG: Record<string, { title: string; icon: any; endpoint: string; f
   excursions: { title: 'Excursions', icon: Clock, endpoint: 'Excursions', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'type', label: 'Type', type: 'text' }, { key: 'price', label: 'Cost (€)', type: 'number' }, { key: 'salePrice', label: 'Sale (€)', type: 'number' }, { key: 'tourCode', label: 'Tour Code', type: 'text', required: false }, { key: 'vendorId', label: 'Vendor', type: 'select', optionsEndpoint: 'Vendors', optionLabel: 'name', required: false }] },
   tourStatuses: { title: 'Tour Statuses', icon: Clock, endpoint: 'TourStatuses', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'orderIndex', label: 'Order Index', type: 'number' }] },
   serviceCategories: { title: 'Service Categories', icon: Database, endpoint: 'ServiceCategories', fields: [{ key: 'name', label: 'Name', type: 'text' }, { key: 'classification', label: 'Classification', type: 'text' }, { key: 'isBase', label: 'Is Base', type: 'boolean' }, { key: 'isRevenue', label: 'Is Revenue', type: 'boolean' }, { key: 'isOperational', label: 'Is Operational', type: 'boolean' }, { key: 'isCost', label: 'Is Cost', type: 'boolean' }, { key: 'isExpandable', label: 'Is Expandable', type: 'boolean' }] },
-  aiKnowledge: { title: 'AI Knowledge Base', icon: Sparkles, endpoint: 'AiKnowledgeItems', fields: [{ key: 'category', label: 'Category', type: 'text' }, { key: 'sourceFile', label: 'Source File', type: 'text' }, { key: 'questionPattern', label: 'Question Pattern', type: 'text' }, { key: 'keywords', label: 'Keywords', type: 'text' }, { key: 'answerMarkdown', label: 'Answer Markdown', type: 'text' }, { key: 'targetUrl', label: 'Target URL', type: 'text' }, { key: 'actionLabel', label: 'Action Label', type: 'text' }] },
+  aiKnowledge: { title: 'AI Knowledge Base', icon: Sparkles, endpoint: 'AiKnowledgeItems', fields: [{ key: 'category', label: 'Category', type: 'text' }, { key: 'subTopic', label: 'Sub-Topic', type: 'text' }, { key: 'sourceFile', label: 'Source File', type: 'text' }, { key: 'questionPattern', label: 'Question Pattern', type: 'text' }, { key: 'keywords', label: 'Keywords', type: 'text' }, { key: 'answerMarkdown', label: 'Answer Markdown', type: 'text' }, { key: 'targetUrl', label: 'Target URL', type: 'text' }, { key: 'actionLabel', label: 'Action Label', type: 'text' }] },
   excelImport: { title: 'Excel Import', icon: FileSpreadsheet, endpoint: '', fields: [] },
   kpis: { title: 'KPIs', icon: BarChart3, endpoint: '', fields: [] },
 };
@@ -432,6 +433,33 @@ export default function MasterDataPage() {
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
+  // AI Knowledge Test Search Sandbox State
+  const [testSearchQuery, setTestSearchQuery] = useState('');
+  const [testSearchResults, setTestSearchResults] = useState<any[] | null>(null);
+  const [isSearchingTest, setIsSearchingTest] = useState(false);
+
+  const handleTestSearch = async () => {
+    if (!testSearchQuery.trim()) return;
+    setIsSearchingTest(true);
+    try {
+      const res = await fetch(`${API}/aiknowledgeitems/test-search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: testSearchQuery.trim() })
+      });
+      if (res.ok) {
+        const results = await res.json();
+        setTestSearchResults(results);
+      } else {
+        alert('Test search failed');
+      }
+    } catch (e) {
+      alert('Error performing test search');
+    } finally {
+      setIsSearchingTest(false);
+    }
+  };
+
   const fetchTabItems = async (tab: TabType) => {
     setLoading(true);
     setCurrentPage(1);
@@ -793,6 +821,92 @@ export default function MasterDataPage() {
                   </div>
                 </div>
 
+                {/* AI Knowledge Test & Diagnostics Sandbox */}
+                {activeTab === 'aiKnowledge' && (
+                  <div className="mx-6 my-4 p-4 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-200/80 rounded-2xl flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs font-bold text-slate-800">AI Knowledge Retrieval Test Sandbox (BM25 Hybrid)</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-semibold border border-amber-200">Interactive</span>
+                      </div>
+                      {testSearchResults && (
+                        <button 
+                          onClick={() => setTestSearchResults(null)}
+                          className="text-xs text-slate-400 hover:text-slate-600 font-semibold"
+                        >
+                          Clear Results
+                        </button>
+                      )}
+                    </div>
+
+                    <form 
+                      onSubmit={(e) => { e.preventDefault(); handleTestSearch(); }}
+                      className="flex items-center gap-2"
+                    >
+                      <input 
+                        type="text"
+                        placeholder="Enter test user prompt (e.g. 'What is Rule 4?', 'How is hotel cost calculated?', 'How to advance to Confirmed?')..."
+                        value={testSearchQuery}
+                        onChange={(e) => setTestSearchQuery(e.target.value)}
+                        className="flex-1 px-3.5 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSearchingTest || !testSearchQuery.trim()}
+                        className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                      >
+                        {isSearchingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        Test Retrieval
+                      </button>
+                    </form>
+
+                    {testSearchResults && (
+                      <div className="space-y-2 mt-2 pt-2 border-t border-amber-200/60">
+                        <div className="text-[11px] font-bold text-slate-700">
+                          Search Results ({testSearchResults.length} match{testSearchResults.length !== 1 ? 'es' : ''}):
+                        </div>
+                        {testSearchResults.length === 0 ? (
+                          <div className="text-xs text-slate-500 italic p-3 bg-white/80 rounded-xl border border-slate-200">
+                            No matching knowledge items met the threshold score (score &ge; 8.0). Try adding more trigger queries or keywords to your manuals.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-2">
+                            {testSearchResults.map((res: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-white/90 rounded-xl border border-amber-200 text-xs space-y-1.5 shadow-xs">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900">{res.item?.subTopic || res.item?.category}:</span>
+                                    <span className="text-slate-700 font-medium">{res.item?.questionPattern}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-mono text-[10px]">
+                                      Match: {res.matchType}
+                                    </span>
+                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-mono font-bold text-[10px]">
+                                      Score: {res.score?.toFixed(1)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-3">
+                                  <span>📄 Source: <code className="font-mono text-slate-700">{res.item?.sourceFile}</code></span>
+                                  <span>📁 Category: <strong className="text-slate-700">{res.item?.category}</strong></span>
+                                  {res.matchedTerms?.length > 0 && (
+                                    <span>🎯 Terms: <code className="text-amber-800">{res.matchedTerms.slice(0, 5).join(', ')}</code></span>
+                                  )}
+                                </div>
+                                <div className="p-2 bg-slate-50 rounded-lg text-slate-700 text-[11px] font-mono whitespace-pre-wrap max-h-24 overflow-y-auto border border-slate-100">
+                                  {res.item?.answerMarkdown}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {(() => {
                   const filteredData = data.filter(item => {
                     if (!searchQuery.trim()) return true;
@@ -975,18 +1089,9 @@ export default function MasterDataPage() {
                         <label htmlFor="location" className="block text-xs font-semibold text-slate-700 mb-1">Location / City *</label>
                         <input id="location" required type="text" value={formData['location'] || ''} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. Prague" />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="starRating" className="block text-xs font-semibold text-slate-700 mb-1">Star Rating</label>
-                          <input id="starRating" type="number" min="1" max="5" value={formData['starRating'] || ''} onChange={e => setFormData({...formData, starRating: Number(e.target.value)})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="4" />
-                        </div>
-                        <div>
-                          <label htmlFor="pricingBasis" className="block text-xs font-semibold text-slate-700 mb-1">Pricing Basis</label>
-                          <select id="pricingBasis" value={formData['pricingBasis'] || 'Pax'} onChange={e => setFormData({...formData, pricingBasis: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm font-medium">
-                            <option value="Pax">Per Pax</option>
-                            <option value="Room">Per Room</option>
-                          </select>
-                        </div>
+                      <div>
+                        <label htmlFor="starRating" className="block text-xs font-semibold text-slate-700 mb-1">Star Rating</label>
+                        <input id="starRating" type="number" min="1" max="5" value={formData['starRating'] || ''} onChange={e => setFormData({...formData, starRating: Number(e.target.value)})} className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" placeholder="4" />
                       </div>
                     </div>
                   </div>

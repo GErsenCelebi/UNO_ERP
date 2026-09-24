@@ -20,6 +20,21 @@ namespace Uno_API.DTOs
         public List<GuideAssignmentDTO> GuideAssignments { get; set; } = new List<GuideAssignmentDTO>();
 
         public bool HasGuideConflict { get; set; }
+
+        public List<HotelStayDTO> HotelStays { get; set; } = new List<HotelStayDTO>();
+        public List<string> Cities { get; set; } = new List<string>();
+
+        public List<string> MissingMainServices { get; set; } = new List<string>();
+        public bool HasMissingServices => MissingMainServices != null && MissingMainServices.Count > 0;
+    }
+
+    public class HotelStayDTO
+    {
+        public int HotelId { get; set; }
+        public string HotelName { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
     }
 
     public class GuideAssignmentDTO

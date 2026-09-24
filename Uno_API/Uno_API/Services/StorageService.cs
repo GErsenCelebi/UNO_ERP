@@ -104,7 +104,10 @@ namespace Uno_API.Services
             var safeFileName = Path.GetFileName(fileName);
             var targetPath = Path.Combine(importDir, safeFileName);
 
-            fileStream.Position = 0;
+            if (fileStream.CanSeek)
+            {
+                fileStream.Position = 0;
+            }
             using (var stream = new FileStream(targetPath, FileMode.Create))
             {
                 await fileStream.CopyToAsync(stream);

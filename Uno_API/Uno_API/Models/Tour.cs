@@ -44,5 +44,8 @@ namespace Uno_API.Models
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public ICollection<Passenger> Passengers { get; set; } = new List<Passenger>();
         public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public List<string> MissingMainServices { get; set; } = new List<string>();
     }
 }

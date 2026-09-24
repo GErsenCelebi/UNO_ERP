@@ -1,14 +1,16 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink } from 'lucide-react';
 import AuditHistoryTab from '@/components/AuditHistoryTab';
+import { formatDate, getFlightAwareUrl } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const API = '/api';
+const API = getApiUrl();
 
 interface Client { id: number; name: string; location?: string; avatarUrl?: string; }
 interface TourStatus { id: number; name: string; orderIndex: number; }
@@ -65,16 +67,44 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
         <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-400" /> {tour.destination}
       </h4>
       <p className="text-xs text-slate-500 mb-3">
-        {new Date(tour.arrivalDate).toLocaleDateString()} — {new Date(tour.endDate).toLocaleDateString()}
+        {formatDate(tour.arrivalDate)} — {formatDate(tour.endDate)}
       </p>
       <div className="space-y-1.5 border-t border-slate-100 pt-3">
         <div className="flex items-center text-xs text-slate-600">
-          <PlaneLanding className="w-3.5 h-3.5 mr-2 text-indigo-400" />
-          <span className="truncate">{tour.arrivalFlight || 'TBD'}</span>
+          <PlaneLanding className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
+          {tour.arrivalFlight && tour.arrivalFlight !== 'TBD' ? (
+            <a
+              href={getFlightAwareUrl(tour.arrivalFlight)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title={`Track ${tour.arrivalFlight} live on FlightAware`}
+              className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate cursor-pointer"
+            >
+              <span>{tour.arrivalFlight}</span>
+              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+            </a>
+          ) : (
+            <span className="truncate text-slate-400">{tour.arrivalFlight || 'TBD'}</span>
+          )}
         </div>
         <div className="flex items-center text-xs text-slate-600">
-          <PlaneTakeoff className="w-3.5 h-3.5 mr-2 text-indigo-400" />
-          <span className="truncate">{tour.departureFlight || 'TBD'}</span>
+          <PlaneTakeoff className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
+          {tour.departureFlight && tour.departureFlight !== 'TBD' ? (
+            <a
+              href={getFlightAwareUrl(tour.departureFlight)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title={`Track ${tour.departureFlight} live on FlightAware`}
+              className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate cursor-pointer"
+            >
+              <span>{tour.departureFlight}</span>
+              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+            </a>
+          ) : (
+            <span className="truncate text-slate-400">{tour.departureFlight || 'TBD'}</span>
+          )}
         </div>
       </div>
     </div>
@@ -352,7 +382,7 @@ export default function ProjectDetailPage() {
             <h1 className="font-bold text-lg text-slate-800">{project.projectCode}</h1>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            {getClientName()} | {new Date(project.startDate).toLocaleDateString()} → {new Date(project.endDate).toLocaleDateString()} | Est. Budget: €{Number(project.approxBudget || 0).toLocaleString()}
+            {getClientName()} | {formatDate(project.startDate)} → {formatDate(project.endDate)} | Est. Budget: €{Number(project.approxBudget || 0).toLocaleString()}
           </p>
         </div>
         <div className="flex gap-2">
@@ -450,11 +480,11 @@ export default function ProjectDetailPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Start Date</p>
-                      <p className="text-sm text-slate-700">{new Date(project.startDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-slate-700">{formatDate(project.startDate)}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase mb-1">End Date</p>
-                      <p className="text-sm text-slate-700">{new Date(project.endDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-slate-700">{formatDate(project.endDate)}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Estimated Budget</p>
@@ -643,7 +673,7 @@ export default function ProjectDetailPage() {
                         <tr key={tour.id} className="hover:bg-slate-50">
                           <td className="px-6 py-3"><a href={`/projects/${projectId}/tours/${tour.id}`} className="font-medium text-blue-600 hover:underline">{tour.tourCode}</a></td>
                           <td className="px-6 py-3 text-slate-600">{guideName}</td>
-                          <td className="px-6 py-3 text-slate-600 whitespace-nowrap">{startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}</td>
+                          <td className="px-6 py-3 text-slate-600 whitespace-nowrap">{formatDate(startDate)} - {formatDate(endDate)}</td>
                           <td className="px-6 py-3 text-slate-600">{tour.pax}</td>
                           <td className="px-6 py-3 text-slate-600">{days}</td>
                           <td className="px-6 py-3 font-medium text-amber-600">€{cost.toLocaleString()}</td>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
@@ -92,8 +93,8 @@ namespace Uno_API.Controllers
                         break;
 
                     case "FLIGHT_MANIFEST_VERIFIED":
-                        isSatisfied = !string.IsNullOrEmpty(tour.ArrivalFlight);
-                        reason = isSatisfied ? $"Arrival flight verified ({tour.ArrivalFlight})" : "Arrival flight number missing";
+                        isSatisfied = !string.IsNullOrWhiteSpace(tour.ArrivalFlight) || !string.IsNullOrWhiteSpace(tour.DepartureFlight) || tour.TourServices.Any(s => !string.IsNullOrWhiteSpace(s.FlightNo));
+                        reason = isSatisfied ? $"Flight verified ({(!string.IsNullOrWhiteSpace(tour.ArrivalFlight) ? tour.ArrivalFlight : tour.DepartureFlight)})" : "Flight number missing";
                         break;
 
                     case "RETURN_DATE_REACHED":
@@ -137,6 +138,12 @@ namespace Uno_API.Controllers
                 });
             }
 
+            var missingMainServices = MainServicesHelper.GetMissingMainServices(tour, tour.TourServices);
+            if (targetStatus >= 3 && missingMainServices.Count > 0)
+            {
+                canAdvance = false;
+            }
+
             return Ok(new
             {
                 TourId = tour.Id,
@@ -146,6 +153,7 @@ namespace Uno_API.Controllers
                 TargetStatusId = targetStatus,
                 CanAdvance = canAdvance,
                 MissingMandatoryCount = missingMandatoryCount,
+                MissingMainServices = missingMainServices,
                 Checkpoints = evaluationResults
             });
         }
@@ -279,11 +287,13 @@ namespace Uno_API.Controllers
             {
                 bool isSat = true;
                 if (chk.CheckpointKey == "HOTEL_RESERVATIONS_CONFIRMED")
-                    isSat = tour.TourServices.Any(s => s.HotelId != null || s.ServiceCategory?.Name == "Hotel");
+                    isSat = tour.TourServices.Any(s => s.HotelId != null || s.ServiceCategory?.Name == "Hotel" || (!string.IsNullOrEmpty(s.Description) && s.Description.ToLower().Contains("hotel")));
                 else if (chk.CheckpointKey == "GUIDE_ASSIGNED_CONFIRMED")
-                    isSat = tour.TourServices.Any(s => s.GuideId != null || s.ServiceCategory?.Name == "Guide");
+                    isSat = tour.TourServices.Any(s => s.GuideId != null || s.ServiceCategory?.Name == "Guide" || (!string.IsNullOrEmpty(s.Description) && s.Description.ToLower().Contains("guide")));
                 else if (chk.CheckpointKey == "TRANSPORT_CONFIRMED")
-                    isSat = tour.TourServices.Any(s => s.DriverId != null || s.TransportCompanyId != null || s.ServiceCategory?.Name == "Transport");
+                    isSat = tour.TourServices.Any(s => s.DriverId != null || s.TransportCompanyId != null || s.ServiceCategory?.Name == "Transport" || s.ServiceCategory?.Name == "Driver" || (!string.IsNullOrEmpty(s.Description) && (s.Description.ToLower().Contains("transport") || s.Description.ToLower().Contains("driver"))));
+                else if (chk.CheckpointKey == "FLIGHT_MANIFEST_VERIFIED")
+                    isSat = !string.IsNullOrWhiteSpace(tour.ArrivalFlight) || !string.IsNullOrWhiteSpace(tour.DepartureFlight) || tour.TourServices.Any(s => !string.IsNullOrWhiteSpace(s.FlightNo));
                 else if (chk.CheckpointKey == "ARRIVAL_DATE_REACHED")
                     isSat = DateTime.UtcNow >= tour.ArrivalDate;
                 else if (chk.CheckpointKey == "RETURN_DATE_REACHED")
@@ -298,6 +308,24 @@ namespace Uno_API.Controllers
                 }
 
                 list.Add(new ChkResultInternal { CheckpointKey = chk.CheckpointKey, Name = chk.Name, IsSatisfied = isSat, IsMandatory = chk.IsMandatory });
+            }
+
+            // Strictly require all 4 main services for Confirmed (3), In Progress (4), or Completed (5)
+            if (targetStatusId >= 3)
+            {
+                var missingMain = MainServicesHelper.GetMissingMainServices(tour, tour.TourServices);
+                if (missingMain.Count > 0)
+                {
+                    canAdvance = false;
+                    foreach (var m in missingMain)
+                    {
+                        if (!list.Any(c => !c.IsSatisfied && c.Name.Contains(m)))
+                        {
+                            missingCount++;
+                            list.Add(new ChkResultInternal { CheckpointKey = $"MISSING_{m.ToUpper().Replace(" ", "_")}", Name = $"Mandatory Main Service: {m}", IsSatisfied = false, IsMandatory = true });
+                        }
+                    }
+                }
             }
 
             return new EvalResultInternal { CanAdvance = canAdvance, MissingMandatoryCount = missingCount, Checkpoints = list };

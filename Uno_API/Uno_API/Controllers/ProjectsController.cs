@@ -113,7 +113,7 @@ namespace Uno_API.Controllers
             // Ensure project storage folder is created automatically
             if (!string.IsNullOrWhiteSpace(project.ProjectCode))
             {
-                _storageService.EnsureProjectFolder(project.ProjectCode);
+                _storageService?.EnsureProjectFolder(project.ProjectCode);
             }
 
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
@@ -135,7 +135,7 @@ namespace Uno_API.Controllers
                 await _context.SaveChangesAsync();
                 if (!string.IsNullOrWhiteSpace(project.ProjectCode))
                 {
-                    _storageService.EnsureProjectFolder(project.ProjectCode);
+                    _storageService?.EnsureProjectFolder(project.ProjectCode);
                 }
             }
             catch (DbUpdateConcurrencyException)

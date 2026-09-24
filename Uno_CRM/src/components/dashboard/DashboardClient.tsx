@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import KPICards from "./KPICards";
 import ProjectGanttChart from "./ProjectGanttChart";
 import { Loader2, ChevronDown, Search, Filter, X } from "lucide-react";
+import { getApiUrl } from "@/lib/apiConfig";
 
 function MultiSelectDropdown({ label, options, selectedIds, toggleOption }: { label: string, options: {id: number, label: string}[], selectedIds: number[], toggleOption: (id: number) => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,7 +73,7 @@ function MultiSelectDropdown({ label, options, selectedIds, toggleOption }: { la
   );
 }
 
-const API = '/api';
+const API = getApiUrl();
 
 export default function DashboardClient() {
   const [loading, setLoading] = useState(true);

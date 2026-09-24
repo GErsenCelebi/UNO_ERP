@@ -10,6 +10,7 @@ import {
   Cell,
   LabelList
 } from "recharts";
+import { formatDate } from "@/lib/utils";
 
 interface ProjectGanttChartProps {
   projects: any[];
@@ -84,9 +85,9 @@ export default function ProjectGanttChart({ projects, onDoubleClick, startDateFi
           <p className="font-semibold text-slate-800 text-sm mb-1">{data.name}</p>
           <div className="text-xs text-slate-600 grid grid-cols-2 gap-x-2 gap-y-1">
             <span className="text-slate-400">Start:</span>
-            <span>{new Date(data.dateRange[0]).toLocaleDateString()}</span>
+            <span>{formatDate(data.dateRange[0])}</span>
             <span className="text-slate-400">Finish:</span>
-            <span>{new Date(data.dateRange[1]).toLocaleDateString()}</span>
+            <span>{formatDate(data.dateRange[1])}</span>
           </div>
           <div className="mt-2 pt-2 border-t border-slate-100">
             <p className="text-xs font-bold text-slate-700">

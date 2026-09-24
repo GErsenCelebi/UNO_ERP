@@ -19,7 +19,23 @@ namespace Uno_API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProjectStatus>>> GetProjectStatuses()
         {
-            return await _context.ProjectStatuses.OrderBy(s => s.OrderIndex).ToListAsync();
+            var statuses = await _context.ProjectStatuses.OrderBy(s => s.OrderIndex).ToListAsync();
+            if (statuses == null || !statuses.Any())
+            {
+                var defaults = new List<ProjectStatus>
+                {
+                    new ProjectStatus { Name = "Draft", OrderIndex = 1 },
+                    new ProjectStatus { Name = "Planning", OrderIndex = 2 },
+                    new ProjectStatus { Name = "Active", OrderIndex = 3 },
+                    new ProjectStatus { Name = "On Hold", OrderIndex = 4 },
+                    new ProjectStatus { Name = "Completed", OrderIndex = 5 },
+                    new ProjectStatus { Name = "Cancelled", OrderIndex = 6 }
+                };
+                _context.ProjectStatuses.AddRange(defaults);
+                await _context.SaveChangesAsync();
+                return await _context.ProjectStatuses.OrderBy(s => s.OrderIndex).ToListAsync();
+            }
+            return statuses;
         }
 
         [HttpGet("{id}")]

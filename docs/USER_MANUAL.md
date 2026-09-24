@@ -109,7 +109,7 @@ Once imported, tour rooming data appears on the **Tour Details Page** (`/project
 - **Tour Header Banner:** Displays Tour Code, Arrival/Departure dates, Flight details, and total Pax breakdown (Adults, Children, Infants).
 - **Passenger List Card:**
   - Dedicated **First Name** and **Surname** columns for clear identification.
-  - Automatic **`(CHD)` Child Flagging**: Passengers under 18 years of age on Arrival Date are flagged with `(CHD)` appended to their name, rendered in bold red text with a light golden highlight row.
+  - Automatic **`(CHD)` Child Flagging**: Passengers under 12 years of age on Arrival Date are flagged with `(CHD)` appended to their name, rendered in bold red text with a light golden highlight row.
 
 ---
 
@@ -171,5 +171,5 @@ After the tour guide checks off sold excursions and base services in Excel:
 
 1. **Excel Lock Files (`~$`):** If an Excel file is open in Microsoft Excel, temporary files starting with `~$` are automatically ignored by the UNO ERP import engine.
 2. **Date Format:** Ensure dates in Excel use standard `dd.MM.yyyy` or `yyyy-MM-dd` format.
-3. **Child Passenger Flagging:** Passengers under 18 years old on the tour arrival date are automatically detected, flagged with `(CHD)` in sales exports, and styled with red text.
+3. **Child Passenger Flagging:** Passengers under 12 years old on the tour arrival date are automatically detected, flagged with `(CHD)` in sales exports, and styled with red text.
 4. **Duplicate Excursions:** When uploading sales files, re-uploading an updated sales file cleanly recalculates tour services without creating duplicate entries.

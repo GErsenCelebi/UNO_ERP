@@ -30,9 +30,149 @@ interface Message {
   timestamp: string;
   links?: { label: string; path: string }[];
   pills?: string[];
+  sourceDocument?: string;
+  category?: string;
+}
+
+function renderInlineContent(text: string): React.ReactNode[] {
+  // Strip repeated asterisks (***, ****, *****, etc.)
+  const cleaned = text.replace(/\*{3,}/g, '');
+  const tokens: React.ReactNode[] = [];
+  const pattern = /(\[([^\]]+)\]\(([^)]+)\)|`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(cleaned)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push(cleaned.substring(lastIndex, match.index).replace(/\*/g, ''));
+    }
+
+    if (match[2] && match[3]) {
+      const label = match[2];
+      const url = match[3];
+      tokens.push(
+        <a 
+          key={match.index} 
+          href={url} 
+          className="text-purple-600 hover:text-purple-800 underline font-semibold transition-colors"
+        >
+          {label}
+        </a>
+      );
+    } else if (match[4]) {
+      tokens.push(
+        <code key={match.index} className="px-1.5 py-0.5 bg-slate-100 text-purple-700 rounded font-mono text-[11px] border border-slate-200">
+          {match[4]}
+        </code>
+      );
+    } else if (match[5]) {
+      tokens.push(
+        <strong key={match.index} className="font-bold text-slate-900">
+          {match[5]}
+        </strong>
+      );
+    } else if (match[6]) {
+      tokens.push(
+        <em key={match.index} className="italic text-slate-700">
+          {match[6]}
+        </em>
+      );
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < cleaned.length) {
+    tokens.push(cleaned.substring(lastIndex).replace(/\*/g, ''));
+  }
+
+  return tokens;
+}
+
+function FormattedMessage({ text, isUser }: { text: string; isUser: boolean }) {
+  if (isUser) {
+    return <div className="whitespace-pre-wrap">{text.replace(/\*{2,}/g, '')}</div>;
+  }
+
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let key = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+
+    if (!trimmed) {
+      elements.push(<div key={key++} className="h-1.5" />);
+      continue;
+    }
+
+    // Horizontal divider: ━━━━━━━━, ---, ***
+    if (/^[━─\-_*]{3,}$/.test(trimmed)) {
+      elements.push(<hr key={key++} className="my-2 border-slate-200" />);
+      continue;
+    }
+
+    // Markdown Headers: #, ##, ###, ####
+    const headerMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    if (headerMatch) {
+      const level = headerMatch[1].length;
+      const headerText = headerMatch[2].replace(/\*/g, '');
+      const headerClass = level <= 2 
+        ? "font-bold text-slate-900 text-xs mt-2 mb-1 pb-0.5 border-b border-slate-100" 
+        : "font-bold text-slate-900 text-xs mt-1.5 mb-0.5";
+      elements.push(
+        <div key={key++} className={headerClass}>
+          {renderInlineContent(headerText)}
+        </div>
+      );
+      continue;
+    }
+
+    // Bullet points: •, -, *, +
+    const bulletMatch = trimmed.match(/^([•\-\*\+])\s+(.+)$/);
+    if (bulletMatch) {
+      const bulletContent = bulletMatch[2];
+      elements.push(
+        <div key={key++} className="flex items-start gap-1.5 my-0.5 pl-0.5">
+          <span className="text-purple-600 font-bold shrink-0 mt-0.5 text-xs leading-none">•</span>
+          <div className="flex-1 text-slate-700 leading-relaxed">
+            {renderInlineContent(bulletContent)}
+          </div>
+        </div>
+      );
+      continue;
+    }
+
+    // Numbered list: 1. , 2. , etc.
+    const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
+    if (numberedMatch) {
+      const num = numberedMatch[1];
+      const numContent = numberedMatch[2];
+      elements.push(
+        <div key={key++} className="flex items-start gap-1.5 my-0.5 pl-0.5">
+          <span className="text-purple-700 font-bold shrink-0 text-[11px] min-w-[14px]">{num}.</span>
+          <div className="flex-1 text-slate-700 leading-relaxed">
+            {renderInlineContent(numContent)}
+          </div>
+        </div>
+      );
+      continue;
+    }
+
+    // Normal paragraph line
+    elements.push(
+      <p key={key++} className="text-slate-800 leading-relaxed my-0.5">
+        {renderInlineContent(trimmed)}
+      </p>
+    );
+  }
+
+  return <div className="space-y-0.5 text-xs leading-relaxed">{elements}</div>;
 }
 
 export default function AIChatDrawer() {
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputQuery, setInputQuery] = useState('');
@@ -42,16 +182,20 @@ export default function AIChatDrawer() {
     {
       id: 'welcome-1',
       sender: 'ai',
-      text: "👋 **Hello! I am your Uno Smart Agent.**\n\nI can answer **how-to process questions**, guide you through ERP features, query live AppDB tour & master data, or explain Governance Rules (e.g. Rule 4: Separate Money Flows).",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text: "👋 **Hello! I am your Uno Smart Assistant.**\n\nI can help you navigate UNO ERP features, check live Tour and Project statistics, guide you through Excel imports, and answer step-by-step operational how-to questions.",
+      timestamp: '10:00',
       pills: [
-        "How to add a user?",
-        "What is Rule 4?",
+        "How to advance from Draft to Confirmed?",
+        "How to import Excel rooming list?",
         "Summarize active tours",
-        "How to configure role access?"
+        "How is hotel cost calculated?"
       ]
     }
   ]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUser = getCurrentUser();
@@ -87,7 +231,9 @@ export default function AIChatDrawer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: textToSend.trim(),
-          role: currentUser?.role || 'Administrator'
+          role: currentUser?.role || 'Administrator',
+          category: selectedCategory || undefined,
+          contextUrl: typeof window !== 'undefined' ? window.location.pathname : undefined
         })
       });
 
@@ -100,7 +246,9 @@ export default function AIChatDrawer() {
         text: data.answer || 'I have processed your query.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         links: data.recommendedLinks,
-        pills: data.suggestedPills
+        pills: data.suggestedPills,
+        sourceDocument: data.sourceDocument,
+        category: data.category
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -117,11 +265,17 @@ export default function AIChatDrawer() {
     }
   };
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <>
       {/* Floating Trigger Button */}
       {!isOpen && (
         <button
+          type="button"
+          suppressHydrationWarning
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-800 text-white rounded-2xl shadow-xl shadow-purple-500/30 border border-purple-400/30 transition-all hover:scale-105 active:scale-95 group font-bold text-sm"
         >
@@ -156,8 +310,13 @@ export default function AIChatDrawer() {
                 <div className="font-bold text-sm flex items-center gap-1.5">
                   Uno Smart Agent
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30 font-mono">LIVE</span>
+                  {typeof window !== 'undefined' && window.location.pathname.includes('/tours/') && (
+                    <span className="text-[10px] bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-full border border-purple-400/30 font-medium">
+                      Tour #{window.location.pathname.split('/tours/')[1]?.split('/')[0]}
+                    </span>
+                  )}
                 </div>
-                <div className="text-[11px] text-purple-200/70">Process Flows • AppDB • Rules 1-5</div>
+                <div className="text-[11px] text-purple-200/70">Process Flows • AppDB • How-To Guides</div>
               </div>
             </div>
 
@@ -191,14 +350,25 @@ export default function AIChatDrawer() {
 
                 <div className={`max-w-[85%] space-y-2 ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                   <div 
-                    className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-2xs whitespace-pre-wrap ${
+                    className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${
                       msg.sender === 'user'
-                        ? 'bg-purple-600 text-white font-medium rounded-tr-xs'
+                        ? 'bg-purple-600 text-white font-medium rounded-tr-xs whitespace-pre-wrap'
                         : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-xs'
                     }`}
                   >
-                    {msg.text}
+                    <FormattedMessage text={msg.text} isUser={msg.sender === 'user'} />
                   </div>
+
+                  {/* Source Document Citation Badge (Only for .pdf, .docx, .pptx - NEVER for .md) */}
+                  {msg.sourceDocument && 
+                   !msg.sourceDocument.endsWith('.md') && 
+                   /\.(pdf|docx?|pptx)$/i.test(msg.sourceDocument) && (
+                    <div className="pt-0.5">
+                      <span className="text-[10px] text-purple-700 bg-purple-50/80 border border-purple-200/80 px-2 py-0.5 rounded-md inline-flex items-center gap-1 font-mono">
+                        📄 {msg.sourceDocument}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Recommended Links */}
                   {msg.links && msg.links.length > 0 && (
@@ -291,8 +461,9 @@ export default function AIChatDrawer() {
                     : 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
                 }`}
               >
-                ⚙️ Master Data / Metadata
+                ⚙️ Master Data
               </button>
+
             </div>
 
             {/* Sub-Topic Selection Pills for Selected Category */}
@@ -300,6 +471,7 @@ export default function AIChatDrawer() {
               <div className="pt-1 border-t border-slate-200/60 flex items-center gap-1.5 overflow-x-auto">
                 <span className="text-[10px] font-semibold text-purple-700">Tours Sub-topics:</span>
                 {[
+                  { label: 'Statuses & Gates', query: 'What are the mandatory tour status checkpoints and how to advance from Draft to Completed?' },
                   { label: 'Services', query: 'How to manage tour services, base services and excursion lines?' },
                   { label: 'Hotels', query: 'How to set up hotel pricing basis (Pax vs Room) and calculate nightly rates?' },
                   { label: 'Guide', query: 'How to assign guides and calculate the strict 10% guide commission on excursion sales?' },
@@ -326,6 +498,7 @@ export default function AIChatDrawer() {
                 {[
                   { label: 'Overview & Purpose', query: 'Why are Projects needed in UNO ERP and what are the most important fields?' },
                   { label: 'Creating Projects', query: 'How to create a project manually or via Rooming List import?' },
+                  { label: 'Executive KPIs', query: 'What KPIs are available on the Executive Dashboard?' },
                   { label: 'Project Statuses', query: 'How to manage project status and track linked tours?' }
                 ].map((item, i) => (
                   <button

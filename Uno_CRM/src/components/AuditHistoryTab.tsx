@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { History, User, Clock, Shield, Tag, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
 
 interface AuditLogRecord {
   id: number;
@@ -117,7 +118,7 @@ export default function AuditHistoryTab({ entityName, entityId }: AuditHistoryTa
                   <div className="text-right shrink-0">
                     <div className="text-[11px] text-slate-400 flex items-center justify-end gap-1 font-mono">
                       <Clock className="w-3 h-3 text-slate-500" />
-                      {new Date(log.timestamp).toLocaleString()}
+                      {formatDateTime(log.timestamp)}
                     </div>
                   </div>
                 </div>

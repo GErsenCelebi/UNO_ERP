@@ -4,10 +4,10 @@ import React, { useState } from "react";
 import { Search, Filter, Plus, Mail, Phone, Calendar, MapPin, Users, Loader2 } from "lucide-react";
 
 const mockBookings = [
-  { id: "BK-101", paxName: "John Doe", tourCode: "TR-001", destination: "Istanbul", status: "Confirmed", total: "€2,500", paid: "€2,500", date: "Oct 12, 2025" },
-  { id: "BK-102", paxName: "Sarah Smith", tourCode: "TR-002", destination: "Cappadocia", status: "Deposit Paid", total: "€2,500", paid: "€500", date: "Oct 15, 2025" },
-  { id: "BK-103", paxName: "Michael Johnson", tourCode: "TR-001", destination: "Istanbul", status: "Pending", total: "€2,500", paid: "€0", date: "Oct 18, 2025" },
-  { id: "BK-104", paxName: "Emily Davis", tourCode: "TR-003", destination: "Antalya", status: "Confirmed", total: "€2,500", paid: "€2,500", date: "Oct 20, 2025" },
+  { id: "BK-101", paxName: "John Doe", tourCode: "TR-001", destination: "Istanbul", status: "Confirmed", total: "€2,500", paid: "€2,500", date: "12/10/2025" },
+  { id: "BK-102", paxName: "Sarah Smith", tourCode: "TR-002", destination: "Cappadocia", status: "Deposit Paid", total: "€2,500", paid: "€500", date: "15/10/2025" },
+  { id: "BK-103", paxName: "Michael Johnson", tourCode: "TR-001", destination: "Istanbul", status: "Pending", total: "€2,500", paid: "€0", date: "18/10/2025" },
+  { id: "BK-104", paxName: "Emily Davis", tourCode: "TR-003", destination: "Antalya", status: "Confirmed", total: "€2,500", paid: "€2,500", date: "20/10/2025" },
 ];
 
 export default function BookingsPage() {

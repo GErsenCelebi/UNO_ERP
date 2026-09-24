@@ -1,18 +1,29 @@
 "use client"
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check, History } from 'lucide-react';
+import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check, History, AlertTriangle } from 'lucide-react';
 import AuditHistoryTab from '@/components/AuditHistoryTab';
 import Can from '@/components/Can';
 import SLAWarningBanner from '@/components/SLAWarningBanner';
+import { formatDate } from '@/lib/utils';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const API = '/api';
+const API = getApiUrl();
 
 interface TourStatus {
   id: number;
   name: string;
   orderIndex: number;
 }
+
+const DEFAULT_STATUSES: TourStatus[] = [
+  { id: 1, name: 'Draft', orderIndex: 1 },
+  { id: 2, name: 'Proposal', orderIndex: 2 },
+  { id: 3, name: 'Confirmed', orderIndex: 3 },
+  { id: 4, name: 'In Progress', orderIndex: 4 },
+  { id: 5, name: 'Completed', orderIndex: 5 },
+  { id: 6, name: 'Cancelled', orderIndex: 6 },
+];
 
 interface Tour {
   id: number;
@@ -105,13 +116,14 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
   );
 };
 
-export default function ToursKanbanPage() {
+export default function ToursPage() {
   const router = useRouter();
   const [tours, setTours] = useState<Tour[]>([]);
-  const [statuses, setStatuses] = useState<TourStatus[]>([]);
+  const [statuses, setStatuses] = useState<TourStatus[]>(DEFAULT_STATUSES);
   const [projects, setProjects] = useState<Project[]>([]);
   const [guides, setGuides] = useState<{ id: number, name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [selectedStatusIds, setSelectedStatusIds] = useState<number[]>([]);
   const [selectedGuideIds, setSelectedGuideIds] = useState<number[]>([]);
@@ -160,6 +172,7 @@ export default function ToursKanbanPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const [toursRes, statusesRes, projectsRes, guidesRes] = await Promise.all([
         fetch(`${API}/tours`, { cache: 'no-store' }),
@@ -170,12 +183,39 @@ export default function ToursKanbanPage() {
       if (toursRes.ok) setTours(await toursRes.json());
       if (statusesRes.ok) {
         const s = await statusesRes.json();
-        setStatuses(s.sort((a: TourStatus, b: TourStatus) => a.orderIndex - b.orderIndex));
+        if (Array.isArray(s) && s.length > 0) {
+          setStatuses(s.sort((a: TourStatus, b: TourStatus) => a.orderIndex - b.orderIndex));
+        } else {
+          setStatuses(DEFAULT_STATUSES);
+        }
+      } else {
+        setStatuses(DEFAULT_STATUSES);
       }
       if (projectsRes.ok) setProjects(await projectsRes.json());
       if (guidesRes.ok) setGuides(await guidesRes.json());
     } catch (err) {
-      console.error('Failed to fetch tours data:', err);
+      console.warn('Backend API currently unreachable:', err);
+      setFetchError("Unable to reach Uno API backend on http://localhost:8001. Please ensure Uno_API is running.");
+      setStatuses(DEFAULT_STATUSES);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSeedStatuses = async () => {
+    setLoading(true);
+    try {
+      for (const st of DEFAULT_STATUSES) {
+        await fetch(`${API}/tourstatuses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: st.name, orderIndex: st.orderIndex }),
+        });
+      }
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to seed tour statuses:', err);
+      setStatuses(DEFAULT_STATUSES);
     } finally {
       setLoading(false);
     }
@@ -375,6 +415,21 @@ export default function ToursKanbanPage() {
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
 
         <div className="relative z-0">
+          {fetchError && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-amber-900 text-xs shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span className="font-medium">{fetchError}</span>
+              </div>
+              <button
+                onClick={() => { setFetchError(null); fetchData(); }}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                Retry Connection
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex justify-center items-center py-32">
               <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
@@ -383,7 +438,13 @@ export default function ToursKanbanPage() {
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <FolderOpen className="w-16 h-16 text-slate-300 mb-4" />
               <h3 className="text-lg font-bold text-slate-700 mb-2">No tour statuses found</h3>
-              <p className="text-slate-500 max-w-md">Configure tour statuses in Master Data first.</p>
+              <p className="text-slate-500 max-w-md mb-4">Tour statuses have not been loaded or configured yet.</p>
+              <button
+                onClick={handleSeedStatuses}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+              >
+                Initialize Default Statuses
+              </button>
             </div>
           ) : (
             <div className="flex gap-4 pb-6" style={{ minHeight: 'calc(100vh - 220px)' }}>
@@ -456,9 +517,7 @@ export default function ToursKanbanPage() {
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
                                   <CalendarDays className="w-3 h-3 text-slate-400" />
                                   <span>
-                                    {(tour.startDate || tour.arrivalDate) ? new Date(tour.startDate || tour.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'}
-                                    {' → '}
-                                    {tour.endDate ? new Date(tour.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                    {formatDate(tour.startDate || tour.arrivalDate)} → {formatDate(tour.endDate)}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500">

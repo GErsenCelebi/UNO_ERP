@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { DollarSign, ArrowDownRight, CreditCard, PieChart, Loader2, MapPin, Package } from "lucide-react";
+import { getApiUrl } from "@/lib/apiConfig";
 
-const API = '/api';
+const API = getApiUrl();
 
 interface ServiceSummary {
   category: string;

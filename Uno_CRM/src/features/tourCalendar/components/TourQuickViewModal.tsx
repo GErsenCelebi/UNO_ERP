@@ -2,6 +2,7 @@ import React from 'react';
 import { TourCalendarEvent } from '../types';
 import { X, Calendar, Users, MapPin, Bus, UserCircle, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { formatDate } from '@/lib/utils';
 
 interface TourQuickViewModalProps {
   event: TourCalendarEvent | null;
@@ -10,12 +11,6 @@ interface TourQuickViewModalProps {
 
 export function TourQuickViewModal({ event, onClose }: TourQuickViewModalProps) {
   if (!event) return null;
-
-  const formatDate = (isoString: string) => {
-    return new Date(isoString).toLocaleDateString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    });
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">

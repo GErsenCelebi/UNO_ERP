@@ -1,11 +1,13 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
+import { formatDate, getFlightAwareUrl } from '@/lib/utils';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const API = '/api';
+const API = getApiUrl();
 
 interface Tour {
   id: number;
@@ -59,7 +61,57 @@ interface TourService {
   [key: string]: any;
 }
 
-const ROOM_TYPES = ['Single', 'Double', 'Triple', 'Twin', 'Suite'];
+const ROOM_TYPES = ['Single', 'Double', 'Twin', 'Triple', 'Double + Extra Bed (DBL+EB)', 'Suite', 'Guide Room', 'Driver Room'];
+
+const getPaxPerRoom = (roomType?: string): number => {
+  const rt = (roomType || '').toLowerCase();
+  if (rt.includes('single') || rt.includes('guide') || rt.includes('driver') || rt.includes('sgl')) return 1;
+  if (rt.includes('triple') || rt.includes('trp') || rt.includes('tpl')) return 3;
+  if (rt.includes('extra bed') || rt.includes('eb') || rt.includes('dbl+eb')) return 3;
+  if (rt.includes('quad') || rt.includes('qdr')) return 4;
+  return 2;
+};
+
+const getHotelDefaultRate = (hotel: any, roomType: string, basis: string): number => {
+  if (!hotel) return 0;
+  const isRoom = (basis || 'Room').toLowerCase().includes('room');
+  const rt = (roomType || '').toLowerCase();
+  if (rt.includes('single') || rt.includes('sgl')) {
+    return isRoom ? (hotel.singleRoomRate || hotel.singleRate || 0) : (hotel.singlePaxRate || hotel.singleRate || 0);
+  }
+  if (rt.includes('triple') || rt.includes('trp') || rt.includes('tpl')) {
+    return isRoom 
+      ? (hotel.tripleRoomRate || (hotel.triplePaxRate ? hotel.triplePaxRate * 3 : 0) || hotel.tripleRate || 0)
+      : (hotel.triplePaxRate || (hotel.tripleRoomRate ? hotel.tripleRoomRate / 3 : 0) || hotel.tripleRate || 0);
+  }
+  if (rt.includes('extra bed') || rt.includes('eb') || rt.includes('dbl+eb')) {
+    return isRoom 
+      ? (hotel.dblEbRoomRate || (hotel.dblEbPaxRate ? hotel.dblEbPaxRate * 3 : 0) || hotel.dblEbRate || 0)
+      : (hotel.dblEbPaxRate || (hotel.dblEbRoomRate ? hotel.dblEbRoomRate / 3 : 0) || hotel.dblEbRate || 0);
+  }
+  if (rt.includes('twin') || rt.includes('twn')) {
+    return isRoom 
+      ? (hotel.twinRoomRate || (hotel.twinPaxRate ? hotel.twinPaxRate * 2 : 0) || hotel.twinRate || 0)
+      : (hotel.twinPaxRate || (hotel.twinRoomRate ? hotel.twinRoomRate / 2 : 0) || hotel.twinRate || 0);
+  }
+  if (rt.includes('guide') || rt.includes('driver')) {
+    return isRoom ? (hotel.singleRoomRate || hotel.singleRate || 60) : (hotel.singlePaxRate || hotel.singleRate || 60);
+  }
+  // Double / default
+  return isRoom 
+    ? (hotel.doubleRoomRate || (hotel.doublePaxRate ? hotel.doublePaxRate * 2 : 0) || hotel.doubleRate || 0)
+    : (hotel.doublePaxRate || (hotel.doubleRoomRate ? hotel.doubleRoomRate / 2 : 0) || hotel.doubleRate || 0);
+};
+
+const isHotelDiscountService = (s: TourService): boolean => {
+  return s.serviceCategoryId === 1003 || s.roomType === 'Hotel Discount' || (s.description || '').toLowerCase().includes('hotel discount');
+};
+
+const isHotelTaxService = (s: TourService): boolean => {
+  const rt = (s.roomType || '').toLowerCase();
+  const desc = (s.description || '').toLowerCase();
+  return rt === 'city tax' || rt === 'hotel tax' || desc.includes('hotel tax') || desc.includes('city tax');
+};
 
 const getCurrencySymbol = (currencyCode?: string) => {
   switch (currencyCode) {
@@ -140,26 +192,61 @@ export default function TourDetailPage() {
     }));
   };
 
+  // Passenger age & classification helper (under 12 = Children, 12+ = Adult)
+  const calculatePassengerAge = (dobStr: string, arrivalDateStr?: string): number | null => {
+    if (!dobStr) return null;
+    const ref = arrivalDateStr ? new Date(arrivalDateStr) : new Date();
+    const dob = new Date(dobStr);
+    if (isNaN(dob.getTime())) return null;
+    let age = ref.getFullYear() - dob.getFullYear();
+    const m = ref.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && ref.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const getPassengerPaxType = (p: any, arrivalDateStr?: string): 'Adult' | 'Children' | 'Infant' => {
+    if (p.dateOfBirth) {
+      const age = calculatePassengerAge(p.dateOfBirth, arrivalDateStr);
+      if (age !== null) {
+        if (age < 2) return 'Infant';
+        if (age < 12) return 'Children';
+        return 'Adult';
+      }
+    }
+    if (p.paxType) {
+      const pt = String(p.paxType).toLowerCase();
+      if (pt.includes('child') || pt.includes('chd') || pt.includes('çocuk') || pt.includes('cocuk')) return 'Children';
+      if (pt.includes('infant') || pt.includes('bebek') || pt.includes('inf')) return 'Infant';
+      return 'Adult';
+    }
+    return 'Adult';
+  };
+
   // Passenger modal & search state & handlers
   const [bookingSearchQuery, setBookingSearchQuery] = useState('');
   const [isPassengerModalOpen, setIsPassengerModalOpen] = useState(false);
   const [editingPassengerId, setEditingPassengerId] = useState<number | null>(null);
   const [passengerData, setPassengerData] = useState<any>({
     firstName: '', lastName: '', gender: 'Male', nationalId: '', passportNo: '',
-    passportType: 'Regular', visaNo: '', phone: '', dateOfBirth: '', roomType: 'Double', pax: 1, address: ''
+    passportType: 'Regular', visaNo: '', phone: '', dateOfBirth: '', roomType: 'Double', pax: 1, address: '',
+    paxType: 'Adult'
   });
 
   const openAddPassengerModal = () => {
     setEditingPassengerId(null);
     setPassengerData({
       firstName: '', lastName: '', gender: 'Male', nationalId: '', passportNo: '',
-      passportType: 'Regular', visaNo: '', phone: '', dateOfBirth: '', roomType: 'Double', pax: 1, address: ''
+      passportType: 'Regular', visaNo: '', phone: '', dateOfBirth: '', roomType: 'Double', pax: 1, address: '',
+      paxType: 'Adult'
     });
     setIsPassengerModalOpen(true);
   };
 
   const openEditPassengerModal = (p: any) => {
     setEditingPassengerId(p.id);
+    const resolvedType = getPassengerPaxType(p, tour?.arrivalDate);
     setPassengerData({
       firstName: p.firstName || '',
       lastName: p.lastName || '',
@@ -172,10 +259,60 @@ export default function TourDetailPage() {
       dateOfBirth: p.dateOfBirth ? p.dateOfBirth.substring(0, 10) : '',
       roomType: p.roomType || 'Double',
       pax: p.pax || 1,
-      address: p.address || ''
+      address: p.address || '',
+      paxType: p.paxType || resolvedType
     });
     setIsPassengerModalOpen(true);
   };
+
+  // Missing Main Services Detection (Guide, Hotel booking, transportation, flight #)
+  const missingMainServices: { key: string; label: string; action: string }[] = useMemo(() => {
+    if (!tour) return [];
+    const missing: { key: string; label: string; action: string }[] = [];
+    
+    // 1. Guide check
+    const hasGuide = services.some(s => 
+      s.guideId || 
+      s.serviceCategoryId === 4 || 
+      (s.serviceCategory?.name || '').toLowerCase().includes('guide') ||
+      (s.description || '').toLowerCase().includes('guide')
+    );
+    if (!hasGuide) missing.push({ key: 'guide', label: 'Tour Guide', action: 'Assign a guide under Services' });
+
+    // 2. Hotel booking check
+    const hasHotel = services.some(s => 
+      s.hotelId || 
+      s.serviceCategoryId === 1 || 
+      (s.serviceCategory?.name || '').toLowerCase().includes('hotel') ||
+      (s.description || '').toLowerCase().includes('hotel')
+    );
+    if (!hasHotel) missing.push({ key: 'hotel', label: 'Hotel Booking', action: 'Add hotel booking under Services' });
+
+    // 3. Transportation check
+    const hasTransport = services.some(s => 
+      s.driverId || 
+      s.transportCompanyId || 
+      s.serviceCategoryId === 3 || 
+      s.serviceCategoryId === 5 || 
+      (s.serviceCategory?.name || '').toLowerCase().includes('transport') || 
+      (s.serviceCategory?.name || '').toLowerCase().includes('driver') ||
+      (s.description || '').toLowerCase().includes('transport') ||
+      (s.description || '').toLowerCase().includes('driver') ||
+      (s.description || '').toLowerCase().includes('bus') ||
+      (s.description || '').toLowerCase().includes('coach')
+    );
+    if (!hasTransport) missing.push({ key: 'transport', label: 'Transportation / Driver', action: 'Assign a driver or transport company under Services' });
+
+    // 4. Flight # check
+    const hasFlight = Boolean(
+      (tour.arrivalFlight && tour.arrivalFlight.trim().length > 0) || 
+      (tour.departureFlight && tour.departureFlight.trim().length > 0) || 
+      services.some(s => s.flightNo && s.flightNo.trim().length > 0)
+    );
+    if (!hasFlight) missing.push({ key: 'flight', label: 'Flight #', action: 'Enter Arrival or Departure Flight #' });
+
+    return missing;
+  }, [tour, services]);
 
   const handleSavePassenger = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,12 +539,25 @@ export default function TourDetailPage() {
       cleanData.pax = (cleanData.adults || 0) + (cleanData.children || 0) + (cleanData.infants || 0);
       cleanData.totalFee = ((cleanData.adults || 0) * (cleanData.baseFee || 0)) + ((cleanData.children || 0) * (cleanData.baseFee || 0) * 0.5);
       
+      if (cleanData.tourStatusId >= 3 && missingMainServices.length > 0) {
+        alert(`Cannot move tour to Confirmed or In Progress!\n\nMissing main services:\n${missingMainServices.map(m => `• ${m.label}`).join('\n')}\n\nPlease define these services before confirming or running this tour.`);
+        setSaving(false);
+        return;
+      }
+
       const targetProjectId = cleanData.projectId;
       const res = await fetch(`${API}/tours/${tourId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanData),
       });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        alert(errJson?.message || 'Failed to update tour');
+        setSaving(false);
+        return;
+      }
 
       if (res.ok) {
         if (guideId !== undefined) {
@@ -480,12 +630,12 @@ export default function TourDetailPage() {
   const getServiceDetails = (svc: TourService) => {
     const cat = getCategoryName(svc);
     if (cat === 'Guide' || cat === 'Hotel') {
-       const start = svc.serviceDate ? new Date(svc.serviceDate).toLocaleDateString() : '';
-       const end = svc.serviceEndDate ? new Date(svc.serviceEndDate).toLocaleDateString() : '';
+       const start = svc.serviceDate ? formatDate(svc.serviceDate) : '';
+       const end = svc.serviceEndDate ? formatDate(svc.serviceEndDate) : '';
        return start && end ? `${start} — ${end}` : '-';
     }
     if (cat === 'Excursion') {
-       return svc.serviceDate ? new Date(svc.serviceDate).toLocaleDateString() : '-';
+       return svc.serviceDate ? formatDate(svc.serviceDate) : '-';
     }
     if (svc.flightNo) return `${svc.flightNo} ${svc.fromAirport || ''}—${svc.toAirport || ''}`;
     return '-';
@@ -863,16 +1013,16 @@ export default function TourDetailPage() {
         const nights = (sDate && eDate) ? Math.max(1, Math.ceil((new Date(eDate).getTime() - new Date(sDate).getTime()) / (1000 * 3600 * 24))) : (Number(newService.totalNights) || Number(newService.quantity) || 1);
         const roomCount = Number(newService.roomCount) || 1;
         const uPrice = Number(newService.unitPrice) || 0;
-        const pb = newService.pricingBasis || 'Pax';
+        const pb = newService.pricingBasis || 'Room';
         const isPerPax = pb.toLowerCase().includes('pax') || pb.toLowerCase().includes('person');
-        const rType = (newService.roomType || '').toLowerCase();
-        let paxPerRoom = 2;
-        if (rType.includes('single') || rType.includes('guide') || rType.includes('driver') || rType.includes('sgl')) paxPerRoom = 1;
-        else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl')) paxPerRoom = 3;
-        else if (rType.includes('quad') || rType.includes('qdr')) paxPerRoom = 4;
+        const paxPerRoom = getPaxPerRoom(newService.roomType);
         const multiplier = isPerPax ? (roomCount * paxPerRoom) : roomCount;
         const discAmt = Number(newService.discountAmount) || 0;
-        const totalAmount = Math.max(0, (multiplier * nights * uPrice) - discAmt);
+        const calcTotal = Math.max(0, (multiplier * nights * uPrice) - discAmt);
+        const totalAmount = (newService.totalAmount !== undefined && newService.totalAmount !== null && !isNaN(Number(newService.totalAmount)))
+          ? Number(newService.totalAmount)
+          : calcTotal;
+
         payloads.push({
           ...basePayload,
           hotelId: newService.hotelId,
@@ -884,7 +1034,11 @@ export default function TourDetailPage() {
           pricingBasis: pb,
           discountAmount: discAmt,
           discountNotes: newService.discountNotes || '',
-          totalNights: nights
+          totalNights: nights,
+          startDate: sDate ? new Date(sDate).toISOString() : null,
+          endDate: eDate ? new Date(eDate).toISOString() : null,
+          serviceDate: sDate ? new Date(sDate).toISOString() : null,
+          serviceEndDate: eDate ? new Date(eDate).toISOString() : null,
         });
       } else if (serviceType === 'Guide' && !editingServiceId) {
         if (!newService.guideAssignments || newService.guideAssignments.length === 0) return alert('Please add at least one guide assignment');
@@ -955,8 +1109,7 @@ export default function TourDetailPage() {
       
       setIsServiceModalOpen(false);
       setEditingServiceId(null);
-      const svcRes = await fetch(`${API}/tourservices?tourId=${tourId}`);
-      if (svcRes.ok) setServices(await svcRes.json());
+      fetchAll();
     } catch (err) { console.error(err); }
   };
 
@@ -998,10 +1151,28 @@ export default function TourDetailPage() {
       guideQty = Math.max(1, Math.ceil((new Date(eDate).getTime() - new Date(sDate).getTime()) / (1000 * 3600 * 24)) + 1) || 1;
     }
 
+    const hotelObj = hotels.find((h: any) => h.id === svc.hotelId);
+    const hotelBasis = (svc as any).pricingBasis || 'Room';
+    const rType = svc.roomType || 'Double';
+    const rCount = svc.roomCount || 1;
+    const nights = (sDate && eDate) ? Math.max(1, Math.ceil((new Date(eDate).getTime() - new Date(sDate).getTime()) / (1000 * 3600 * 24))) : (svc.quantity || 1);
+    const pPerRoom = getPaxPerRoom(rType);
+    const isPerPax = hotelBasis.toLowerCase().includes('pax');
+    const multiplier = isPerPax ? (rCount * pPerRoom) : rCount;
+    const resolvedUnitPrice = (svc.unitPrice !== undefined && svc.unitPrice !== null && svc.unitPrice > 0)
+      ? svc.unitPrice
+      : getHotelDefaultRate(hotelObj, rType, hotelBasis);
+    const resolvedTotalAmount = (svc.totalAmount !== undefined && svc.totalAmount !== null && svc.totalAmount > 0)
+      ? svc.totalAmount
+      : Math.round(multiplier * nights * resolvedUnitPrice * 100) / 100;
+
+    const rtLower = rType.toLowerCase();
+
     setNewService({
       description: svc.description || '',
-      quantity: svc.quantity,
-      unitPrice: svc.unitPrice,
+      quantity: nights,
+      unitPrice: resolvedUnitPrice,
+      totalAmount: resolvedTotalAmount,
       serviceCategoryId: svc.serviceCategoryId,
       isRevenue: svc.isRevenue,
       hotelId: svc.hotelId || null,
@@ -1009,20 +1180,21 @@ export default function TourDetailPage() {
       guideId: svc.guideId || null,
       excursionId: svc.excursionId || null,
       transportCompanyId: svc.transportCompanyId || null,
-      pricingBasis: (svc as any).pricingBasis || 'Room',
+      pricingBasis: hotelBasis,
       discountAmount: (svc as any).discountAmount || 0,
       discountNotes: (svc as any).discountNotes || '',
-      roomType: svc.roomType || 'Double',
-      roomCount: svc.roomCount || 1,
-      singleCount: svc.roomType === 'Single' ? (svc.roomCount || 0) : 0,
-      doubleCount: svc.roomType === 'Double' ? (svc.roomCount || 0) : 0,
-      twinCount: svc.roomType === 'Twin' ? (svc.roomCount || 0) : 0,
-      tripleCount: svc.roomType === 'Triple' ? (svc.roomCount || 0) : 0,
-      dblEbCount: (svc.roomType === 'Double + Extra Bed (DBL+EB)' || svc.roomType === 'DBL+EB') ? (svc.roomCount || 0) : 0,
+      roomType: rType,
+      roomCount: rCount,
+      singleCount: (rtLower.includes('single') || rtLower.includes('guide') || rtLower.includes('driver')) ? rCount : 0,
+      doubleCount: (rtLower.includes('double') && !rtLower.includes('extra bed') && !rtLower.includes('eb')) ? rCount : 0,
+      twinCount: rtLower.includes('twin') ? rCount : 0,
+      tripleCount: rtLower.includes('triple') ? rCount : 0,
+      dblEbCount: (rtLower.includes('extra bed') || rtLower.includes('eb')) ? rCount : 0,
       flightNo: svc.flightNo || '',
       serviceDate: sDate,
       startDate: sDate,
       endDate: eDate,
+      totalNights: nights,
       fromAirport: svc.fromAirport || '',
       toAirport: svc.toAirport || '',
       guideAssignments: svc.serviceCategoryId === getCategoryId('Guide') ? [{
@@ -1041,7 +1213,7 @@ export default function TourDetailPage() {
     if (!confirm('Delete this service?')) return;
     try {
       await fetch(`${API}/tourservices/${id}`, { method: 'DELETE' });
-      setServices(prev => prev.filter(s => s.id !== id));
+      fetchAll();
     } catch (err) { console.error(err); }
   };
 
@@ -1113,15 +1285,42 @@ export default function TourDetailPage() {
   }, 0);
   const totalRevenue = totalSales;
   const profit = totalRevenue - totalServiceCost;
-  const costPerPax = tour ? Math.round(totalServiceCost / Math.max(tour.pax || 1, 1)) : 0;
+  // Derive accommodated guest count from hotel services if tour.pax / adults / children are 0
+  let inferredHotelPax = 0;
+  effectiveCostServices.forEach(s => {
+    if (s.roomType && s.roomCount && s.roomCount > 0 && !isHotelDiscountService(s) && !isHotelTaxService(s)) {
+      const rType = (s.roomType || s.description || '').toLowerCase();
+      let ppr = 2;
+      if (rType.includes('single') || rType.includes('sgl')) ppr = 1;
+      else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl') || rType.includes('extra bed') || rType.includes('eb')) ppr = 3;
+      else if (rType.includes('quad') || rType.includes('qdr')) ppr = 4;
+      else if (rType.includes('double') || rType.includes('twin') || rType.includes('dbl') || rType.includes('twn')) ppr = 2;
+      else if (rType.includes('guide') || rType.includes('driver')) ppr = 0; // staff rooms are not tour passengers
+      inferredHotelPax += ((s.roomCount || 0) * ppr);
+    }
+  });
+  const taxSvc = effectiveCostServices.find(s => isHotelTaxService(s));
+  const fallbackHotelPax = inferredHotelPax > 0 ? inferredHotelPax : (taxSvc?.roomCount || 0);
+
+  const effectiveTourPax = Math.max(
+    tour?.pax || (tour?.adults || 0) + (tour?.children || 0) || (tour?.passengers?.length || 0) || fallbackHotelPax || 1,
+    1
+  );
+
+  const costPerPax = tour ? Math.round(totalServiceCost / effectiveTourPax) : 0;
 
   // Financial Pivot Table Data Computation
   const getFinancialPivotData = () => {
-    const totalPax = Math.max(tour?.pax || (tour?.adults || 0) + (tour?.children || 0) || 1, 1);
+    const totalPax = effectiveTourPax;
 
     const calculatedBaseRevenue = (tour?.baseFee && tour.baseFee > 0)
       ? ((tour.adults || 0) * tour.baseFee) + ((tour.children || 0) * tour.baseFee * 0.5)
       : Number(tour?.totalFee || 0);
+
+    const hasBaseServiceInRevenue = revenueServices.some(s => {
+      const cat = serviceCategories.find(c => c.id === s.serviceCategoryId);
+      return (cat?.isBase && cat?.isRevenue) || s.serviceCategoryId === 8 || (s.description || '').startsWith('Base Tour Fee');
+    });
 
     interface PivotItem {
       id: string;
@@ -1142,7 +1341,7 @@ export default function TourDetailPage() {
 
     const items: PivotItem[] = [];
 
-    if (calculatedBaseRevenue > 0) {
+    if (calculatedBaseRevenue > 0 && !hasBaseServiceInRevenue) {
       items.push({
         id: 'base-package-fee',
         description: `Base Tour Fee (${tour?.adults || 0} Adults, ${tour?.children || 0} Children)`,
@@ -1177,12 +1376,15 @@ export default function TourDetailPage() {
       const catName = getCategoryName(s);
       const pb = (s.pricingBasis || 'Pax').trim();
       const isPerPaxBasis = pb.toLowerCase().includes('pax') || pb.toLowerCase().includes('person');
+      const isHotelDiscount = isHotelDiscountService(s);
+      const isHotelTax = isHotelTaxService(s);
+      const isHotel = (catName.toLowerCase().includes('hotel') || s.hotelId !== null || s.serviceCategoryId === 1) && !isHotelDiscount;
+      const isHotelRoom = isHotel && !isHotelTax;
 
       let itemOccupants = totalPax;
       let paxPerRoom = 2;
-      const isHotel = (catName.toLowerCase().includes('hotel') || s.hotelId !== null || s.serviceCategoryId === 1) && !isHotelDiscountService(s);
 
-      if (isHotel && s.roomCount && s.roomCount > 0) {
+      if (isHotelRoom && s.roomCount && s.roomCount > 0) {
         const rType = (s.roomType || s.description || '').toLowerCase();
         if (rType.includes('single') || rType.includes('guide') || rType.includes('driver') || rType.includes('sgl')) paxPerRoom = 1;
         else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl') || rType.includes('extra bed') || rType.includes('eb')) paxPerRoom = 3;
@@ -1197,7 +1399,17 @@ export default function TourDetailPage() {
       // If pricingBasis is Pax, use unitPrice as-is (with safety guard for room-level rates).
       // If pricingBasis is Room, divide unitPrice by accommodated guest count (paxPerRoom).
       let perPaxPrice: number;
-      if (isHotel && s.roomCount && s.roomCount > 0) {
+      if (isHotelDiscount) {
+        perPaxPrice = 0;
+      } else if (isHotelTax) {
+        const taxPax = s.roomCount || totalPax || 1;
+        const taxNights = nights || 1;
+        const rawAmt = (s.totalAmount !== undefined && s.totalAmount !== null && s.totalAmount !== 0) 
+          ? s.totalAmount 
+          : ((s.unitPrice || 0) * (s.quantity || 1));
+        const descMatch = (s.description || '').match(/€\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:pax|person)/i);
+        perPaxPrice = descMatch ? parseFloat(descMatch[1]) : (taxPax * taxNights > 0 ? Math.round((rawAmt / (taxPax * taxNights)) * 100) / 100 : 0);
+      } else if (isHotelRoom && s.roomCount && s.roomCount > 0) {
         if (isPerPaxBasis) {
           if (paxPerRoom > 1 && s.unitPrice > 70) {
             perPaxPrice = Math.round((s.unitPrice / paxPerRoom) * 100) / 100;
@@ -1212,7 +1424,14 @@ export default function TourDetailPage() {
       }
 
       let revVal: number;
-      if (isHotel && s.roomCount && s.roomCount > 0) {
+      if (isHotelDiscount) {
+        const rawAmt = s.totalAmount || (s.unitPrice * (s.quantity || 1)) || 0;
+        revVal = -Math.abs(rawAmt);
+      } else if (isHotelTax) {
+        revVal = (s.totalAmount !== undefined && s.totalAmount !== null && s.totalAmount !== 0) 
+          ? s.totalAmount 
+          : ((s.unitPrice || 0) * (s.quantity || 1));
+      } else if (isHotelRoom && s.roomCount && s.roomCount > 0) {
         const disc = s.discountAmount || 0;
         const expectedTotal = (s.roomCount * paxPerRoom * nights * perPaxPrice);
         if (s.totalAmount && s.totalAmount > 0) {
@@ -1233,23 +1452,34 @@ export default function TourDetailPage() {
       }
 
       const roomRate = perPaxPrice * paxPerRoom;
-      const details = isHotel && s.roomCount && s.roomCount > 0
-        ? `${s.roomCount} Rm${s.roomCount > 1 ? 's' : ''} × ${nights} Nt${nights > 1 ? 's' : ''} (${itemOccupants} Pax) @ €${perPaxPrice.toFixed(2)}/pax (€${roomRate.toFixed(2)}/rm)`
-        : `${s.quantity || 1} x €${(s.unitPrice || 0).toFixed(2)}`;
+      let details: string;
+      if (isHotelDiscount) {
+        details = `Hotel Discount: -€${Math.abs(revVal).toFixed(2)}`;
+      } else if (isHotelTax) {
+        const taxPax = s.roomCount || totalPax || 1;
+        const taxNights = nights || 1;
+        const descMatch = (s.description || '').match(/€\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:pax|person)/i);
+        const taxRate = descMatch ? parseFloat(descMatch[1]) : perPaxPrice;
+        details = `${taxPax} Pax × ${taxNights} Nt${taxNights > 1 ? 's' : ''} @ €${taxRate.toFixed(2)}/pax/night`;
+      } else if (isHotelRoom && s.roomCount && s.roomCount > 0) {
+        details = `${s.roomCount} Rm${s.roomCount > 1 ? 's' : ''} × ${nights} Nt${nights > 1 ? 's' : ''} (${itemOccupants} Pax) @ €${perPaxPrice.toFixed(2)}/pax (€${roomRate.toFixed(2)}/rm)`;
+      } else {
+        details = `${s.quantity || 1} x €${(s.unitPrice || 0).toFixed(2)}`;
+      }
 
       items.push({
         id: `rev-${s.id}`,
         description: s.description || `${catName} Sale`,
-        categoryName: catName.toLowerCase().includes('excursion') ? 'Excursions & Optional Sales' : (catName || 'Other Revenue'),
+        categoryName: catName.toLowerCase().includes('excursion') ? 'Excursions & Optional Sales' : ((isHotelDiscount || isHotelTax) ? 'Hotel' : (catName || 'Other Revenue')),
         bucketName: 'Tour Revenue',
         cost: 0,
         revenue: revVal,
         qty: s.quantity || 1,
         unitPrice: s.unitPrice || 0,
         detailsText: details,
-        occupants: itemOccupants,
-        roomCount: s.roomCount ?? undefined,
-        pricingBasis: pb,
+        occupants: isHotelTax ? (s.roomCount || totalPax) : itemOccupants,
+        roomCount: isHotelTax ? undefined : (s.roomCount ?? undefined),
+        pricingBasis: isHotelTax ? 'Pax' : pb,
         roomType: s.roomType ?? undefined,
         perPaxPrice: perPaxPrice
       });
@@ -1266,11 +1496,15 @@ export default function TourDetailPage() {
       else if (s.roomType === 'Guide Room' || s.roomType === 'Driver Room' || s.guideId || s.driverId) bucket = 'Staff & Escorts';
       else if (catObj?.isOperational) bucket = 'Operational Services';
 
+      const isHotelDiscount = isHotelDiscountService(s);
+      const isHotelTax = isHotelTaxService(s);
+      const isHotel = (catName.toLowerCase().includes('hotel') || s.hotelId !== null || s.serviceCategoryId === 1) && !isHotelDiscount;
+      const isHotelRoom = isHotel && !isHotelTax;
+
       let itemOccupants = totalPax;
       let paxPerRoom = 2;
-      const isHotel = (catName.toLowerCase().includes('hotel') || s.hotelId !== null || s.serviceCategoryId === 1) && !isHotelDiscountService(s);
 
-      if (s.roomCount && s.roomCount > 0) {
+      if (isHotelRoom && s.roomCount && s.roomCount > 0) {
         const rType = (s.roomType || s.description || '').toLowerCase();
         if (rType.includes('single') || rType.includes('guide') || rType.includes('driver') || rType.includes('sgl')) paxPerRoom = 1;
         else if (rType.includes('triple') || rType.includes('trp') || rType.includes('tpl') || rType.includes('extra bed') || rType.includes('eb')) paxPerRoom = 3;
@@ -1285,9 +1519,17 @@ export default function TourDetailPage() {
       // If pricingBasis is Pax, use unitPrice as-is (with safety guard for room-level rates).
       // If pricingBasis is Room, divide unitPrice by accommodated guest count (paxPerRoom).
       let perPaxPrice: number;
-      if (isHotelDiscountService(s)) {
+      if (isHotelDiscount) {
         perPaxPrice = 0; // calculated below once costVal is determined
-      } else if (isHotel && s.roomCount && s.roomCount > 0) {
+      } else if (isHotelTax) {
+        const taxPax = s.roomCount || totalPax || 1;
+        const taxNights = nights || 1;
+        const rawAmt = (s.totalAmount !== undefined && s.totalAmount !== null && s.totalAmount !== 0) 
+          ? s.totalAmount 
+          : ((s.unitPrice || 0) * (s.quantity || 1));
+        const descMatch = (s.description || '').match(/€\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:pax|person)/i);
+        perPaxPrice = descMatch ? parseFloat(descMatch[1]) : (taxPax * taxNights > 0 ? Math.round((rawAmt / (taxPax * taxNights)) * 100) / 100 : 0);
+      } else if (isHotelRoom && s.roomCount && s.roomCount > 0) {
         if (isPerPaxBasis) {
           if (paxPerRoom > 1 && s.unitPrice > 70) {
             perPaxPrice = Math.round((s.unitPrice / paxPerRoom) * 100) / 100;
@@ -1302,11 +1544,15 @@ export default function TourDetailPage() {
       }
 
       let costVal: number;
-      if (isHotelDiscountService(s)) {
+      if (isHotelDiscount) {
         const rawAmt = s.totalAmount || (s.unitPrice * (s.quantity || 1)) || 0;
         costVal = -Math.abs(rawAmt);
         perPaxPrice = totalPax > 0 ? -Math.round((Math.abs(costVal) / totalPax) * 100) / 100 : 0;
-      } else if (isHotel && s.roomCount && s.roomCount > 0) {
+      } else if (isHotelTax) {
+        costVal = (s.totalAmount !== undefined && s.totalAmount !== null && s.totalAmount !== 0) 
+          ? s.totalAmount 
+          : ((s.unitPrice || 0) * (s.quantity || 1));
+      } else if (isHotelRoom && s.roomCount && s.roomCount > 0) {
         const disc = s.discountAmount || 0;
         const expectedTotal = (s.roomCount * paxPerRoom * nights * perPaxPrice);
         if (s.totalAmount && s.totalAmount > 0) {
@@ -1327,23 +1573,34 @@ export default function TourDetailPage() {
       }
 
       const roomRate = perPaxPrice * paxPerRoom;
-      const details = isHotel && s.roomCount && s.roomCount > 0
-        ? `${s.roomCount} Rm${s.roomCount > 1 ? 's' : ''} × ${nights} Nt${nights > 1 ? 's' : ''} (${itemOccupants} Pax) @ €${perPaxPrice.toFixed(2)}/pax (€${roomRate.toFixed(2)}/rm)`
-        : `${s.quantity || 1} x €${(s.unitPrice || 0).toFixed(2)}`;
+      let details: string;
+      if (isHotelDiscount) {
+        details = `Hotel Discount: -€${Math.abs(costVal).toFixed(2)}`;
+      } else if (isHotelTax) {
+        const taxPax = s.roomCount || totalPax || 1;
+        const taxNights = nights || 1;
+        const descMatch = (s.description || '').match(/€\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:pax|person)/i);
+        const taxRate = descMatch ? parseFloat(descMatch[1]) : perPaxPrice;
+        details = `${taxPax} Pax × ${taxNights} Nt${taxNights > 1 ? 's' : ''} @ €${taxRate.toFixed(2)}/pax/night`;
+      } else if (isHotelRoom && s.roomCount && s.roomCount > 0) {
+        details = `${s.roomCount} Rm${s.roomCount > 1 ? 's' : ''} × ${nights} Nt${nights > 1 ? 's' : ''} (${itemOccupants} Pax) @ €${perPaxPrice.toFixed(2)}/pax (€${roomRate.toFixed(2)}/rm)`;
+      } else {
+        details = `${s.quantity || 1} x €${(s.unitPrice || 0).toFixed(2)}`;
+      }
 
       items.push({
         id: `cost-${s.id}`,
         description: s.description || `${catName} Item`,
-        categoryName: isHotelDiscountService(s) ? 'Hotel' : (catName || 'Other Expenses'),
+        categoryName: (isHotelDiscount || isHotelTax) ? 'Hotel' : (catName || 'Other Expenses'),
         bucketName: bucket,
         cost: costVal,
         revenue: 0,
         qty: s.quantity || 1,
-        unitPrice: isHotelDiscountService(s) ? -Math.abs(s.unitPrice || costVal) : (s.unitPrice || 0),
-        detailsText: isHotelDiscountService(s) ? `Hotel Discount: -€${Math.abs(costVal).toFixed(2)}` : details,
-        occupants: itemOccupants,
-        roomCount: s.roomCount ?? undefined,
-        pricingBasis: pb,
+        unitPrice: isHotelDiscount ? -Math.abs(s.unitPrice || costVal) : (s.unitPrice || 0),
+        detailsText: details,
+        occupants: isHotelTax ? (s.roomCount || totalPax) : itemOccupants,
+        roomCount: isHotelTax ? undefined : (s.roomCount ?? undefined),
+        pricingBasis: isHotelTax ? 'Pax' : pb,
         roomType: s.roomType ?? undefined,
         perPaxPrice: perPaxPrice
       });
@@ -1661,7 +1918,7 @@ export default function TourDetailPage() {
         <div className="flex-1">
           <h1 className="font-bold text-lg text-slate-800">{tour.tourCode} — {tour.destination}</h1>
           <p className="text-xs text-slate-500">
-            {new Date(tour.arrivalDate).toLocaleDateString()} → {new Date(tour.endDate).toLocaleDateString()} | {tour.pax} Pax | {tour.tourStatus?.name || ''}
+            {formatDate(tour.arrivalDate)} → {formatDate(tour.endDate)} | {tour.pax} Pax | {tour.tourStatus?.name || ''}
           </p>
         </div>
         {/* Top Bar Financial Metric Summary Cards */}
@@ -1684,7 +1941,7 @@ export default function TourDetailPage() {
               <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[80px]">
                 <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-tight">Base Fee</p>
                 <p className="text-xs font-bold text-emerald-800 leading-tight">
-                  €{Number((tour.baseFee && tour.baseFee > 0) ? tour.baseFee : 250).toLocaleString()}
+                  €{Number(tour.baseFee || 0).toLocaleString()}
                 </p>
                 <p className="text-[9px] text-emerald-600 font-medium leading-tight">Per adult fee</p>
               </div>
@@ -1797,7 +2054,21 @@ export default function TourDetailPage() {
                         <h3 className="text-sm font-semibold text-slate-800 mb-2">Flight Information</h3>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival Flight</label>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="block text-sm font-medium text-slate-700">Arrival Flight</label>
+                              {editData.arrivalFlight && (
+                                <a
+                                  href={getFlightAwareUrl(editData.arrivalFlight)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+                                  title="Check flight status on FlightAware"
+                                >
+                                  <span>Check Live</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                            </div>
                             <input type="text" value={editData.arrivalFlight || ''} onChange={e => setEditData({ ...editData, arrivalFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1234" />
                           </div>
                           <div>
@@ -1811,7 +2082,21 @@ export default function TourDetailPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-4 mt-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure Flight</label>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="block text-sm font-medium text-slate-700">Departure Flight</label>
+                              {editData.departureFlight && (
+                                <a
+                                  href={getFlightAwareUrl(editData.departureFlight)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+                                  title="Check flight status on FlightAware"
+                                >
+                                  <span>Check Live</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
+                            </div>
                             <input type="text" value={editData.departureFlight || ''} onChange={e => setEditData({ ...editData, departureFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1235" />
                           </div>
                           <div>
@@ -1838,9 +2123,25 @@ export default function TourDetailPage() {
                         {tourStatuses.length > 0 && (
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
-                            <select value={editData.tourStatusId} onChange={e => setEditData({ ...editData, tourStatusId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
-                              {tourStatuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            <select 
+                              value={editData.tourStatusId} 
+                              onChange={e => setEditData({ ...editData, tourStatusId: parseInt(e.target.value) })} 
+                              className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-blue-500 text-sm ${missingMainServices.length > 0 ? 'border-amber-300' : 'border-slate-200'}`}
+                            >
+                              {tourStatuses.map((s: any) => {
+                                const isBlocked = s.id >= 3 && missingMainServices.length > 0;
+                                return (
+                                  <option key={s.id} value={s.id} disabled={isBlocked} className={isBlocked ? 'text-red-500 font-semibold' : ''}>
+                                    {s.name} {isBlocked ? '⚠️ (Blocked: Missing Main Services)' : ''}
+                                  </option>
+                                );
+                              })}
                             </select>
+                            {missingMainServices.length > 0 && (
+                              <p className="text-[11px] text-red-600 font-medium mt-1">
+                                Confirmed & In Progress blocked until all 4 main services are assigned.
+                              </p>
+                            )}
                           </div>
                         )}
                         <div>
@@ -1876,6 +2177,53 @@ export default function TourDetailPage() {
                     </form>
                   ) : (
                     <div className="p-6 space-y-6">
+                      {missingMainServices.length > 0 && (
+                        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-red-100 rounded-lg text-red-600 mt-0.5 sm:mt-0">
+                              <AlertTriangle className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-red-900 uppercase tracking-wide">
+                                  Action Required: Missing Main Services ({missingMainServices.length})
+                                </h3>
+                                <span className="bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                                  Action Required
+                                </span>
+                              </div>
+                              <p className="text-xs text-red-700 mt-0.5 font-medium">
+                                Cannot move this tour to <span className="font-bold underline">Confirmed</span> or <span className="font-bold underline">In Progress</span> until the following services are completed:
+                              </p>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {missingMainServices.map(m => (
+                                  <span key={m.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 border border-red-300 text-red-800 text-xs font-semibold rounded-md shadow-2xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                                    {m.label}
+                                    <span className="text-[10px] text-red-500 font-normal">({m.action})</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const hasFlightMissing = missingMainServices.some(m => m.key === 'flight');
+                              if (hasFlightMissing && !isEditing) {
+                                setIsEditing(true);
+                              } else {
+                                const svcElem = document.getElementById('tour-services-section');
+                                if (svcElem) svcElem.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }}
+                            className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors shadow-xs cursor-pointer"
+                          >
+                            Resolve Missing
+                          </button>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-4 gap-6">
                         <div>
                           <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Tour Code</p>
@@ -1894,8 +2242,14 @@ export default function TourDetailPage() {
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Status & Guide(s)</p>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">{tour.tourStatus?.name || 'N/A'}</span>
+                            {missingMainServices.length > 0 && (
+                              <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs animate-pulse">
+                                <AlertTriangle className="w-3 h-3 text-white" />
+                                Action Required
+                              </span>
+                            )}
                             <span className="text-sm font-bold text-slate-700">
                               {(() => {
                                 const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
@@ -2136,17 +2490,79 @@ export default function TourDetailPage() {
                         </div>
                       </div>
                       <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
-                          <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
-                            <PlaneLanding className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
-                            <span className="font-medium mr-2">Arrival:</span> {new Date(tour.arrivalDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                            {tour.arrivalFlight && <span className="ml-2 font-semibold">({tour.arrivalFlight})</span>}
+                          <div className="flex flex-wrap items-center gap-y-1.5 text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                            <PlaneLanding className="w-4 h-4 mr-2 text-indigo-500 shrink-0" />
+                            <span className="font-medium mr-1.5">Arrival:</span> {new Date(tour.arrivalDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                             {tour.arrivalAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.arrivalAirport}</span>}
+                            {tour.arrivalFlight && (
+                              <div className="inline-flex items-center gap-1.5 ml-2">
+                                <a
+                                  href={getFlightAwareUrl(tour.arrivalFlight)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`Check ${tour.arrivalFlight} live status on FlightAware`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                                >
+                                  <span>{tour.arrivalFlight}</span>
+                                  <ExternalLink className="w-3 h-3 text-indigo-500 group-hover:text-indigo-700 shrink-0" />
+                                </a>
+                                {(() => {
+                                  const match = tour.arrivalFlight.match(/([A-Za-z0-9]{2,3})\s*([0-9]{1,4})/);
+                                  if (match) {
+                                    const fr24 = `${match[1]}${match[2]}`.toLowerCase();
+                                    return (
+                                      <a
+                                        href={`https://www.flightradar24.com/data/flights/${fr24}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`View ${tour.arrivalFlight} on FlightRadar24 live radar`}
+                                        className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-[10px] font-bold tracking-tight transition-all cursor-pointer shadow-2xs"
+                                      >
+                                        Radar24
+                                      </a>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
-                            <PlaneTakeoff className="w-4 h-4 mr-2.5 text-indigo-500 shrink-0" />
-                            <span className="font-medium mr-2">Departure:</span> {new Date(tour.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                            {tour.departureFlight && <span className="ml-2 font-semibold">({tour.departureFlight})</span>}
+                          <div className="flex flex-wrap items-center gap-y-1.5 text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                            <PlaneTakeoff className="w-4 h-4 mr-2 text-indigo-500 shrink-0" />
+                            <span className="font-medium mr-1.5">Departure:</span> {new Date(tour.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                             {tour.departureAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.departureAirport}</span>}
+                            {tour.departureFlight && (
+                              <div className="inline-flex items-center gap-1.5 ml-2">
+                                <a
+                                  href={getFlightAwareUrl(tour.departureFlight)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`Check ${tour.departureFlight} live status on FlightAware`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                                >
+                                  <span>{tour.departureFlight}</span>
+                                  <ExternalLink className="w-3 h-3 text-indigo-500 group-hover:text-indigo-700 shrink-0" />
+                                </a>
+                                {(() => {
+                                  const match = tour.departureFlight.match(/([A-Za-z0-9]{2,3})\s*([0-9]{1,4})/);
+                                  if (match) {
+                                    const fr24 = `${match[1]}${match[2]}`.toLowerCase();
+                                    return (
+                                      <a
+                                        href={`https://www.flightradar24.com/data/flights/${fr24}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`View ${tour.departureFlight} on FlightRadar24 live radar`}
+                                        className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-[10px] font-bold tracking-tight transition-all cursor-pointer shadow-2xs"
+                                      >
+                                        Radar24
+                                      </a>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -2168,8 +2584,8 @@ export default function TourDetailPage() {
                             hotelReservationsMap[key] = {
                               hotelName,
                               city,
-                              startDate: startDateStr ? new Date(startDateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
-                              endDate: endDateStr ? new Date(endDateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-',
+                              startDate: formatDate(startDateStr),
+                              endDate: formatDate(endDateStr),
                               rooms: [],
                               totalCost: 0
                             };
@@ -2501,7 +2917,7 @@ export default function TourDetailPage() {
                                           <span className="font-bold text-emerald-950">{h?.name || 'General Hotel Discount'}</span>
                                           <span className="ml-2 text-emerald-700 font-medium">{s.description || 'Hotel Discount'}</span>
                                           {s.startDate && s.endDate && (
-                                            <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                            <span className="ml-2 text-slate-500">Dates: {formatDate(s.startDate)} - {formatDate(s.endDate)}</span>
                                           )}
                                         </div>
                                         <div className="flex items-center gap-3">
@@ -2588,7 +3004,7 @@ export default function TourDetailPage() {
                                             <span className="font-bold text-amber-900">Guide: {g?.name || 'Assigned Tour Guide'}</span>
                                             <span className="ml-2 text-amber-700 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
                                             {s.startDate && s.endDate && (
-                                              <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                              <span className="ml-2 text-slate-500">Dates: {formatDate(s.startDate)} - {formatDate(s.endDate)}</span>
                                             )}
                                           </div>
                                           <div className="flex items-center gap-3">
@@ -2649,7 +3065,7 @@ export default function TourDetailPage() {
                                             <span className="font-bold text-slate-800">Driver: {d?.name || 'Assigned Tour Driver'}</span>
                                             <span className="ml-2 text-slate-600 font-medium">Hotel: {h?.name || 'Hotel Stay'}</span>
                                             {s.startDate && s.endDate && (
-                                              <span className="ml-2 text-slate-500">Dates: {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</span>
+                                              <span className="ml-2 text-slate-500">Dates: {formatDate(s.startDate)} - {formatDate(s.endDate)}</span>
                                             )}
                                           </div>
                                           <div className="flex items-center gap-3">
@@ -2815,15 +3231,20 @@ export default function TourDetailPage() {
                             {p.roomNumber ? `Room ${p.roomNumber}` : '-'}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                              (p.paxType || '').toLowerCase().includes('child') ? 'bg-amber-100 text-amber-800' :
-                              (p.paxType || '').toLowerCase().includes('infant') ? 'bg-rose-100 text-rose-800' :
-                              'bg-slate-100 text-slate-700'
-                            }`}>
-                              {(p.paxType || '').toLowerCase().includes('child') ? 'Children 🧒' :
-                               (p.paxType || '').toLowerCase().includes('infant') ? 'Infant 👶' :
-                               'Adult'}
-                            </span>
+                            {(() => {
+                              const pType = getPassengerPaxType(p, tour?.arrivalDate);
+                              return (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  pType === 'Children' ? 'bg-amber-100 text-amber-800' :
+                                  pType === 'Infant' ? 'bg-rose-100 text-rose-800' :
+                                  'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {pType === 'Children' ? 'Children 🧒' :
+                                   pType === 'Infant' ? 'Infant 👶' :
+                                   'Adult'}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-4 py-3 font-semibold text-slate-800">{p.firstName || '-'}</td>
                           <td className="px-4 py-3 font-semibold text-slate-800">{p.lastName || '-'}</td>
@@ -2833,7 +3254,7 @@ export default function TourDetailPage() {
                           <td className="px-4 py-3 text-slate-600">{p.passportType || '-'}</td>
                           <td className="px-4 py-3 text-slate-600">{p.visaNo || '-'}</td>
                           <td className="px-4 py-3 text-slate-600">{p.phone || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.dateOfBirth ? new Date(p.dateOfBirth).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-3 text-slate-600">{formatDate(p.dateOfBirth, '-')}</td>
                           <td className="px-4 py-3 text-slate-600 font-medium">{p.roomType || '-'}</td>
                           <td className="px-4 py-3 text-center font-medium text-slate-700">{p.pax}</td>
                           <td className="px-4 py-3 text-right">
@@ -2880,7 +3301,7 @@ export default function TourDetailPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Gender</label>
                   <select value={passengerData.gender} onChange={e => setPassengerData({ ...passengerData, gender: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
@@ -2891,7 +3312,49 @@ export default function TourDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Date of Birth</label>
-                  <input type="date" value={passengerData.dateOfBirth} onChange={e => setPassengerData({ ...passengerData, dateOfBirth: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                  <input
+                    type="date"
+                    value={passengerData.dateOfBirth}
+                    onChange={e => {
+                      const newDob = e.target.value;
+                      const age = calculatePassengerAge(newDob, tour?.arrivalDate);
+                      let newPaxType = passengerData.paxType || 'Adult';
+                      if (age !== null) {
+                        if (age < 2) newPaxType = 'Infant';
+                        else if (age < 12) newPaxType = 'Children';
+                        else newPaxType = 'Adult';
+                      }
+                      setPassengerData({ ...passengerData, dateOfBirth: newDob, paxType: newPaxType });
+                    }}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  {passengerData.dateOfBirth && (() => {
+                    const age = calculatePassengerAge(passengerData.dateOfBirth, tour?.arrivalDate);
+                    if (age !== null) {
+                      return (
+                        <p className="text-[11px] font-medium text-slate-500 mt-1">
+                          Age: <span className="font-bold text-slate-800">{age} yrs</span> {age < 12 ? '→ Children' : '→ Adult'}
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Pax Classification</label>
+                  <select
+                    value={passengerData.paxType || 'Adult'}
+                    onChange={e => setPassengerData({ ...passengerData, paxType: e.target.value })}
+                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-semibold ${
+                      passengerData.paxType === 'Children' ? 'bg-amber-50 border-amber-300 text-amber-900' :
+                      passengerData.paxType === 'Infant' ? 'bg-rose-50 border-rose-300 text-rose-900' :
+                      'bg-slate-50 border-slate-200 text-slate-800'
+                    }`}
+                  >
+                    <option value="Adult">Adult</option>
+                    <option value="Children">Children</option>
+                    <option value="Infant">Infant</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number</label>
@@ -2967,7 +3430,7 @@ export default function TourDetailPage() {
                         <label className="block text-xs font-bold text-slate-700 mb-1">Select Hotel</label>
                         <select required value={newService.hotelId || ''} onChange={e => {
                           const h = hotels.find((x: any) => x.id === parseInt(e.target.value));
-                          const basis = h?.pricingBasis === 'Room' ? 'Room' : 'Pax';
+                          const basis = newService.pricingBasis || 'Room';
                           
                           // Rooming list counts from passengers
                           const passList = tour?.passengers || [];
@@ -2989,28 +3452,38 @@ export default function TourDetailPage() {
                           const trRate = basis === 'Room' ? (h?.tripleRoomRate || (h?.triplePaxRate ? h.triplePaxRate * 3 : 0) || (h?.tripleRate ? h.tripleRate * 3 : 0)) : (h?.triplePaxRate || (h?.tripleRoomRate ? h.tripleRoomRate / 3 : 0) || h?.tripleRate || 0);
                           const ebRate = basis === 'Room' ? (h?.dblEbRoomRate || (h?.dblEbPaxRate ? h.dblEbPaxRate * 3 : 0) || (h?.dblEbRate ? h.dblEbRate * 3 : 0)) : (h?.dblEbPaxRate || (h?.dblEbRoomRate ? h.dblEbRoomRate / 3 : 0) || h?.dblEbRate || 0);
 
+                          let editedUp = dRate || 0;
+                          let editedTot = newService.totalAmount;
+                          if (editingServiceId) {
+                            editedUp = getHotelDefaultRate(h, newService.roomType || 'Double', basis);
+                            const ppr = getPaxPerRoom(newService.roomType || 'Double');
+                            const mult = (basis === 'Pax') ? ((newService.roomCount || 1) * ppr) : (newService.roomCount || 1);
+                            editedTot = Math.round(mult * (newService.quantity || 1) * editedUp * 100) / 100;
+                          }
+
                           setNewService({ 
                             ...newService, 
                             hotelId: h?.id || null, 
                             description: h?.name || '', 
                             pricingBasis: basis,
-                            singleCount: sCount,
-                            doubleCount: dCount,
-                            twinCount: twCount,
-                            tripleCount: trCount,
-                            dblEbCount: ebCount,
+                            singleCount: editingServiceId ? newService.singleCount : sCount,
+                            doubleCount: editingServiceId ? newService.doubleCount : dCount,
+                            twinCount: editingServiceId ? newService.twinCount : twCount,
+                            tripleCount: editingServiceId ? newService.tripleCount : trCount,
+                            dblEbCount: editingServiceId ? newService.dblEbCount : ebCount,
                             singleRate: sRate,
                             doubleRate: dRate,
                             twinRate: twRate,
                             tripleRate: trRate,
                             dblEbRate: ebRate,
-                            unitPrice: dRate || 0,
+                            unitPrice: editingServiceId ? editedUp : (dRate || 0),
+                            totalAmount: editedTot,
                             guideRate: sRate || 60,
                             driverRate: sRate || 50
                           });
                         }} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 shadow-2xs">
                           <option value="">Select a Hotel...</option>
-                          {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location} ({h.pricingBasis === 'Room' ? 'Per Room' : 'Per Pax'})</option>)}
+                          {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} — {h.location}</option>)}
                         </select>
                       </div>
 
@@ -3026,9 +3499,24 @@ export default function TourDetailPage() {
                               const prevBasis = newService.pricingBasis || 'Pax';
                               const isFromPax = prevBasis === 'Pax';
 
+                              let editedUp = newService.unitPrice;
+                              let editedTot = newService.totalAmount;
+                              if (editingServiceId) {
+                                const ppr = getPaxPerRoom(newService.roomType || 'Double');
+                                if (isFromPax && newService.unitPrice > 0) {
+                                  editedUp = Math.round(newService.unitPrice * ppr * 100) / 100;
+                                } else {
+                                  editedUp = getHotelDefaultRate(h, newService.roomType || 'Double', 'Room');
+                                }
+                                const mult = newService.roomCount || 1;
+                                editedTot = Math.round(mult * (newService.quantity || 1) * editedUp * 100) / 100;
+                              }
+
                               setNewService({
                                 ...newService,
                                 pricingBasis: newBasis,
+                                unitPrice: editingServiceId ? editedUp : newService.unitPrice,
+                                totalAmount: editingServiceId ? editedTot : newService.totalAmount,
                                 singleRate: h?.singleRoomRate || (h?.singlePaxRate ? h.singlePaxRate : (newService.singleRate || 0)),
                                 doubleRate: h?.doubleRoomRate || (h?.doublePaxRate ? h.doublePaxRate * 2 : (newService.doubleRate ? (isFromPax ? newService.doubleRate * 2 : newService.doubleRate) : 0)),
                                 twinRate: h?.twinRoomRate || (h?.twinPaxRate ? h.twinPaxRate * 2 : (newService.twinRate ? (isFromPax ? newService.twinRate * 2 : newService.twinRate) : 0)),
@@ -3048,9 +3536,24 @@ export default function TourDetailPage() {
                               const prevBasis = newService.pricingBasis || 'Room';
                               const isFromRoom = prevBasis === 'Room';
 
+                              let editedUp = newService.unitPrice;
+                              let editedTot = newService.totalAmount;
+                              if (editingServiceId) {
+                                const ppr = getPaxPerRoom(newService.roomType || 'Double');
+                                if (isFromRoom && newService.unitPrice > 0) {
+                                  editedUp = Math.round((newService.unitPrice / ppr) * 100) / 100;
+                                } else {
+                                  editedUp = getHotelDefaultRate(h, newService.roomType || 'Double', 'Pax');
+                                }
+                                const mult = (newService.roomCount || 1) * ppr;
+                                editedTot = Math.round(mult * (newService.quantity || 1) * editedUp * 100) / 100;
+                              }
+
                               setNewService({
                                 ...newService,
                                 pricingBasis: newBasis,
+                                unitPrice: editingServiceId ? editedUp : newService.unitPrice,
+                                totalAmount: editingServiceId ? editedTot : newService.totalAmount,
                                 singleRate: h?.singlePaxRate || (h?.singleRoomRate ? h.singleRoomRate : (newService.singleRate || 0)),
                                 doubleRate: h?.doublePaxRate || (h?.doubleRoomRate ? h.doubleRoomRate / 2 : (newService.doubleRate ? (isFromRoom ? newService.doubleRate / 2 : newService.doubleRate) : 0)),
                                 twinRate: h?.twinPaxRate || (h?.twinRoomRate ? h.twinRoomRate / 2 : (newService.twinRate ? (isFromRoom ? newService.twinRate / 2 : newService.twinRate) : 0)),
@@ -3101,7 +3604,13 @@ export default function TourDetailPage() {
                           const newStart = e.target.value;
                           const diff = new Date(newService.endDate).getTime() - new Date(newStart).getTime();
                           const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
-                          setNewService({ ...newService, startDate: newStart, quantity: n });
+                          let newTot = newService.totalAmount;
+                          if (editingServiceId) {
+                            const ppr = getPaxPerRoom(newService.roomType);
+                            const mult = (newService.pricingBasis === 'Pax') ? ((newService.roomCount || 1) * ppr) : (newService.roomCount || 1);
+                            newTot = Math.round(mult * n * (newService.unitPrice || 0) * 100) / 100;
+                          }
+                          setNewService({ ...newService, startDate: newStart, quantity: n, totalAmount: newTot });
                         }} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium" suppressHydrationWarning />
                       </div>
 
@@ -3111,7 +3620,13 @@ export default function TourDetailPage() {
                           const newEnd = e.target.value;
                           const diff = new Date(newEnd).getTime() - new Date(newService.startDate).getTime();
                           const n = !isNaN(diff) ? Math.max(1, Math.ceil(diff / (1000 * 3600 * 24))) : 1;
-                          setNewService({ ...newService, endDate: newEnd, quantity: n });
+                          let newTot = newService.totalAmount;
+                          if (editingServiceId) {
+                            const ppr = getPaxPerRoom(newService.roomType);
+                            const mult = (newService.pricingBasis === 'Pax') ? ((newService.roomCount || 1) * ppr) : (newService.roomCount || 1);
+                            newTot = Math.round(mult * n * (newService.unitPrice || 0) * 100) / 100;
+                          }
+                          setNewService({ ...newService, endDate: newEnd, quantity: n, totalAmount: newTot });
                         }} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium" suppressHydrationWarning />
                       </div>
                     </div>
@@ -3558,20 +4073,201 @@ export default function TourDetailPage() {
                           })()}
                         </div>
                       </div>
-                    ) : (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Room Type</label>
-                        <select value={newService.roomType} onChange={e => setNewService({ ...newService, roomType: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
-                          {ROOM_TYPES.map(rt => <option key={rt} value={rt}>{rt}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Rooms</label>
-                        <input required type="number" min="1" value={newService.roomCount} onChange={e => setNewService({ ...newService, roomCount: parseInt(e.target.value) })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
-                      </div>
-                    </div>
-                  )}
+                    ) : (() => {
+                      const h = hotels.find((x: any) => x.id === newService.hotelId);
+                      const basis = newService.pricingBasis || 'Room';
+                      const isPaxBasis = basis.toLowerCase().includes('pax');
+                      const rType = newService.roomType || 'Double';
+                      const rCount = Number(newService.roomCount) || 1;
+                      const nights = Number(newService.quantity) || 1;
+                      const paxPerRoom = getPaxPerRoom(rType);
+                      const totalPaxAccommodated = rCount * paxPerRoom;
+                      const multiplier = isPaxBasis ? totalPaxAccommodated : rCount;
+                      const currentUnitPrice = Number(newService.unitPrice) || 0;
+                      const currentTotalAmount = (newService.totalAmount !== undefined && newService.totalAmount !== null && !isNaN(Number(newService.totalAmount)))
+                        ? Number(newService.totalAmount)
+                        : Math.round(multiplier * nights * currentUnitPrice * 100) / 100;
+                      const defaultRate = getHotelDefaultRate(h, rType, basis);
+                      const isRateDefault = Math.abs(currentUnitPrice - defaultRate) < 0.01;
+
+                      const updateRoomTypeAndCount = (newRt: string, newRc: number, newUp?: number) => {
+                        const effectiveUp = newUp !== undefined ? newUp : currentUnitPrice;
+                        const ppr = getPaxPerRoom(newRt);
+                        const mult = isPaxBasis ? (newRc * ppr) : newRc;
+                        const newTot = Math.round(mult * nights * effectiveUp * 100) / 100;
+                        const rtLower = newRt.toLowerCase();
+                        setNewService({
+                          ...newService,
+                          roomType: newRt,
+                          roomCount: newRc,
+                          unitPrice: effectiveUp,
+                          totalAmount: newTot,
+                          singleCount: (rtLower.includes('single') || rtLower.includes('guide') || rtLower.includes('driver')) ? newRc : 0,
+                          doubleCount: (rtLower.includes('double') && !rtLower.includes('extra bed') && !rtLower.includes('eb')) ? newRc : 0,
+                          twinCount: rtLower.includes('twin') ? newRc : 0,
+                          tripleCount: rtLower.includes('triple') ? newRc : 0,
+                          dblEbCount: (rtLower.includes('extra bed') || rtLower.includes('eb') || rtLower.includes('dbl+eb')) ? newRc : 0,
+                        });
+                      };
+
+                      return (
+                        <div className="space-y-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+                          {/* Row 1: Room Type & Room Count */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1">Room Type</label>
+                              <select 
+                                value={newService.roomType} 
+                                onChange={e => {
+                                  const selectedRt = e.target.value;
+                                  const fetchedRate = getHotelDefaultRate(h, selectedRt, basis);
+                                  updateRoomTypeAndCount(selectedRt, rCount, fetchedRate);
+                                }} 
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs font-semibold text-slate-800 shadow-2xs"
+                              >
+                                {ROOM_TYPES.map(rt => <option key={rt} value={rt}>{rt}</option>)}
+                              </select>
+                              <span className="text-[10px] text-slate-400 mt-1 block">
+                                Accommodates {paxPerRoom} Pax per room
+                              </span>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1">Number of Rooms</label>
+                              <input 
+                                required 
+                                type="number" 
+                                min="1" 
+                                value={newService.roomCount || ''} 
+                                onChange={e => {
+                                  const count = Math.max(1, parseInt(e.target.value) || 1);
+                                  updateRoomTypeAndCount(rType, count, currentUnitPrice);
+                                }} 
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs font-bold text-slate-800 shadow-2xs" 
+                              />
+                              <span className="text-[10px] text-slate-400 mt-1 block">
+                                Total: {totalPaxAccommodated} Pax across {rCount} room{rCount > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Row 2: Editable Nightly Rate & Editable Final Price */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200/80">
+                            {/* Nightly Rate Input */}
+                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-xs font-bold text-slate-800">
+                                  {isPaxBasis ? 'Nightly Rate per Pax (€/pax/night)' : 'Nightly Rate per Room (€/room/night)'}
+                                </label>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isRateDefault ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                                  {isRateDefault ? '⚡ Fetched from Hotel' : '✏️ Custom Rate'}
+                                </span>
+                              </div>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-2 text-xs font-bold text-slate-400">€</span>
+                                <input 
+                                  required 
+                                  type="number" 
+                                  step="0.01" 
+                                  min="0" 
+                                  value={newService.unitPrice !== undefined && newService.unitPrice !== null ? newService.unitPrice : ''} 
+                                  onChange={e => {
+                                    const up = parseFloat(e.target.value) || 0;
+                                    const newTot = Math.round(multiplier * nights * up * 100) / 100;
+                                    setNewService({
+                                      ...newService,
+                                      unitPrice: up,
+                                      totalAmount: newTot
+                                    });
+                                  }} 
+                                  className="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-extrabold text-emerald-700 focus:bg-white focus:ring-2 focus:ring-emerald-500" 
+                                  placeholder={defaultRate ? defaultRate.toFixed(2) : '0.00'}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] text-slate-400">
+                                <span>Default hotel metadata rate: €{defaultRate.toFixed(2)}</span>
+                                {!isRateDefault && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newTot = Math.round(multiplier * nights * defaultRate * 100) / 100;
+                                      setNewService({
+                                        ...newService,
+                                        unitPrice: defaultRate,
+                                        totalAmount: newTot
+                                      });
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
+                                  >
+                                    Reset to Default
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Final Price / Total Cost Input */}
+                            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-xs font-bold text-slate-800">
+                                  Final Price / Total Cost (€)
+                                </label>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {nights} Night{nights > 1 ? 's' : ''} Stay
+                                </span>
+                              </div>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-2 text-xs font-bold text-slate-400">€</span>
+                                <input 
+                                  required 
+                                  type="number" 
+                                  step="0.01" 
+                                  min="0" 
+                                  value={newService.totalAmount !== undefined && newService.totalAmount !== null ? newService.totalAmount : ''} 
+                                  onChange={e => {
+                                    const tot = parseFloat(e.target.value) || 0;
+                                    const derivedUp = (multiplier * nights > 0) ? Math.round((tot / (multiplier * nights)) * 100) / 100 : 0;
+                                    setNewService({
+                                      ...newService,
+                                      totalAmount: tot,
+                                      unitPrice: derivedUp
+                                    });
+                                  }} 
+                                  className="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500" 
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <span className="text-[10px] text-slate-400 block truncate">
+                                Direct total override; updates nightly rate to match
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Calculation Details Banner */}
+                          <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 space-y-1">
+                            <div className="flex items-center justify-between font-bold">
+                              <span className="flex items-center gap-1.5">
+                                ℹ️ Price Calculation Breakdown ({isPaxBasis ? 'Per Pax Basis' : 'Per Room Basis'}):
+                              </span>
+                              <span className="text-blue-700 font-extrabold">
+                                Total: €{currentTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-blue-800">
+                              {isPaxBasis ? (
+                                <span>
+                                  <strong>{totalPaxAccommodated} Pax</strong> ({rCount} Rooms × {paxPerRoom} Pax/Rm) × <strong>{nights} Nights</strong> @ <strong>€{currentUnitPrice.toFixed(2)}/pax/night</strong> = <strong>€{currentTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                  <span className="ml-2 text-slate-500">(Effective room rate: €{(currentUnitPrice * paxPerRoom).toFixed(2)}/room/night)</span>
+                                </span>
+                              ) : (
+                                <span>
+                                  <strong>{rCount} Rooms</strong> × <strong>{nights} Nights</strong> @ <strong>€{currentUnitPrice.toFixed(2)}/room/night</strong> = <strong>€{currentTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                  <span className="ml-2 text-slate-500">(Effective pax rate: €{(currentUnitPrice / paxPerRoom).toFixed(2)}/pax/night)</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                 </>
               )}
 
@@ -3608,7 +4304,7 @@ export default function TourDetailPage() {
                      <div>
                         <p className="text-xs text-blue-500 font-semibold uppercase tracking-wider mb-0.5">Tour Bounds</p>
                         <p className="text-sm text-blue-900 font-medium">
-                           {new Date(tour?.arrivalDate || '').toLocaleDateString()} — {new Date(tour?.endDate || '').toLocaleDateString()}
+                            {formatDate(tour?.arrivalDate)} — {formatDate(tour?.endDate)}
                         </p>
                      </div>
                      <div className="text-right">
@@ -4026,7 +4722,7 @@ export default function TourDetailPage() {
                         <tr key={inv.id} className="hover:bg-slate-50">
                           <td className="px-6 py-4 font-medium text-slate-800">{inv.invoiceNo}</td>
                           <td className="px-6 py-4 text-slate-600">{inv.name}</td>
-                          <td className="px-6 py-4 text-slate-600">{new Date(inv.date).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 text-slate-600">{formatDate(inv.date)}</td>
                           <td className="px-6 py-4 text-slate-600">{inv.toCompany || '-'}</td>
                           <td className="px-6 py-4 font-semibold text-slate-800">{getCurrencySymbol(inv.currency)}{inv.totalAmount.toLocaleString()}</td>
                           <td className="px-6 py-4 text-right">
@@ -4294,7 +4990,7 @@ export default function TourDetailPage() {
                           <div className="font-medium text-slate-500">Invoice No:</div>
                           <div className="font-semibold text-slate-800">{currentInvoice.invoiceNo}</div>
                           <div className="font-medium text-slate-500">Date:</div>
-                          <div className="font-semibold text-slate-800">{new Date(currentInvoice.date).toLocaleDateString()}</div>
+                          <div className="font-semibold text-slate-800">{formatDate(currentInvoice.date)}</div>
                           <div className="font-medium text-slate-500">Tour Ref:</div>
                           <div className="font-semibold text-slate-800">{tour.tourCode}</div>
                         </div>

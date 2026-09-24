@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TourCalendarEvent } from '../types';
 import { TourBlock } from './TourBlock';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 
 interface CalendarGridProps {
   events: TourCalendarEvent[];
@@ -269,7 +270,7 @@ export function CalendarGrid({ events, onEventClick }: CalendarGridProps) {
                     <div className="flex justify-between border-b border-slate-50 pb-2">
                       <span className="text-slate-500">Dates:</span>
                       <span className="font-medium text-slate-800">
-                        {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+                        {formatDate(event.startDate)} - {formatDate(event.endDate)}
                       </span>
                     </div>
                     <div className="flex justify-between border-b border-slate-50 pb-2">

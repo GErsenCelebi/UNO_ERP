@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
@@ -41,10 +42,14 @@ namespace Uno_API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreatePassenger([FromBody] Passenger passenger)
         {
-            if (!await _context.Tours.AnyAsync(t => t.Id == passenger.TourId))
+            var tour = await _context.Tours.FindAsync(passenger.TourId);
+            if (tour == null)
             {
                 return BadRequest("Invalid TourId.");
             }
+
+            DateTime refDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
+            passenger.PaxType = PassengerAgeHelper.DeterminePaxType(passenger.DateOfBirth, passenger.PaxType, refDate);
 
             _context.Passengers.Add(passenger);
             await _context.SaveChangesAsync();
@@ -64,6 +69,9 @@ namespace Uno_API.Controllers
             var dbP = await _context.Passengers.FindAsync(id);
             if (dbP == null) return NotFound();
 
+            var tour = await _context.Tours.FindAsync(dbP.TourId);
+            DateTime refDate = (tour != null && tour.ArrivalDate != default) ? tour.ArrivalDate : DateTime.Today;
+
             dbP.FirstName = passenger.FirstName;
             dbP.LastName = passenger.LastName;
             dbP.Gender = passenger.Gender;
@@ -76,6 +84,7 @@ namespace Uno_API.Controllers
             dbP.RoomType = passenger.RoomType;
             dbP.Address = passenger.Address;
             dbP.Pax = passenger.Pax > 0 ? passenger.Pax : 1;
+            dbP.PaxType = PassengerAgeHelper.DeterminePaxType(passenger.DateOfBirth, passenger.PaxType, refDate);
 
             _context.Entry(dbP).State = EntityState.Modified;
             await _context.SaveChangesAsync();
@@ -123,20 +132,15 @@ namespace Uno_API.Controllers
             int childCount = 0;
             int infantCount = 0;
 
+            DateTime refDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
+
             foreach (var p in payingPassengers)
             {
                 int paxVal = p.Pax > 0 ? p.Pax : 1;
-                if (p.DateOfBirth.HasValue)
-                {
-                    var age = (DateTime.Now - p.DateOfBirth.Value).TotalDays / 365.25;
-                    if (age < 2) infantCount += paxVal;
-                    else if (age < 12) childCount += paxVal;
-                    else adultCount += paxVal;
-                }
-                else
-                {
-                    adultCount += paxVal;
-                }
+                string pType = PassengerAgeHelper.DeterminePaxType(p.DateOfBirth, p.PaxType, refDate);
+                if (pType == "Infant") infantCount += paxVal;
+                else if (pType == "Children") childCount += paxVal;
+                else adultCount += paxVal;
             }
 
             if (tour.BaseFee == 0) tour.BaseFee = 250m;

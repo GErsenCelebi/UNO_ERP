@@ -6,17 +6,25 @@ using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
+    public class TestSearchRequest
+    {
+        public string Query { get; set; } = string.Empty;
+        public string? Category { get; set; }
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     public class AiKnowledgeItemsController : ControllerBase
     {
         private readonly UnoDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly IKnowledgeRetrievalService _retrievalService;
 
-        public AiKnowledgeItemsController(UnoDbContext context, IWebHostEnvironment env)
+        public AiKnowledgeItemsController(UnoDbContext context, IWebHostEnvironment env, IKnowledgeRetrievalService retrievalService)
         {
             _context = context;
             _env = env;
+            _retrievalService = retrievalService;
         }
 
         // GET: api/AiKnowledgeItems
@@ -45,6 +53,7 @@ namespace Uno_API.Controllers
             item.UpdatedAt = DateTime.UtcNow;
             _context.AiKnowledgeItems.Add(item);
             await _context.SaveChangesAsync();
+            _retrievalService.InvalidateCache();
 
             return CreatedAtAction("GetAiKnowledgeItem", new { id = item.Id }, item);
         }
@@ -61,6 +70,7 @@ namespace Uno_API.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                _retrievalService.InvalidateCache();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -80,6 +90,7 @@ namespace Uno_API.Controllers
 
             _context.AiKnowledgeItems.Remove(item);
             await _context.SaveChangesAsync();
+            _retrievalService.InvalidateCache();
 
             return NoContent();
         }
@@ -90,7 +101,21 @@ namespace Uno_API.Controllers
         {
             var indexer = new FileRepositoryIndexer(_context);
             var result = await indexer.IndexWorkspaceMarkdownFilesAsync();
+            _retrievalService.InvalidateCache();
             return Ok(result);
+        }
+
+        // POST: api/AiKnowledgeItems/test-search
+        [HttpPost("test-search")]
+        public async Task<ActionResult<List<KnowledgeSearchResult>>> TestSearch([FromBody] TestSearchRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Query))
+            {
+                return BadRequest("Query is required");
+            }
+
+            var results = await _retrievalService.SearchTopMatchesAsync(request.Query, request.Category, 3);
+            return Ok(results);
         }
 
         // POST: api/AiKnowledgeItems/upload-md
@@ -136,8 +161,9 @@ namespace Uno_API.Controllers
 
             var indexer = new FileRepositoryIndexer(_context);
             var itemsCount = await indexer.ParseAndSaveMarkdownSectionsAsync(file.FileName, content);
+            _retrievalService.InvalidateCache();
 
-            return Ok(new { Message = $"Successfully uploaded, saved to KB folder, and parsed '{file.FileName}'!", ItemsIngested = itemsCount });
+            return Ok(new { Message = $"Successfully uploaded and parsed '{file.FileName}'!", ItemsIngested = itemsCount });
         }
 
         private bool AiKnowledgeItemExists(int id)

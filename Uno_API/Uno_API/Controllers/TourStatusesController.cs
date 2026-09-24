@@ -20,7 +20,23 @@ namespace Uno_API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TourStatus>>> GetTourStatuses()
         {
-            return await _context.TourStatuses.OrderBy(s => s.OrderIndex).ToListAsync();
+            var statuses = await _context.TourStatuses.OrderBy(s => s.OrderIndex).ToListAsync();
+            if (statuses == null || !statuses.Any())
+            {
+                var defaults = new List<TourStatus>
+                {
+                    new TourStatus { Name = "Draft", OrderIndex = 1 },
+                    new TourStatus { Name = "Proposal", OrderIndex = 2 },
+                    new TourStatus { Name = "Confirmed", OrderIndex = 3 },
+                    new TourStatus { Name = "In Progress", OrderIndex = 4 },
+                    new TourStatus { Name = "Completed", OrderIndex = 5 },
+                    new TourStatus { Name = "Cancelled", OrderIndex = 6 }
+                };
+                _context.TourStatuses.AddRange(defaults);
+                await _context.SaveChangesAsync();
+                return await _context.TourStatuses.OrderBy(s => s.OrderIndex).ToListAsync();
+            }
+            return statuses;
         }
 
         [HttpGet("{id}")]

@@ -5,7 +5,7 @@ export const getApiUrl = (): string => {
   if (typeof window !== 'undefined') {
     // Relative API endpoint for Production deployment behind IIS / reverse proxy
     const origin = window.location.origin;
-    if (origin.includes('localhost:8000')) {
+    if (origin.includes('localhost:8000') || origin.includes('127.0.0.1:8000') || origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000')) {
       return 'http://localhost:8001/api';
     }
     return `${origin}/api`;

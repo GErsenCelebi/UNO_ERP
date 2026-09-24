@@ -25,6 +25,8 @@ builder.Services.AddDbContext<UnoDbContext>(options =>
 
 builder.Services.AddScoped<IStorageService, StorageService>();
 builder.Services.AddHostedService<StorageMigrationService>();
+builder.Services.AddScoped<IKnowledgeRetrievalService, LocalKnowledgeRetrievalService>();
+builder.Services.AddScoped<ITourProjectLookupService, TourProjectLookupService>();
 
 // Configure CORS for Next.js UI
 builder.Services.AddCors(options =>
@@ -92,7 +94,14 @@ if (initializeDatabaseOnStartup)
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Passengers]') AND name = 'RoomNumber') ALTER TABLE [Passengers] ADD [RoomNumber] int NULL;",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Passengers]') AND name = 'PaxType') ALTER TABLE [Passengers] ADD [PaxType] nvarchar(50) NULL;",
             @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TourStatusCheckpoints') CREATE TABLE [TourStatusCheckpoints] ([Id] int IDENTITY(1,1) NOT NULL, [TargetStatusId] int NOT NULL, [CheckpointKey] nvarchar(100) NOT NULL, [Name] nvarchar(200) NOT NULL, [Description] nvarchar(500) NOT NULL, [IsMandatory] bit NOT NULL DEFAULT 1, [WarningThresholdDays] int NULL, CONSTRAINT [PK_TourStatusCheckpoints] PRIMARY KEY ([Id]));",
-            @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AiKnowledgeItems') CREATE TABLE [AiKnowledgeItems] ([Id] int IDENTITY(1,1) NOT NULL, [Title] nvarchar(255) NOT NULL, [Category] nvarchar(100) NOT NULL, [Tags] nvarchar(255) NULL, [Content] nvarchar(max) NOT NULL, [Source] nvarchar(255) NULL, [IsActive] bit NOT NULL DEFAULT 1, [CreatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(), [UpdatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT [PK_AiKnowledgeItems] PRIMARY KEY ([Id]));"
+            @"IF NOT EXISTS (SELECT 1 FROM [TourStatuses]) BEGIN SET IDENTITY_INSERT [TourStatuses] ON; INSERT INTO [TourStatuses] ([Id], [Name], [OrderIndex]) VALUES (1, 'Draft', 1), (2, 'Proposal', 2), (3, 'Confirmed', 3), (4, 'In Progress', 4), (5, 'Completed', 5), (6, 'Cancelled', 6); SET IDENTITY_INSERT [TourStatuses] OFF; END",
+            @"IF NOT EXISTS (SELECT 1 FROM [ProjectStatuses]) BEGIN SET IDENTITY_INSERT [ProjectStatuses] ON; INSERT INTO [ProjectStatuses] ([Id], [Name], [OrderIndex]) VALUES (1, 'Draft', 1), (2, 'Planning', 2), (3, 'Active', 3), (4, 'On Hold', 4), (5, 'Completed', 5), (6, 'Cancelled', 6); SET IDENTITY_INSERT [ProjectStatuses] OFF; END",
+            @"IF EXISTS (SELECT * FROM sys.tables WHERE name = 'AiKnowledgeItems') BEGIN UPDATE [AiKnowledgeItems] SET [Keywords] = 'excel, import, project, tour, rooming, sales, master data, scenarios, filename, format' WHERE [Id] IN (268, 328) OR [Keywords] LIKE '%excel%'; END",
+            @"IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Hotels]') AND name = 'PricingBasis') UPDATE [Hotels] SET [PricingBasis] = NULL;",
+            @"UPDATE [Tours] SET [Pax] = [Adults] + [Children] WHERE ([Pax] IS NULL OR [Pax] = 0) AND ([Adults] > 0 OR [Children] > 0);",
+            @"UPDATE [Tours] SET [Pax] = 44, [Adults] = 44 WHERE [Id] = 6128 AND ([Pax] IS NULL OR [Pax] = 0);",
+            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'SubTopic') ALTER TABLE [AiKnowledgeItems] ADD [SubTopic] nvarchar(100) NULL;",
+            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'TriggerQueries') ALTER TABLE [AiKnowledgeItems] ADD [TriggerQueries] nvarchar(max) NULL;"
         };
 
         foreach (var sql in patches)

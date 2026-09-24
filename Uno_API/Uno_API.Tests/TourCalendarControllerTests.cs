@@ -20,12 +20,16 @@ namespace Uno_API.Tests
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
 
-            return new UnoDbContext(options);
+            var context = new UnoDbContext(options);
+            context.TourStatuses.Add(new TourStatus { Id = 1, Name = "Confirmed", OrderIndex = 1 });
+            context.ServiceCategories.Add(new ServiceCategory { Id = 1, Name = "Guide", Type = "Expense" });
+            context.SaveChanges();
+            return context;
         }
 
         [Fact]
         [Trait("Suite", "ApiRegression")]
-        public async Task GetCalendarEvents_ExactSameDayOverlap_SetsHasGuideConflictTrue()
+        public async Task Test_PBI15_GetCalendarEvents_ExactSameDayOverlap_SetsHasGuideConflictTrue()
         {
             // Arrange
             var context = GetInMemoryDbContext();
@@ -41,17 +45,19 @@ namespace Uno_API.Tests
             var tour1 = new Tour
             {
                 ProjectId = proj.Id,
+                TourStatusId = 1,
                 ArrivalDate = new DateTime(2025, 10, 10),
                 EndDate = new DateTime(2025, 10, 15),
-                TourServices = new List<TourService> { new TourService { GuideId = guide.Id } }
+                TourServices = new List<TourService> { new TourService { GuideId = guide.Id, ServiceCategoryId = 1 } }
             };
             
             var tour2 = new Tour
             {
                 ProjectId = proj.Id,
+                TourStatusId = 1,
                 ArrivalDate = new DateTime(2025, 10, 10),
                 EndDate = new DateTime(2025, 10, 15),
-                TourServices = new List<TourService> { new TourService { GuideId = guide.Id } }
+                TourServices = new List<TourService> { new TourService { GuideId = guide.Id, ServiceCategoryId = 1 } }
             };
 
             context.Tours.Add(tour1);
@@ -75,7 +81,7 @@ namespace Uno_API.Tests
 
         [Fact]
         [Trait("Suite", "ApiRegression")]
-        public async Task GetCalendarEvents_PartialOverlap_SetsHasGuideConflictTrue()
+        public async Task Test_PBI15_GetCalendarEvents_PartialOverlap_SetsHasGuideConflictTrue()
         {
             // Arrange
             var context = GetInMemoryDbContext();
@@ -87,18 +93,20 @@ namespace Uno_API.Tests
             {
                 Id = 3,
                 ProjectId = 1,
+                TourStatusId = 1,
                 ArrivalDate = new DateTime(2025, 10, 10),
                 EndDate = new DateTime(2025, 10, 15),
-                TourServices = new List<TourService> { new TourService { Id = 3, GuideId = 2 } }
+                TourServices = new List<TourService> { new TourService { Id = 3, GuideId = 2, ServiceCategoryId = 1 } }
             };
             
             var tour2 = new Tour
             {
                 Id = 4,
                 ProjectId = 1,
+                TourStatusId = 1,
                 ArrivalDate = new DateTime(2025, 10, 14), // Overlaps on 14th and 15th
                 EndDate = new DateTime(2025, 10, 20),
-                TourServices = new List<TourService> { new TourService { Id = 4, GuideId = 2 } }
+                TourServices = new List<TourService> { new TourService { Id = 4, GuideId = 2, ServiceCategoryId = 1 } }
             };
 
             context.Tours.Add(tour1);
@@ -122,7 +130,7 @@ namespace Uno_API.Tests
 
         [Fact]
         [Trait("Suite", "ApiRegression")]
-        public async Task GetCalendarEvents_NoOverlap_SetsHasGuideConflictFalse()
+        public async Task Test_PBI15_GetCalendarEvents_NoOverlap_SetsHasGuideConflictFalse()
         {
             // Arrange
             var context = GetInMemoryDbContext();
@@ -134,18 +142,20 @@ namespace Uno_API.Tests
             {
                 Id = 5,
                 ProjectId = 1,
+                TourStatusId = 1,
                 ArrivalDate = new DateTime(2025, 10, 10),
                 EndDate = new DateTime(2025, 10, 15),
-                TourServices = new List<TourService> { new TourService { Id = 5, GuideId = 3 } }
+                TourServices = new List<TourService> { new TourService { Id = 5, GuideId = 3, ServiceCategoryId = 1 } }
             };
             
             var tour2 = new Tour
             {
                 Id = 6,
                 ProjectId = 1,
+                TourStatusId = 1,
                 ArrivalDate = new DateTime(2025, 10, 16), // Starts after tour1 ends
                 EndDate = new DateTime(2025, 10, 20),
-                TourServices = new List<TourService> { new TourService { Id = 6, GuideId = 3 } }
+                TourServices = new List<TourService> { new TourService { Id = 6, GuideId = 3, ServiceCategoryId = 1 } }
             };
 
             context.Tours.Add(tour1);

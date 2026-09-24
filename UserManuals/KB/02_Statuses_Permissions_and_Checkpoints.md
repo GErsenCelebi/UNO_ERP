@@ -1,6 +1,6 @@
 # 🚦 Metadata - Statuses, Order, Checkpoints, Roles, Taxes & Discounts
 
-This document details the central metadata governance rules in UNO ERP, including tour status lifecycles, mandatory checkpoints, role access permissions, tax rates, and discount structures.
+This document details the central metadata configuration rules in UNO ERP, including tour status lifecycles, mandatory checkpoints, role access permissions, tax rates, and discount structures.
 
 ---
 

@@ -1,10 +1,12 @@
 "use client"
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Plus, X, LayoutTemplate, Users, CalendarDays, DollarSign, Loader2, FolderOpen, ChevronDown, ArrowRight, Map, Briefcase } from 'lucide-react';
+import { Search, Plus, X, LayoutTemplate, Users, CalendarDays, DollarSign, Loader2, FolderOpen, ChevronDown, ArrowRight, Map, Briefcase, AlertTriangle } from 'lucide-react';
 import Can from '@/components/Can';
+import { formatDate } from '@/lib/utils';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const API = '/api';
+const API = getApiUrl();
 
 interface Client {
   id: number;
@@ -18,6 +20,15 @@ interface ProjectStatus {
   name: string;
   orderIndex: number;
 }
+
+const DEFAULT_PROJECT_STATUSES: ProjectStatus[] = [
+  { id: 1, name: 'Draft', orderIndex: 1 },
+  { id: 2, name: 'Planning', orderIndex: 2 },
+  { id: 3, name: 'Active', orderIndex: 3 },
+  { id: 4, name: 'On Hold', orderIndex: 4 },
+  { id: 5, name: 'Completed', orderIndex: 5 },
+  { id: 6, name: 'Cancelled', orderIndex: 6 },
+];
 
 interface Project {
   id: number;
@@ -37,12 +48,12 @@ interface Project {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; gradient: string; dot: string; text: string }> = {
-  'Draft':      { bg: 'bg-slate-50',   border: 'border-slate-200',   gradient: 'from-slate-500 to-slate-700',     dot: 'bg-slate-400',   text: 'text-slate-700' },
-  'Planning':   { bg: 'bg-indigo-50',  border: 'border-indigo-200',  gradient: 'from-indigo-500 to-violet-600',   dot: 'bg-indigo-400',  text: 'text-indigo-700' },
-  'Active':     { bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-500 to-green-600',   dot: 'bg-emerald-400', text: 'text-emerald-700' },
-  'On Hold':    { bg: 'bg-amber-50',   border: 'border-amber-200',   gradient: 'from-amber-500 to-yellow-600',    dot: 'bg-amber-400',   text: 'text-amber-700' },
-  'Completed':  { bg: 'bg-sky-50',     border: 'border-sky-200',     gradient: 'from-sky-500 to-cyan-600',        dot: 'bg-sky-400',     text: 'text-sky-700' },
-  'Cancelled':  { bg: 'bg-rose-50',    border: 'border-rose-200',    gradient: 'from-rose-500 to-red-600',        dot: 'bg-rose-400',    text: 'text-rose-700' },
+  'Draft':     { bg: 'bg-slate-50',   border: 'border-slate-200',  gradient: 'from-slate-500 to-slate-700',    dot: 'bg-slate-400',   text: 'text-slate-700' },
+  'Planning':  { bg: 'bg-amber-50',   border: 'border-amber-200',  gradient: 'from-amber-500 to-orange-600',   dot: 'bg-amber-400',   text: 'text-amber-700' },
+  'Active':    { bg: 'bg-indigo-50',  border: 'border-indigo-200', gradient: 'from-indigo-500 to-blue-600',    dot: 'bg-indigo-400',  text: 'text-indigo-700' },
+  'On Hold':   { bg: 'bg-violet-50',  border: 'border-violet-200', gradient: 'from-violet-500 to-purple-600',  dot: 'bg-violet-400',  text: 'text-violet-700' },
+  'Completed': { bg: 'bg-emerald-50', border: 'border-emerald-200',gradient: 'from-emerald-500 to-green-600',  dot: 'bg-emerald-400', text: 'text-emerald-700' },
+  'Cancelled': { bg: 'bg-rose-50',    border: 'border-rose-200',   gradient: 'from-rose-500 to-red-600',       dot: 'bg-rose-400',    text: 'text-rose-700' },
 };
 
 const getStatusColor = (name: string) => STATUS_COLORS[name] || STATUS_COLORS['Draft'];
@@ -51,8 +62,9 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [statuses, setStatuses] = useState<ProjectStatus[]>([]);
+  const [statuses, setStatuses] = useState<ProjectStatus[]>(DEFAULT_PROJECT_STATUSES);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -72,6 +84,7 @@ export default function ProjectsPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const [projRes, clientRes, statusRes] = await Promise.all([
         fetch(`${API}/projects`, { cache: 'no-store' }),
@@ -82,10 +95,18 @@ export default function ProjectsPage() {
       if (clientRes.ok) setClients(await clientRes.json());
       if (statusRes.ok) {
         const s = await statusRes.json();
-        setStatuses(s.sort((a: ProjectStatus, b: ProjectStatus) => a.orderIndex - b.orderIndex));
+        if (Array.isArray(s) && s.length > 0) {
+          setStatuses(s.sort((a: ProjectStatus, b: ProjectStatus) => a.orderIndex - b.orderIndex));
+        } else {
+          setStatuses(DEFAULT_PROJECT_STATUSES);
+        }
+      } else {
+        setStatuses(DEFAULT_PROJECT_STATUSES);
       }
     } catch (err) {
-      console.error('Failed to fetch projects:', err);
+      console.warn('Backend API currently unreachable:', err);
+      setFetchError("Unable to reach Uno API backend on http://localhost:8001. Please ensure Uno_API is running.");
+      setStatuses(DEFAULT_PROJECT_STATUSES);
     } finally {
       setLoading(false);
     }
@@ -238,6 +259,21 @@ export default function ProjectsPage() {
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
 
         <div className="relative z-0">
+          {fetchError && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-amber-900 text-xs shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span className="font-medium">{fetchError}</span>
+              </div>
+              <button
+                onClick={() => { setFetchError(null); fetchData(); }}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                Retry Connection
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex justify-center items-center py-32">
               <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
@@ -323,9 +359,7 @@ export default function ProjectsPage() {
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
                                   <CalendarDays className="w-3 h-3 text-slate-400" />
                                   <span>
-                                    {project.startDate ? new Date(project.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—'}
-                                    {' → '}
-                                    {project.endDate ? new Date(project.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                    {formatDate(project.startDate)} → {formatDate(project.endDate)}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500">

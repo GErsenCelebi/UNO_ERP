@@ -1,37 +1,58 @@
-using NUnit.Framework;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.IO;
+using Microsoft.EntityFrameworkCore;
+using Moq;
+using System;
 using System.Threading.Tasks;
 using Uno_API.Controllers;
+using Uno_API.Data;
+using Xunit;
 
 namespace Uno_API.Tests.Controllers
 {
-    [TestFixture]
     public class ExcelImportControllerTests
     {
-        private ExcelImportController _controller = null!;
-
-        [SetUp]
-        public void Setup()
+        private UnoDbContext GetInMemoryDbContext()
         {
-            // _controller = new ExcelImportController(...);
+            var options = new DbContextOptionsBuilder<UnoDbContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .Options;
+
+            return new UnoDbContext(options);
         }
 
-        [Test]
-        public async Task ImportFlightLogistics_InvalidFileExt_ReturnsBadRequest()
+        [Fact]
+        [Trait("Suite", "ApiRegression")]
+        public async Task Test_PBI13_UploadTours_NullFile_ReturnsBadRequest()
         {
             // Arrange
-            var fileMock = new Moq.Mock<IFormFile>();
-            fileMock.Setup(f => f.FileName).Returns("flights.txt");
-            fileMock.Setup(f => f.Length).Returns(100);
+            var context = GetInMemoryDbContext();
+            var controller = new ExcelImportController(context);
 
             // Act
-            // var result = await _controller.ImportFlightLogistics(fileMock.Object);
+            var result = await controller.UploadTours(null!);
 
             // Assert
-            // Assert.IsInstanceOf<BadRequestObjectResult>(result);
-            NUnit.Framework.Assert.Pass("Test generated successfully.");
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("No file uploaded.", badRequest.Value);
+        }
+
+        [Fact]
+        [Trait("Suite", "CurrentSprintApi")]
+        public async Task Test_PBI13_UploadTours_EmptyFile_ReturnsBadRequest()
+        {
+            // Arrange
+            var context = GetInMemoryDbContext();
+            var controller = new ExcelImportController(context);
+            var fileMock = new Mock<IFormFile>();
+            fileMock.Setup(f => f.Length).Returns(0);
+
+            // Act
+            var result = await controller.UploadTours(fileMock.Object);
+
+            // Assert
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("No file uploaded.", badRequest.Value);
         }
     }
 }

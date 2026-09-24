@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uno_API.Data;
 using Uno_API.Models;
+using Uno_API.Services;
 
 namespace Uno_API.Controllers
 {
@@ -240,6 +241,9 @@ namespace Uno_API.Controllers
                         string visaNo = row.Cell(13).GetString().Trim();
                         string address = row.Cell(14).GetString().Trim();
 
+                        DateTime refDate = currentTour.ArrivalDate != default ? currentTour.ArrivalDate : DateTime.Today;
+                        string paxType = PassengerAgeHelper.DeterminePaxType(dob, null, refDate);
+
                         importedPassengers.Add(new Passenger
                         {
                             FirstName = firstName,
@@ -247,6 +251,7 @@ namespace Uno_API.Controllers
                             Gender = gender,
                             NationalId = nationalId,
                             DateOfBirth = dob,
+                            PaxType = paxType,
                             Phone = phone,
                             PassportNo = passportNo,
                             PassportType = passportType,
