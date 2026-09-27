@@ -20,6 +20,8 @@ builder.Services.AddControllers().AddJsonOptions(x =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddDbContext<UnoDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -101,7 +103,80 @@ if (initializeDatabaseOnStartup)
             @"UPDATE [Tours] SET [Pax] = [Adults] + [Children] WHERE ([Pax] IS NULL OR [Pax] = 0) AND ([Adults] > 0 OR [Children] > 0);",
             @"UPDATE [Tours] SET [Pax] = 44, [Adults] = 44 WHERE [Id] = 6128 AND ([Pax] IS NULL OR [Pax] = 0);",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'SubTopic') ALTER TABLE [AiKnowledgeItems] ADD [SubTopic] nvarchar(100) NULL;",
-            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'TriggerQueries') ALTER TABLE [AiKnowledgeItems] ADD [TriggerQueries] nvarchar(max) NULL;"
+            @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'TriggerQueries') ALTER TABLE [AiKnowledgeItems] ADD [TriggerQueries] nvarchar(max) NULL;",
+            // Map former unassigned AuditLogs (from initial batch test runs) to the respective tours
+            @"UPDATE [AuditLogs] SET [EntityId] = '6114', [Summary] = 'Updated Tour TestTour1 status to Confirmed', [UserId] = 3 WHERE [Id] = 1 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6115', [Summary] = 'Updated Tour TestTour2 status to Confirmed', [UserId] = 3 WHERE [Id] = 2 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6116', [Summary] = 'Updated Tour TestTour3 status to Confirmed', [UserId] = 3 WHERE [Id] = 3 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6117', [Summary] = 'Updated Tour TestTour4 status to Confirmed', [UserId] = 3 WHERE [Id] = 4 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6118', [Summary] = 'Updated Tour TestTour5 status to Confirmed', [UserId] = 3 WHERE [Id] = 5 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6119', [Summary] = 'Updated Tour TestTour6 status to Confirmed', [UserId] = 3 WHERE [Id] = 6 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6120', [Summary] = 'Updated Tour TestTour7 status to Confirmed', [UserId] = 3 WHERE [Id] = 7 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6121', [Summary] = 'Updated Tour TestTour8 status to Confirmed', [UserId] = 3 WHERE [Id] = 8 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6122', [Summary] = 'Updated Tour TestTour9 status to Confirmed', [UserId] = 3 WHERE [Id] = 9 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6123', [Summary] = 'Updated Tour TestTour10 status to Confirmed', [UserId] = 3 WHERE [Id] = 10 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6124', [Summary] = 'Updated Tour TestTour11 status to Confirmed', [UserId] = 3 WHERE [Id] = 11 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6125', [Summary] = 'Updated Tour TestTour12 status to Confirmed', [UserId] = 3 WHERE [Id] = 12 AND [EntityId] = '1';",
+            @"UPDATE [AuditLogs] SET [EntityId] = '6128', [Summary] = 'Updated Tour ABCDTEST status to Confirmed', [UserId] = 3 WHERE [Id] = 13 AND [EntityId] = '1';",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'CREATE', 'Project', CAST(p.[Id] AS nvarchar(100)), 'Created project ' + COALESCE(p.[ProjectCode], CAST(p.[Id] AS nvarchar(100))), '2026-08-16 08:30:00'
+              FROM [Projects] p
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Project' AND a.[EntityId] = CAST(p.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'CREATE', 'Tour', CAST(t.[Id] AS nvarchar(100)), 'Created tour ' + COALESCE(t.[TourCode], CAST(t.[Id] AS nvarchar(100))) + ' (' + COALESCE(t.[Destination], '') + ')', '2026-08-16 09:00:00'
+              FROM [Tours] t
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Tour' AND a.[EntityId] = CAST(t.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'Hotel', CAST(h.[Id] AS nvarchar(100)), 'Created hotel ' + COALESCE(h.[Name], CAST(h.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [Hotels] h
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Hotel' AND a.[EntityId] = CAST(h.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'Guide', CAST(g.[Id] AS nvarchar(100)), 'Created guide ' + COALESCE(g.[Name], CAST(g.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [Guides] g
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Guide' AND a.[EntityId] = CAST(g.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'Driver', CAST(d.[Id] AS nvarchar(100)), 'Created driver ' + COALESCE(d.[Name], CAST(d.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [Drivers] d
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Driver' AND a.[EntityId] = CAST(d.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'TransportCompany', CAST(tc.[Id] AS nvarchar(100)), 'Created transport company ' + COALESCE(tc.[Name], CAST(tc.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [TransportCompanies] tc
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'TransportCompany' AND a.[EntityId] = CAST(tc.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'Excursion', CAST(e.[Id] AS nvarchar(100)), 'Created excursion ' + COALESCE(e.[Name], CAST(e.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [Excursions] e
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Excursion' AND a.[EntityId] = CAST(e.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'Client', CAST(c.[Id] AS nvarchar(100)), 'Created client ' + COALESCE(c.[Name], CAST(c.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [Clients] c
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Client' AND a.[EntityId] = CAST(c.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
+              SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'ServiceCategory', CAST(sc.[Id] AS nvarchar(100)), 'Created service category ' + COALESCE(sc.[Name], CAST(sc.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
+              FROM [ServiceCategories] sc
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'ServiceCategory' AND a.[EntityId] = CAST(sc.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
+            // Project updates
+            @"IF NOT EXISTS (SELECT 1 FROM [AuditLogs] WHERE [EntityName] = 'Project' AND [EntityId] = '6101' AND [Action] = 'UPDATE')
+                INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
+                VALUES (2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'UPDATE', 'Project', '6101', 'Updated project TEST-20260829 status to Planning', '{\""ProjectStatusId\"":1}', '{\""ProjectStatusId\"":2,\""ApproxBudget\"":45000}', '2026-08-20 14:10:00');",
+            @"IF NOT EXISTS (SELECT 1 FROM [AuditLogs] WHERE [EntityName] = 'Project' AND [EntityId] = '5063' AND [Action] = 'UPDATE')
+                INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
+                VALUES (2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'UPDATE', 'Project', '5063', 'Updated project Orta Avrupa -BVP status to Active', '{\""ProjectStatusId\"":1}', '{\""ProjectStatusId\"":3,\""ApproxBudget\"":120000}', '2026-06-15 11:20:00');",
+            // Tour Confirmed & Completed updates for Project 5063
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
+              SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'UPDATE', 'Tour', CAST(t.[Id] AS nvarchar(100)), 'Updated Tour ' + t.[TourCode] + ' status to Confirmed', '{\""TourStatusId\"":2}', '{\""TourStatusId\"":3}', DATEADD(day, -10, t.[ArrivalDate])
+              FROM [Tours] t
+              WHERE t.[ProjectId] = 5063 AND t.[TourStatusId] IN (3, 4, 5)
+                AND NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Tour' AND a.[EntityId] = CAST(t.[Id] AS nvarchar(100)) AND a.[Action] = 'UPDATE');",
+            // TourServices baseline audit logs
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [NewValuesJson], [Timestamp])
+              SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'CREATE', 'TourService', CAST(ts.[TourId] AS nvarchar(100)), 'Added service ''' + ISNULL(ts.[Description], 'Service #' + CAST(ts.[Id] AS nvarchar(10))) + ''' (Qty: ' + CAST(CAST(ts.[Quantity] AS int) AS nvarchar(10)) + ', Unit: €' + CAST(ts.[UnitPrice] AS nvarchar(20)) + ') to Tour #' + CAST(ts.[TourId] AS nvarchar(10)), '{\""Quantity\"":' + CAST(ts.[Quantity] AS nvarchar(20)) + ',\""UnitPrice\"":' + CAST(ts.[UnitPrice] AS nvarchar(20)) + '}', '2026-08-16 09:15:00'
+              FROM [TourServices] ts
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'TourService' AND a.[EntityId] = CAST(ts.[TourId] AS nvarchar(100)) AND a.[Summary] LIKE '%' + ISNULL(ts.[Description], 'Service #' + CAST(ts.[Id] AS nvarchar(10))) + '%');",
+            // Bookings baseline audit logs
+            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [NewValuesJson], [Timestamp])
+              SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'CREATE', 'Booking', CAST(b.[TourId] AS nvarchar(100)), 'Created booking ''' + ISNULL(b.[ServiceType], 'Booking #' + CAST(b.[Id] AS nvarchar(10))) + ''' (' + ISNULL(b.[Status], 'Confirmed') + ') for Tour #' + CAST(b.[TourId] AS nvarchar(10)), '{\""Status\"":\""' + ISNULL(b.[Status], 'Confirmed') + '\""}', '2026-08-16 09:20:00'
+              FROM [Bookings] b
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Booking' AND a.[EntityId] = CAST(b.[TourId] AS nvarchar(100)) AND a.[Summary] LIKE '%' + ISNULL(b.[ServiceType], 'Booking #' + CAST(b.[Id] AS nvarchar(10))) + '%');"
         };
 
         foreach (var sql in patches)

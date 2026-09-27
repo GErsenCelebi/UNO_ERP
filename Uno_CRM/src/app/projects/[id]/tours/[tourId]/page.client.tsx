@@ -1,9 +1,12 @@
 "use client"
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
+import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
+import Can from '@/components/Can';
+import { getAuthHeaders } from '@/lib/auth';
 import { formatDate, getFlightAwareUrl } from '@/lib/utils';
 import { getApiUrl } from '@/lib/apiConfig';
 
@@ -530,6 +533,34 @@ export default function TourDetailPage() {
     }
   };
 
+  const [isDeletingTour, setIsDeletingTour] = useState(false);
+
+  const handleDeleteTour = async () => {
+    if (!tour) return;
+    const confirmMsg = `Are you sure you want to delete Tour "${tour.tourCode}" (${tour.destination})?\n\nThis will permanently delete the tour and all its services, bookings, and passengers.\n\nThis action cannot be undone.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsDeletingTour(true);
+    try {
+      const res = await fetch(`${API}/tours/${tour.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        alert(`Tour "${tour.tourCode}" was successfully deleted.`);
+        router.push(`/projects/${tour.projectId}`);
+      } else {
+        const data = await res.json().catch(() => null);
+        alert(data?.error || 'Failed to delete tour. Only Administrators are permitted to delete tours.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while deleting the tour.');
+    } finally {
+      setIsDeletingTour(false);
+    }
+  };
+
   const handleUpdateTour = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -701,6 +732,40 @@ export default function TourDetailPage() {
       }]
     });
     setIsServiceModalOpen(true);
+  };
+
+  const handleResolveMissing = (missingKey?: string) => {
+    const target = missingKey || missingMainServices[0]?.key;
+    if (!target) return;
+
+    if (target === 'flight') {
+      setActiveTab('info');
+      if (!isEditing) setIsEditing(true);
+      setTimeout(() => {
+        const flightInput = document.querySelector('input[placeholder*="TK"], #flight-info-section') as HTMLElement;
+        if (flightInput) {
+          flightInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          flightInput.focus();
+        }
+      }, 150);
+      return;
+    }
+
+    // Switch to Services tab and open the matching service modal
+    setActiveTab('services');
+    setTimeout(() => {
+      const svcSection = document.getElementById('tour-services-section');
+      if (svcSection) {
+        svcSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (target === 'transport') {
+        openServiceModal('Transport', false);
+      } else if (target === 'hotel') {
+        openServiceModal('Hotel', false);
+      } else if (target === 'guide') {
+        openServiceModal('Guide', false);
+      }
+    }, 120);
   };
 
   const [editingServiceId, setEditingServiceId] = useState<number | null>(null);
@@ -2000,15 +2065,27 @@ export default function TourDetailPage() {
               {/* LEFT COLUMN: Main Tour Information & Financial Breakdown (Expanded to 8-9 Cols) */}
               <div className="lg:col-span-8 xl:col-span-9 space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-slate-50 flex justify-between items-center">
-                    <div>
-                      <h2 className="text-base md:text-lg font-bold text-slate-800">Tour Information</h2>
-                      <p className="text-xs text-slate-500 mt-0.5">View and edit tour details</p>
+                  <div className="px-4 py-1.5 border-b border-slate-100 bg-gradient-to-r from-indigo-50/70 to-slate-50 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-slate-800">Tour Information</h2>
+                      <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• View and edit tour details</span>
                     </div>
                     {!isEditing && (
-                      <button onClick={() => setIsEditing(true)} className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors gap-1.5">
-                        <Edit className="w-3.5 h-3.5" /> Edit
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setIsEditing(true)} className="flex items-center px-2.5 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition-colors gap-1 shadow-2xs">
+                          <Edit className="w-3 h-3" /> Edit
+                        </button>
+                        <Can perform="delete-tours">
+                          <button
+                            onClick={handleDeleteTour}
+                            disabled={isDeletingTour}
+                            title="Delete tour (Administrators only)"
+                            className="flex items-center px-2.5 py-1 bg-rose-600 text-white rounded-md text-xs font-semibold hover:bg-rose-700 transition-colors gap-1 shadow-2xs disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" /> {isDeletingTour ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </Can>
+                      </div>
                     )}
                   </div>
 
@@ -2050,7 +2127,7 @@ export default function TourDetailPage() {
                           <span className="font-bold text-emerald-900 text-lg">€{(((editData.adults || 0) * (editData.baseFee || 0)) + ((editData.children || 0) * (editData.baseFee || 0) * 0.5)).toLocaleString()}</span>
                         </div>
                       )}
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 space-y-4">
+                      <div id="flight-info-section" className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 space-y-4">
                         <h3 className="text-sm font-semibold text-slate-800 mb-2">Flight Information</h3>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
@@ -2178,89 +2255,93 @@ export default function TourDetailPage() {
                   ) : (
                     <div className="p-6 space-y-6">
                       {missingMainServices.length > 0 && (
-                        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-red-100 rounded-lg text-red-600 mt-0.5 sm:mt-0">
-                              <AlertTriangle className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-bold text-red-900 uppercase tracking-wide">
-                                  Action Required: Missing Main Services ({missingMainServices.length})
-                                </h3>
-                                <span className="bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
-                                  Action Required
-                                </span>
-                              </div>
-                              <p className="text-xs text-red-700 mt-0.5 font-medium">
-                                Cannot move this tour to <span className="font-bold underline">Confirmed</span> or <span className="font-bold underline">In Progress</span> until the following services are completed:
-                              </p>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {missingMainServices.map(m => (
-                                  <span key={m.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 border border-red-300 text-red-800 text-xs font-semibold rounded-md shadow-2xs">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                                    {m.label}
-                                    <span className="text-[10px] text-red-500 font-normal">({m.action})</span>
-                                  </span>
-                                ))}
-                              </div>
+                        <div className="bg-red-50/80 border border-red-200 rounded-lg px-2.5 py-1 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 shadow-2xs">
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <span className="font-bold text-red-800 uppercase text-[10px] tracking-wide shrink-0">
+                              Missing Main Services ({missingMainServices.length}):
+                            </span>
+                            <div className="inline-flex flex-wrap items-center gap-1">
+                              {missingMainServices.map(m => (
+                                <button
+                                  key={m.key}
+                                  type="button"
+                                  onClick={() => handleResolveMissing(m.key)}
+                                  title={`Click to resolve ${m.label}`}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.2 bg-red-100 hover:bg-red-200 border border-red-200 text-red-800 text-[10px] font-semibold rounded shadow-2xs transition-colors cursor-pointer"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                  <span>{m.label}</span>
+                                  <span className="text-[9px] text-red-500">↗</span>
+                                </button>
+                              ))}
                             </div>
                           </div>
                           <button
                             type="button"
-                            onClick={() => {
-                              const hasFlightMissing = missingMainServices.some(m => m.key === 'flight');
-                              if (hasFlightMissing && !isEditing) {
-                                setIsEditing(true);
-                              } else {
-                                const svcElem = document.getElementById('tour-services-section');
-                                if (svcElem) svcElem.scrollIntoView({ behavior: 'smooth' });
-                              }
-                            }}
-                            className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors shadow-xs cursor-pointer"
+                            onClick={() => handleResolveMissing()}
+                            className="shrink-0 px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded transition-colors shadow-2xs cursor-pointer flex items-center gap-1"
                           >
-                            Resolve Missing
+                            <span>Resolve Missing</span>
+                            <span className="text-[10px]">→</span>
                           </button>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-4 gap-6">
+                      <div className="grid grid-cols-5 gap-4">
                         <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Tour Code</p>
-                          <p className="text-sm font-bold text-slate-800">{tour.tourCode}</p>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Tour Code</p>
+                          <p className="text-xs font-bold text-slate-800">{tour.tourCode}</p>
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Assigned Project</p>
-                          <p className="text-sm font-bold text-blue-600 flex items-center">
-                            <Briefcase className="w-4 h-4 mr-1.5 text-blue-500" />
-                            {projects.find(p => p.id === tour.projectId)?.projectCode || tour.project?.projectCode || `Project #${tour.projectId}`}
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Assigned Project</p>
+                          <p className="text-xs font-bold text-blue-600 flex items-center truncate" title={projects.find(p => p.id === tour.projectId)?.projectCode || tour.project?.projectCode || `Project #${tour.projectId}`}>
+                            <Briefcase className="w-3.5 h-3.5 mr-1 text-blue-500 shrink-0" />
+                            <span className="truncate">{projects.find(p => p.id === tour.projectId)?.projectCode || tour.project?.projectCode || `Project #${tour.projectId}`}</span>
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Destination</p>
-                          <p className="text-sm font-bold text-slate-800 flex items-center"><MapPin className="w-4 h-4 mr-1 text-indigo-400" /> {tour.destination}</p>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Destination</p>
+                          <p className="text-xs font-bold text-slate-800 flex items-center truncate" title={tour.destination}>
+                            <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-400 shrink-0" />
+                            <span className="truncate">{tour.destination}</span>
+                          </p>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Status & Guide(s)</p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">{tour.tourStatus?.name || 'N/A'}</span>
-                            {missingMainServices.length > 0 && (
-                              <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs animate-pulse">
-                                <AlertTriangle className="w-3 h-3 text-white" />
-                                Action Required
-                              </span>
-                            )}
-                            <span className="text-sm font-bold text-slate-700">
-                              {(() => {
-                                const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
-                                const allGuides = Array.from(new Set(svcGuides));
-                                return allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
-                              })()}
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Status</p>
+                          <div className="flex items-center gap-1 flex-nowrap whitespace-nowrap min-w-0">
+                            <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">
+                              {tour.tourStatus?.name || 'N/A'}
                             </span>
+                            {missingMainServices.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleResolveMissing()}
+                                title={`Action Required: Missing ${missingMainServices.map(m => m.label).join(', ')}. Click to resolve.`}
+                                className="bg-red-600 hover:bg-red-700 text-white px-1 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-tight inline-flex items-center gap-0.5 shadow-2xs shrink-0 transition-colors cursor-pointer animate-pulse"
+                              >
+                                <AlertTriangle className="w-2.5 h-2.5 text-white shrink-0" />
+                                Action Required
+                              </button>
+                            )}
                           </div>
                         </div>
+                        <div>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Guide(s)</p>
+                          {(() => {
+                            const svcGuides = services.filter(s => s.guideId).map(s => guides.find(g => g.id === s.guideId)?.name).filter(Boolean);
+                            const allGuides = Array.from(new Set(svcGuides));
+                            const guideText = allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
+                            return (
+                              <p className="text-xs font-bold text-slate-700 flex items-center gap-1 truncate" title={`Guide(s): ${guideText}`}>
+                                <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span className="truncate">{guideText}</span>
+                              </p>
+                            );
+                          })()}
+                        </div>
                         
-                        <div className="col-span-4 space-y-4">
+                        <div className="col-span-5 space-y-4">
 
                           {/* INLINE PER-PAX COLLAPSIBLE BREAKDOWN TABLE AT THIS SPOT */}
                           {(() => {
@@ -2722,12 +2803,20 @@ export default function TourDetailPage() {
               </div>
 
             </div>
+
+            {/* Tour Audit History Section */}
+            <EntityAuditHistorySection
+              entityName="Tour"
+              entityId={tour.id}
+              title={`Tour ${tour.tourCode} Audit History`}
+              subtitle="Full chronological audit trail of all tour events and modifications"
+            />
           </div>
         )}
 
         {/* ──── SERVICES TAB ──── */}
         {activeTab === 'services' && (
-          <div className="p-6 space-y-6 max-w-6xl mx-auto">
+          <div id="tour-services-section" className="p-6 space-y-6 max-w-6xl mx-auto">
             
             {/* Services Revenue */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
@@ -3120,25 +3209,33 @@ export default function TourDetailPage() {
             </div>
 
             {/* Financial Summary */}
-            <div className="grid grid-cols-4 gap-4">
-              <div className="bg-slate-800 rounded-2xl p-6 text-white flex flex-col justify-center">
-                <p className="text-slate-400 text-sm font-medium">Total Revenue (Sales)</p>
-                <h3 className="text-2xl font-bold mt-1">€{totalSales.toLocaleString()}</h3>
+            <div className="grid grid-cols-4 gap-2.5">
+              <div className="bg-slate-800 rounded-xl px-4 py-2.5 text-white flex flex-col justify-center shadow-2xs">
+                <p className="text-slate-400 text-xs font-medium">Total Revenue (Sales)</p>
+                <h3 className="text-lg font-bold mt-0.5">€{totalSales.toLocaleString()}</h3>
               </div>
-              <div className="bg-slate-100 rounded-2xl p-6 text-slate-800 flex flex-col justify-center border border-slate-200">
-                <p className="text-slate-500 text-sm font-medium">Total Service Cost</p>
-                <h3 className="text-2xl font-bold mt-1">€{totalServiceCost.toLocaleString()}</h3>
+              <div className="bg-slate-100 rounded-xl px-4 py-2.5 text-slate-800 flex flex-col justify-center border border-slate-200 shadow-2xs">
+                <p className="text-slate-500 text-xs font-medium">Total Service Cost</p>
+                <h3 className="text-lg font-bold mt-0.5">€{totalServiceCost.toLocaleString()}</h3>
               </div>
-              <div className={`col-span-2 rounded-2xl p-6 flex flex-col justify-center text-white ${profit >= 0 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-red-600'}`}>
-                <p className="text-white/80 text-sm font-medium">Profit</p>
+              <div className={`col-span-2 rounded-xl px-4 py-2.5 flex flex-col justify-center text-white shadow-2xs ${profit >= 0 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-red-600'}`}>
+                <p className="text-white/80 text-xs font-medium">Profit</p>
                 <div className="flex justify-between items-end">
-                  <h3 className="text-4xl font-bold mt-1">€{Math.abs(profit).toLocaleString()} {profit >= 0 ? '(+)' : '(-)'}</h3>
+                  <h3 className="text-xl font-bold mt-0.5">€{Math.abs(profit).toLocaleString()} {profit >= 0 ? '(+)' : '(-)'}</h3>
                   <div className="text-right">
-                    <p className="text-white/90 text-sm">{services.length} services total</p>
+                    <p className="text-white/90 text-xs">{services.length} services total</p>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Tour Services Audit History Section */}
+            <EntityAuditHistorySection
+              entityName="TourService"
+              entityId={tour.id}
+              title={`Tour ${tour.tourCode} Services Audit History`}
+              subtitle="Full chronological audit trail of service additions, cost/rate modifications, supplier assignments, and deletions for this tour"
+            />
           </div>
         )}
 
@@ -3273,6 +3370,14 @@ export default function TourDetailPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Bookings & Passenger Audit History Section */}
+              <EntityAuditHistorySection
+                entityName="Booking,Passenger"
+                entityId={tour.id}
+                title={`Tour ${tour.tourCode} Bookings & Passenger Audit History`}
+                subtitle="Full chronological audit trail of passenger rooming assignments, booking reservations, and modifications for this tour"
+              />
             </div>
           </div>
         );

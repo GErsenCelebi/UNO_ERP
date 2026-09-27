@@ -157,10 +157,41 @@ namespace Uno_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
+            var userRole = Request.Headers["X-User-Role"].FirstOrDefault() ?? "";
+            if (!string.IsNullOrEmpty(userRole) && !string.Equals(userRole, "Administrator", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = "Only Administrators are authorized to delete projects." });
+            }
+
+            var project = await _context.Projects
+                .Include(p => p.Tours)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (project == null)
             {
                 return NotFound();
+            }
+
+            if (project.Tours != null && project.Tours.Any())
+            {
+                var tourIds = project.Tours.Select(t => t.Id).ToList();
+
+                var services = await _context.TourServices.Where(s => tourIds.Contains(s.TourId)).ToListAsync();
+                if (services.Any()) _context.TourServices.RemoveRange(services);
+
+                var bookings = await _context.Bookings.Where(b => tourIds.Contains(b.TourId)).ToListAsync();
+                if (bookings.Any()) _context.Bookings.RemoveRange(bookings);
+
+                var passengers = await _context.Passengers.Where(p => tourIds.Contains(p.TourId)).ToListAsync();
+                if (passengers.Any()) _context.Passengers.RemoveRange(passengers);
+
+                var invoices = await _context.Invoices.Where(i => tourIds.Contains(i.TourId)).ToListAsync();
+                if (invoices.Any()) _context.Invoices.RemoveRange(invoices);
+
+                var attachments = await _context.TourAttachments.Where(a => tourIds.Contains(a.TourId)).ToListAsync();
+                if (attachments.Any()) _context.TourAttachments.RemoveRange(attachments);
+
+                _context.Tours.RemoveRange(project.Tours);
             }
 
             _context.Projects.Remove(project);

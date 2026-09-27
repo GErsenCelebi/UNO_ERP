@@ -354,6 +354,12 @@ namespace Uno_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTour(int id)
         {
+            var userRole = Request.Headers["X-User-Role"].FirstOrDefault() ?? "";
+            if (!string.IsNullOrEmpty(userRole) && !string.Equals(userRole, "Administrator", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = "Only Administrators are authorized to delete tours." });
+            }
+
             var tour = await _context.Tours
                 .Include(t => t.TourServices)
                 .Include(t => t.Bookings)
@@ -371,6 +377,9 @@ namespace Uno_API.Controllers
 
             var invoices = await _context.Invoices.Where(i => i.TourId == id).ToListAsync();
             if (invoices.Any()) _context.Invoices.RemoveRange(invoices);
+
+            var attachments = await _context.TourAttachments.Where(a => a.TourId == id).ToListAsync();
+            if (attachments.Any()) _context.TourAttachments.RemoveRange(attachments);
 
             _context.Tours.Remove(tour);
             await _context.SaveChangesAsync();

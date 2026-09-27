@@ -60,6 +60,26 @@ export function canManageUsers(role?: string): boolean {
   return role === 'Administrator';
 }
 
+export function canDeleteProjects(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator';
+}
+
+export function canDeleteTours(role?: string): boolean {
+  if (!role) return false;
+  return role === 'Administrator';
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const user = getCurrentUser();
+  if (!user) return {};
+  return {
+    'X-User-Role': user.role || '',
+    'X-User-Name': user.name || '',
+    'X-User-Email': user.email || ''
+  };
+}
+
 const AUTH_KEY = 'uno_erp_user_session';
 
 import { getApiUrl } from '@/lib/apiConfig';

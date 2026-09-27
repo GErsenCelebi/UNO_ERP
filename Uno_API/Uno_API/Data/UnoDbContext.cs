@@ -111,5 +111,184 @@ namespace Uno_API.Data
                 new User { Id = 4, Email = "deniz.evren@uno-dmc.cz", Password = "FenerliDeniz@1907", Name = "Deniz Evren", Role = "Administrator", IsActive = true, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 8, 12, 0, 0, 0), DateTimeKind.Utc) }
             );
         }
+
+        private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor? _httpContextAccessor;
+
+        public UnoDbContext(DbContextOptions<UnoDbContext> options, Microsoft.AspNetCore.Http.IHttpContextAccessor? httpContextAccessor = null) : base(options)
+        {
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var auditEntries = new List<AuditLog>();
+
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.Entity is not AuditLog && 
+                           (e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted))
+                .ToList();
+
+            var trackedEntities = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Project", "Tour", "Hotel", "Guide", "Driver", "TransportCompany", "Excursion", "ServiceCategory", "Client", "Vendor",
+                "TourService", "Booking", "Passenger"
+            };
+
+            var addedEntries = new List<(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry Entry, AuditLog Log)>();
+
+            // Resolve actor
+            string userName = "G. Ersen Çelebi";
+            string userEmail = "gersencelebi@gmail.com";
+            string userRole = "Administrator";
+            int userId = 2;
+
+            var httpContext = _httpContextAccessor?.HttpContext;
+            if (httpContext != null)
+            {
+                if (httpContext.Request.Headers.TryGetValue("X-User-Email", out var emailH) && !string.IsNullOrWhiteSpace(emailH))
+                    userEmail = emailH.ToString();
+                if (httpContext.Request.Headers.TryGetValue("X-User-Name", out var nameH) && !string.IsNullOrWhiteSpace(nameH))
+                    userName = nameH.ToString();
+                if (httpContext.Request.Headers.TryGetValue("X-User-Role", out var roleH) && !string.IsNullOrWhiteSpace(roleH))
+                    userRole = roleH.ToString();
+            }
+
+            foreach (var entry in entries)
+            {
+                var entityType = entry.Entity.GetType();
+                var entityName = entityType.Name;
+
+                if (!trackedEntities.Contains(entityName))
+                    continue;
+
+                string action = entry.State switch
+                {
+                    EntityState.Added => "CREATE",
+                    EntityState.Modified => "UPDATE",
+                    EntityState.Deleted => "DELETE",
+                    _ => ""
+                };
+
+                var primaryKey = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
+                var pkVal = primaryKey?.CurrentValue?.ToString() ?? "";
+                var entityId = pkVal;
+
+                var tourIdProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "TourId");
+                if (tourIdProp?.CurrentValue != null && (entityName == "TourService" || entityName == "Booking" || entityName == "Passenger"))
+                {
+                    entityId = tourIdProp.CurrentValue.ToString() ?? pkVal;
+                }
+
+                var nameProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "Name" || p.Metadata.Name == "TourCode" || p.Metadata.Name == "ProjectCode" || p.Metadata.Name == "Description" || p.Metadata.Name == "ServiceType");
+                var nameVal = nameProp?.CurrentValue?.ToString() ?? $"{entityName} #{pkVal}";
+
+                if (entityName == "Passenger")
+                {
+                    var fn = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "FirstName")?.CurrentValue?.ToString() ?? "";
+                    var ln = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "LastName")?.CurrentValue?.ToString() ?? "";
+                    nameVal = $"{fn} {ln}".Trim();
+                    if (string.IsNullOrEmpty(nameVal)) nameVal = $"Passenger #{pkVal}";
+                }
+
+                string summary = action switch
+                {
+                    "CREATE" => entityName switch
+                    {
+                        "TourService" => $"Added service '{nameVal}' to Tour #{entityId}",
+                        "Booking" => $"Created booking '{nameVal}' for Tour #{entityId}",
+                        "Passenger" => $"Added passenger {nameVal} to Tour #{entityId}",
+                        _ => $"Created {entityName.ToLower()} {nameVal}"
+                    },
+                    "UPDATE" => entityName switch
+                    {
+                        "TourService" => $"Updated service '{nameVal}' on Tour #{entityId}",
+                        "Booking" => $"Updated booking '{nameVal}' on Tour #{entityId}",
+                        "Passenger" => $"Updated passenger {nameVal} on Tour #{entityId}",
+                        _ => $"Updated {entityName.ToLower()} {nameVal}"
+                    },
+                    "DELETE" => entityName switch
+                    {
+                        "TourService" => $"Deleted service '{nameVal}' from Tour #{entityId}",
+                        "Booking" => $"Deleted booking '{nameVal}' from Tour #{entityId}",
+                        "Passenger" => $"Deleted passenger {nameVal} from Tour #{entityId}",
+                        _ => $"Deleted {entityName.ToLower()} {nameVal}"
+                    },
+                    _ => $"{action} {entityName}"
+                };
+
+                string? oldValuesJson = null;
+                string? newValuesJson = null;
+
+                if (entry.State == EntityState.Modified)
+                {
+                    var oldValues = new Dictionary<string, object?>();
+                    var newValues = new Dictionary<string, object?>();
+
+                    foreach (var prop in entry.Properties)
+                    {
+                        if (prop.IsModified && prop.Metadata.Name != "Id")
+                        {
+                            oldValues[prop.Metadata.Name] = prop.OriginalValue;
+                            newValues[prop.Metadata.Name] = prop.CurrentValue;
+                        }
+                    }
+
+                    if (oldValues.Count > 0)
+                    {
+                        oldValuesJson = System.Text.Json.JsonSerializer.Serialize(oldValues);
+                        newValuesJson = System.Text.Json.JsonSerializer.Serialize(newValues);
+                    }
+                }
+
+                var log = new AuditLog
+                {
+                    UserId = userId,
+                    UserName = userName,
+                    UserEmail = userEmail,
+                    UserRole = userRole,
+                    Action = action,
+                    EntityName = entityName,
+                    EntityId = entityId,
+                    Summary = summary,
+                    OldValuesJson = oldValuesJson,
+                    NewValuesJson = newValuesJson,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                auditEntries.Add(log);
+
+                if (entry.State == EntityState.Added)
+                {
+                    addedEntries.Add((entry, log));
+                }
+            }
+
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            if (auditEntries.Count > 0)
+            {
+                foreach (var (entry, log) in addedEntries)
+                {
+                    var tourIdProp = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "TourId");
+                    if (tourIdProp?.CurrentValue != null && (log.EntityName == "TourService" || log.EntityName == "Booking" || log.EntityName == "Passenger"))
+                    {
+                        log.EntityId = tourIdProp.CurrentValue.ToString() ?? log.EntityId;
+                    }
+                    else
+                    {
+                        var primaryKey = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey());
+                        if (primaryKey?.CurrentValue != null)
+                        {
+                            log.EntityId = primaryKey.CurrentValue.ToString() ?? "";
+                        }
+                    }
+                }
+
+                AuditLogs.AddRange(auditEntries);
+                await base.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
     }
 }

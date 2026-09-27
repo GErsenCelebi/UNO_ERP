@@ -29,7 +29,17 @@ namespace Uno_API.Controllers
 
             if (!string.IsNullOrWhiteSpace(entityName))
             {
-                query = query.Where(a => a.EntityName.ToLower() == entityName.Trim().ToLower());
+                var names = entityName.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                      .Select(n => n.ToLower())
+                                      .ToList();
+                if (names.Count == 1)
+                {
+                    query = query.Where(a => a.EntityName.ToLower() == names[0]);
+                }
+                else if (names.Count > 1)
+                {
+                    query = query.Where(a => names.Contains(a.EntityName.ToLower()));
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(entityId))

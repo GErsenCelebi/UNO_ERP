@@ -10,7 +10,7 @@ using Uno_API.Models;
 
 namespace Uno_API.Services
 {
-    public class TourProjectLookupService : ITourProjectLookupService
+    public partial class TourProjectLookupService : ITourProjectLookupService
     {
         private readonly UnoDbContext _context;
 
@@ -24,6 +24,18 @@ namespace Uno_API.Services
             if (string.IsNullOrWhiteSpace(query)) return null;
 
             var q = query.Trim().ToLowerInvariant();
+
+            // 0. Tour Financial & Operational Benchmarking / Multi-Tour Comparison
+            if (q.Contains("compare") || q.Contains("comparison") || q.Contains("benchmark") || 
+                q.Contains("versus") || Regex.IsMatch(q, @"\bvs\b") || q.Contains("difference") || 
+                q.Contains("compared") || q.Contains("benchmarking"))
+            {
+                var compareResponse = await HandleTourComparisonAsync(q, contextUrl);
+                if (compareResponse != null)
+                {
+                    return compareResponse;
+                }
+            }
 
             // 1. Try to resolve a specific Tour
             var tour = await ResolveTourEntityAsync(q, contextUrl);

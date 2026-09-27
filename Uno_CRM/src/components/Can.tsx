@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/lib/auth';
-import { canEditProjects, canEditTours, canEditMasterData, canViewAuditLogs, canManageUsers } from '@/lib/auth';
+import { canEditProjects, canEditTours, canEditMasterData, canViewAuditLogs, canManageUsers, canDeleteProjects, canDeleteTours } from '@/lib/auth';
 
 interface CanProps {
-  perform: 'edit-projects' | 'edit-tours' | 'edit-masterdata' | 'view-audit' | 'manage-users';
+  perform: 'edit-projects' | 'edit-tours' | 'edit-masterdata' | 'view-audit' | 'manage-users' | 'delete-projects' | 'delete-tours';
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
@@ -25,6 +25,8 @@ export default function Can({ perform, children, fallback = null }: CanProps) {
     else if (perform === 'edit-masterdata') isPermitted = canEditMasterData(role);
     else if (perform === 'view-audit') isPermitted = canViewAuditLogs(role);
     else if (perform === 'manage-users') isPermitted = canManageUsers(role);
+    else if (perform === 'delete-projects') isPermitted = canDeleteProjects(role);
+    else if (perform === 'delete-tours') isPermitted = canDeleteTours(role);
 
     setAllowed(isPermitted);
   }, [perform]);

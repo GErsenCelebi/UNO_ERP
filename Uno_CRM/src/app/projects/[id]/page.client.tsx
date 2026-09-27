@@ -1,8 +1,10 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink } from 'lucide-react';
-import AuditHistoryTab from '@/components/AuditHistoryTab';
+import { ArrowLeft, Loader2, Edit, Trash2, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink } from 'lucide-react';
+import Can from '@/components/Can';
+import { getAuthHeaders } from '@/lib/auth';
+import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
 import { formatDate, getFlightAwareUrl } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -245,6 +247,34 @@ export default function ProjectDetailPage() {
     if ((activeTab === 'finance' || activeTab === 'dashboard') && tours.length > 0) fetchAllServices();
   }, [activeTab, tours, tourStatuses]);
 
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    const confirmMsg = `Are you sure you want to delete Project "${project.projectCode}"?\n\nThis will permanently delete the project and all its ${tours.length} associated tours with their services, bookings, and passengers.\n\nThis action cannot be undone.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsDeletingProject(true);
+    try {
+      const res = await fetch(`${API}/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        alert(`Project "${project.projectCode}" was successfully deleted.`);
+        router.push('/projects');
+      } else {
+        const data = await res.json().catch(() => null);
+        alert(data?.error || 'Failed to delete project. Only Administrators are permitted to delete projects.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while deleting the project.');
+    } finally {
+      setIsDeletingProject(false);
+    }
+  };
+
   const handleUpdateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -402,7 +432,6 @@ export default function ProjectDetailPage() {
         {tabBtn('tours', 'Tours', MapPin)}
         {tabBtn('dashboard', 'Dashboard', LayoutDashboard)}
         {tabBtn('finance', 'Finance', LineChart)}
-        {tabBtn('history', 'Audit History', History)}
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -410,100 +439,120 @@ export default function ProjectDetailPage() {
         {/* ──── OVERVIEW TAB ──── */}
         {activeTab === 'overview' && (
           <div className="p-6 max-w-3xl mx-auto">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-slate-50 flex justify-between items-center">
-                <div>
-                  <h2 className="text-base md:text-lg font-bold text-slate-800">Project Information</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">View and edit project details</p>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="px-4 py-1.5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-slate-50 flex justify-between items-center">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-sm font-bold text-slate-800">Project Information</h2>
+                  <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• View and edit project details</span>
                 </div>
                 {!isEditing && (
-                  <button onClick={() => setIsEditing(true)} className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors gap-1.5">
-                    <Edit className="w-3.5 h-3.5" /> Edit
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setIsEditing(true)} className="flex items-center px-2.5 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition-colors gap-1 shadow-2xs">
+                      <Edit className="w-3 h-3" /> Edit
+                    </button>
+                    <Can perform="delete-projects">
+                      <button 
+                        onClick={handleDeleteProject} 
+                        disabled={isDeletingProject}
+                        title="Delete project (Administrators only)"
+                        className="flex items-center px-2.5 py-1 bg-rose-600 text-white rounded-md text-xs font-semibold hover:bg-rose-700 transition-colors gap-1 shadow-2xs disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3 h-3" /> {isDeletingProject ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </Can>
+                  </div>
                 )}
               </div>
 
               {isEditing && editData ? (
-                <form onSubmit={handleUpdateProject} className="p-6 space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleUpdateProject} className="p-4 space-y-3.5">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Project Code</label>
-                      <input required type="text" value={editData.projectCode} onChange={e => setEditData({ ...editData, projectCode: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Project Code</label>
+                      <input required type="text" value={editData.projectCode} onChange={e => setEditData({ ...editData, projectCode: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Client</label>
-                      <select value={editData.clientId} onChange={e => setEditData({ ...editData, clientId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Client</label>
+                      <select value={editData.clientId} onChange={e => setEditData({ ...editData, clientId: parseInt(e.target.value) })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs">
                         {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
-                    <input type="text" value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
+                    <input type="text" value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Start Date</label>
-                      <input required type="date" value={editData.startDate} onChange={e => setEditData({ ...editData, startDate: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
+                      <input required type="date" value={editData.startDate} onChange={e => setEditData({ ...editData, startDate: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">End Date</label>
-                      <input required type="date" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      <label className="block text-xs font-medium text-slate-700 mb-1">End Date</label>
+                      <input required type="date" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Estimated Budget (€)</label>
-                      <input required type="number" min="0" step="100" value={editData.approxBudget} onChange={e => setEditData({ ...editData, approxBudget: parseFloat(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Estimated Budget (€)</label>
+                      <input required type="number" min="0" step="100" value={editData.approxBudget} onChange={e => setEditData({ ...editData, approxBudget: parseFloat(e.target.value) })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                   </div>
-                  <div className="pt-2 flex gap-3">
-                    <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl">Cancel</button>
-                    <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-60">
+                  <div className="pt-1.5 flex gap-2">
+                    <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg">Cancel</button>
+                    <button type="submit" disabled={saving} className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs disabled:opacity-60">
                       {saving ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="p-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-6">
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Project Code</p>
-                      <p className="text-sm font-bold text-slate-800">{project.projectCode}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Project Code</p>
+                      <p className="text-xs font-bold text-slate-800">{project.projectCode}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Client</p>
-                      <div className="flex items-center gap-2">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Client</p>
+                      <div className="flex items-center gap-1.5">
                         {project.client?.avatarUrl && (
-                          <img src={`/${project.client.avatarUrl}`} alt="Client Logo" className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          <img src={`/${project.client.avatarUrl}`} alt="Client Logo" className="w-4 h-4 rounded-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         )}
-                        <p className="text-sm font-bold text-slate-800">{getClientName()}</p>
+                        <p className="text-xs font-bold text-slate-800">{getClientName()}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Start Date</p>
-                      <p className="text-sm text-slate-700">{formatDate(project.startDate)}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Start Date</p>
+                      <p className="text-xs text-slate-700">{formatDate(project.startDate)}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">End Date</p>
-                      <p className="text-sm text-slate-700">{formatDate(project.endDate)}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">End Date</p>
+                      <p className="text-xs text-slate-700">{formatDate(project.endDate)}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Estimated Budget</p>
-                      <p className="text-sm font-bold text-emerald-600">€{Number(project.approxBudget || 0).toLocaleString()}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Estimated Budget</p>
+                      <p className="text-xs font-bold text-emerald-600">€{Number(project.approxBudget || 0).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Tours</p>
-                      <p className="text-sm font-bold text-blue-600">{tours.length} tours</p>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Tours</p>
+                      <p className="text-xs font-bold text-blue-600">{tours.length} tours</p>
                     </div>
                   </div>
                   {project.description && (
-                    <div className="border-t border-slate-100 pt-4">
-                      <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Description</p>
-                      <p className="text-sm text-slate-700">{project.description}</p>
+                    <div className="border-t border-slate-100 pt-2.5">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Description</p>
+                      <p className="text-xs text-slate-700">{project.description}</p>
                     </div>
                   )}
                 </div>
               )}
             </div>
+
+            {/* Project Audit History Section */}
+            <EntityAuditHistorySection
+              entityName="Project"
+              entityId={project.id}
+              title={`Project ${project.projectCode} Audit History`}
+              subtitle="Chronological audit trail of all project modifications"
+            />
           </div>
         )}
 
@@ -548,8 +597,8 @@ export default function ProjectDetailPage() {
 
         {/* ──── DASHBOARD TAB ──── */}
         {activeTab === 'dashboard' && (
-          <div className="p-6 space-y-6 max-w-5xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="p-4 space-y-3 max-w-6xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
               {[
                 { label: 'Total Tours', value: tours.length, icon: MapPin, color: 'blue' },
                 { label: 'Total Pax', value: totalPax, icon: UsersIcon, color: 'purple' },
@@ -558,27 +607,31 @@ export default function ProjectDetailPage() {
                 { label: 'Actual Revenue', value: `€${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'sky' },
                 { label: 'Sale / Pax', value: `€${salesPerPax.toLocaleString()}`, icon: DollarSign, color: 'emerald' },
               ].map(kpi => (
-                <div key={kpi.label} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <div className={`w-10 h-10 rounded-xl bg-${kpi.color}-50 flex items-center justify-center mb-3`}>
-                    <kpi.icon className={`w-5 h-5 text-${kpi.color}-600`} />
+                <div key={kpi.label} className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight truncate">{kpi.label}</span>
+                    <div className={`w-5 h-5 rounded-md bg-${kpi.color}-50 flex items-center justify-center shrink-0`}>
+                      <kpi.icon className={`w-3 h-3 text-${kpi.color}-600`} />
+                    </div>
                   </div>
-                  <p className="text-sm text-slate-500 font-medium">{kpi.label}</p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1">{kpi.value}</h3>
+                  <h3 className="text-base font-bold text-slate-800 leading-tight">{kpi.value}</h3>
                 </div>
               ))}
             </div>
 
             {/* Estimated Total Revenue */}
             {project.approxBudget > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                <h3 className="font-semibold text-slate-700 mb-4">Estimated Total Revenue Progress</h3>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-500">€{totalRevenue.toLocaleString()} of €{Number(project.approxBudget).toLocaleString()}</span>
-                  <span className="font-bold text-slate-700">{Math.min(100, Math.round((totalRevenue / project.approxBudget) * 100))}%</span>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3">
+                <div className="flex justify-between items-center mb-1.5">
+                  <h3 className="text-xs font-bold text-slate-700">Estimated Total Revenue Progress</h3>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-slate-500 text-[11px]">€{totalRevenue.toLocaleString()} of €{Number(project.approxBudget).toLocaleString()}</span>
+                    <span className="font-bold text-slate-700 bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded text-[11px]">{Math.min(100, Math.round((totalRevenue / project.approxBudget) * 100))}%</span>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-3">
+                <div className="w-full bg-slate-100 rounded-full h-2">
                   <div
-                    className="h-3 rounded-full transition-all bg-sky-500"
+                    className="h-2 rounded-full transition-all bg-sky-500"
                     style={{ width: `${Math.min(100, (totalRevenue / project.approxBudget) * 100)}%` }}
                   />
                 </div>
@@ -586,15 +639,15 @@ export default function ProjectDetailPage() {
             )}
 
             {/* Tours Status Breakdown */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-              <h3 className="font-semibold text-slate-700 mb-4">Tour Status Breakdown</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3">
+              <h3 className="text-xs font-bold text-slate-700 mb-2">Tour Status Breakdown</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {tourStatuses.map(status => {
                   const count = tours.filter(t => t.tourStatusId === status.id).length;
                   return (
-                    <div key={status.id} className="bg-slate-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-bold text-slate-800">{count}</p>
-                      <p className="text-sm text-slate-500 mt-1">{status.name}</p>
+                    <div key={status.id} className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
+                      <p className="text-base font-bold text-slate-800 leading-tight">{count}</p>
+                      <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">{status.name}</p>
                     </div>
                   );
                 })}
@@ -605,42 +658,42 @@ export default function ProjectDetailPage() {
 
         {/* ──── FINANCE TAB ──── */}
         {activeTab === 'finance' && (
-          <div className="p-6 space-y-6 max-w-6xl mx-auto">
-            <div className="grid grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <p className="text-sm text-slate-500 font-medium mb-1">Estimated Budget</p>
-                <h3 className="text-2xl font-bold text-blue-600">€{Number(project.approxBudget || 0).toLocaleString()}</h3>
+          <div className="p-4 space-y-3 max-w-6xl mx-auto">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">Estimated Budget</p>
+                <h3 className="text-lg font-bold text-blue-600 leading-tight">€{Number(project.approxBudget || 0).toLocaleString()}</h3>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <p className="text-sm text-slate-500 font-medium mb-1">Total Service Cost</p>
-                <h3 className="text-2xl font-bold text-red-600">€{totalServiceCost.toLocaleString()}</h3>
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">Total Service Cost</p>
+                <h3 className="text-lg font-bold text-red-600 leading-tight">€{totalServiceCost.toLocaleString()}</h3>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <p className="text-sm text-slate-500 font-medium mb-1">Remaining</p>
-                <h3 className={`text-2xl font-bold ${(project.approxBudget || 0) - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">Remaining</p>
+                <h3 className={`text-lg font-bold leading-tight ${(project.approxBudget || 0) - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   €{((project.approxBudget || 0) - totalServiceCost).toLocaleString()}
                 </h3>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="px-6 py-3 border-b border-slate-200">
-                <h3 className="text-base font-semibold text-slate-800">Financial Performance by Tour</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Monitor costs, revenues, and profit margins</p>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden mb-3">
+              <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2 bg-gradient-to-r from-blue-50/50 to-slate-50/50">
+                <h3 className="text-xs font-bold text-slate-800">Financial Performance by Tour</h3>
+                <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• Monitor costs, revenues, and profit margins</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/80 text-slate-500 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-100">
                     <tr>
-                      <th className="px-6 py-3">Tour Code</th>
-                      <th className="px-6 py-3">Guide Name</th>
-                      <th className="px-6 py-3">Dates</th>
-                      <th className="px-6 py-3">Pax</th>
-                      <th className="px-6 py-3">Days</th>
-                      <th className="px-6 py-3">Total Cost</th>
-                      <th className="px-6 py-3">Total Sales (Extra)</th>
-                      <th className="px-6 py-3">Total Revenue</th>
-                      <th className="px-6 py-3">Profit (+/-)</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Tour Code</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Guide Name</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Dates</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Pax</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Days</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Total Cost</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Total Sales (Extra)</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Total Revenue</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Profit (+/-)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -670,16 +723,16 @@ export default function ProjectDetailPage() {
                       const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
 
                       return (
-                        <tr key={tour.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-3"><a href={`/projects/${projectId}/tours/${tour.id}`} className="font-medium text-blue-600 hover:underline">{tour.tourCode}</a></td>
-                          <td className="px-6 py-3 text-slate-600">{guideName}</td>
-                          <td className="px-6 py-3 text-slate-600 whitespace-nowrap">{formatDate(startDate)} - {formatDate(endDate)}</td>
-                          <td className="px-6 py-3 text-slate-600">{tour.pax}</td>
-                          <td className="px-6 py-3 text-slate-600">{days}</td>
-                          <td className="px-6 py-3 font-medium text-amber-600">€{cost.toLocaleString()}</td>
-                          <td className="px-6 py-3 font-medium text-blue-600">€{sales.toLocaleString()}</td>
-                          <td className="px-6 py-3 font-medium text-sky-600">€{revenue.toLocaleString()}</td>
-                          <td className={`px-6 py-3 font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        <tr key={tour.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-1.5"><a href={`/projects/${projectId}/tours/${tour.id}`} className="font-semibold text-blue-600 hover:underline">{tour.tourCode}</a></td>
+                          <td className="px-3 py-1.5 text-slate-600 truncate max-w-[120px]">{guideName}</td>
+                          <td className="px-3 py-1.5 text-slate-600 whitespace-nowrap text-[11px]">{formatDate(startDate)} - {formatDate(endDate)}</td>
+                          <td className="px-3 py-1.5 text-slate-600 font-medium">{tour.pax}</td>
+                          <td className="px-3 py-1.5 text-slate-600">{days}</td>
+                          <td className="px-3 py-1.5 font-medium text-amber-600">€{cost.toLocaleString()}</td>
+                          <td className="px-3 py-1.5 font-medium text-blue-600">€{sales.toLocaleString()}</td>
+                          <td className="px-3 py-1.5 font-medium text-sky-600">€{revenue.toLocaleString()}</td>
+                          <td className={`px-3 py-1.5 font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             €{Math.abs(profit).toLocaleString()} {profit >= 0 ? '(+)' : '(-)'}
                           </td>
                         </tr>
@@ -690,26 +743,26 @@ export default function ProjectDetailPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-3 border-b border-slate-200">
-                <h3 className="text-base font-semibold text-slate-800">All Tour Services</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Aggregated services across all tours</p>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2 bg-gradient-to-r from-blue-50/50 to-slate-50/50">
+                <h3 className="text-xs font-bold text-slate-800">All Tour Services</h3>
+                <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• Aggregated services across all tours</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/80 text-slate-500 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-100">
                     <tr>
-                      <th className="px-6 py-3">Tour</th>
-                      <th className="px-6 py-3">Service</th>
-                      <th className="px-6 py-3">Category</th>
-                      <th className="px-6 py-3">Qty</th>
-                      <th className="px-6 py-3">Unit Price</th>
-                      <th className="px-6 py-3">Total</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Tour</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Service</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Category</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Qty</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Unit Price</th>
+                      <th className="px-3 py-1.5 whitespace-nowrap">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {allServices.length === 0 ? (
-                      <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400">No services recorded yet across tours.</td></tr>
+                      <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400 text-xs">No services recorded yet across tours.</td></tr>
                     ) : [...allServices].sort((a, b) => {
                       const isRevA = a.isRevenue === true || (a.isRevenue == null && getServiceClassification(a) === 'Extra');
                       const isRevB = b.isRevenue === true || (b.isRevenue == null && getServiceClassification(b) === 'Extra');
@@ -721,13 +774,13 @@ export default function ProjectDetailPage() {
                       const badgeClass = isRev ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700';
 
                       return (
-                        <tr key={svc.id || i} className={`hover:bg-slate-50 ${colorClass}`}>
-                          <td className="px-6 py-3"><span className={`px-2 py-0.5 rounded text-xs font-medium ${badgeClass}`}>{svc.tourCode}</span></td>
-                          <td className="px-6 py-3 font-medium">{svc.description || svc.serviceName || '-'}</td>
-                          <td className="px-6 py-3"><span className={`px-2 py-0.5 rounded text-xs ${badgeClass}`}>{getServiceCategoryName(svc)}</span></td>
-                          <td className="px-6 py-3">{svc.quantity || 1}</td>
-                          <td className="px-6 py-3">€{Number(svc.unitPrice || 0).toFixed(2)}</td>
-                          <td className="px-6 py-3 font-bold">
+                        <tr key={svc.id || i} className={`hover:bg-slate-50 transition-colors ${colorClass}`}>
+                          <td className="px-3 py-1.5"><span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${badgeClass}`}>{svc.tourCode}</span></td>
+                          <td className="px-3 py-1.5 font-medium">{svc.description || svc.serviceName || '-'}</td>
+                          <td className="px-3 py-1.5"><span className={`px-1.5 py-0.5 rounded text-[10px] ${badgeClass}`}>{getServiceCategoryName(svc)}</span></td>
+                          <td className="px-3 py-1.5">{svc.quantity || 1}</td>
+                          <td className="px-3 py-1.5">€{Number(svc.unitPrice || 0).toFixed(2)}</td>
+                          <td className="px-3 py-1.5 font-bold">
                             {isRev ? '+' : '-'}€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1) || 0).toLocaleString()}
                           </td>
                         </tr>
@@ -737,13 +790,6 @@ export default function ProjectDetailPage() {
                 </table>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ──── AUDIT HISTORY TAB ──── */}
-        {activeTab === 'history' && (
-          <div className="p-6 max-w-4xl mx-auto">
-            <AuditHistoryTab entityName="Project" entityId={project.id} />
           </div>
         )}
       </div>

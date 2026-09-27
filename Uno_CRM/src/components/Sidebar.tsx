@@ -49,8 +49,52 @@ export default function Sidebar() {
         <img src="/logo.png" alt="UNO ERP Logo" className={`object-contain ${isCollapsed ? 'w-6 h-6 mr-0' : 'w-8 h-8 mr-2'}`} />
         {!isCollapsed && <span className="font-bold text-sm text-slate-800 tracking-tight whitespace-nowrap overflow-hidden">UNO ERP</span>}
       </div>
+
+      {/* Logged in User Profile & Logout (Above Dashboard) */}
+      {user && (
+        <div className={`border-b border-slate-200/80 py-2.5 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between px-2 py-1.5 bg-slate-50 hover:bg-slate-100/70 rounded-xl border border-slate-200/60 transition-colors">
+              <div className="flex items-center space-x-2 truncate">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="truncate">
+                  <div className="text-xs font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                    <span>{user.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500 truncate">
+                    <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                      user.role === 'Administrator' ? 'bg-purple-100 text-purple-700' :
+                      user.role === 'TourAdmin' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {user.role || 'User'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Log out"
+                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-1 shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogout}
+              title={`Logged in as ${user.name}. Click to Log out`}
+              className="w-full flex items-center justify-center p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
       
-      <nav className={`flex-1 py-6 space-y-1 overflow-y-auto overflow-x-hidden ${isCollapsed ? 'px-3' : 'px-4'}`}>
+      <nav className={`flex-1 py-4 space-y-1 overflow-y-auto overflow-x-hidden ${isCollapsed ? 'px-3' : 'px-4'}`}>
         {/* Dashboard */}
         {topItems.map((item) => {
           const Icon = item.icon;
@@ -172,20 +216,6 @@ export default function Sidebar() {
 
       <div className={`p-4 border-t border-slate-200 shrink-0 overflow-x-hidden ${isCollapsed ? 'px-3' : 'px-4'}`}>
         <Link
-          href="/audit-logs"
-          prefetch={false}
-          title={isCollapsed ? 'Audit Logs' : undefined}
-          className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
-            pathname?.startsWith('/audit-logs')
-              ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100'
-              : 'text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          <History className={`w-4 h-4 ${isCollapsed ? 'mr-0' : 'mr-2.5'} ${pathname?.startsWith('/audit-logs') ? 'text-blue-600' : 'text-slate-400'}`} />
-          {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">Audit Logs</span>}
-        </Link>
-
-        <Link
           href="/settings"
           prefetch={false}
           title={isCollapsed ? 'User Accounts' : undefined}
@@ -198,50 +228,6 @@ export default function Sidebar() {
           <Users className={`w-4 h-4 ${isCollapsed ? 'mr-0' : 'mr-2.5'} ${pathname?.startsWith('/settings') ? 'text-blue-600' : 'text-slate-400'}`} />
           {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">User Accounts</span>}
         </Link>
-
-        {/* Logged in User Profile & Logout */}
-        {user && (
-          <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-            {!isCollapsed ? (
-              <div className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-200/60">
-                <div className="flex items-center space-x-2 truncate">
-                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                    {user.name.charAt(0)}
-                  </div>
-                  <div className="truncate">
-                    <div className="text-xs font-semibold text-slate-800 truncate flex items-center gap-1.5">
-                      <span>{user.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-slate-500 truncate">
-                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
-                        user.role === 'Administrator' ? 'bg-purple-100 text-purple-700' :
-                        user.role === 'TourAdmin' ? 'bg-emerald-100 text-emerald-700' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>
-                        {user.role || 'User'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  title="Log out"
-                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-1 shrink-0"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleLogout}
-                title={`Logged in as ${user.name}. Click to Log out`}
-                className="w-full flex items-center justify-center p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </aside>
   );

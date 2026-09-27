@@ -4,6 +4,7 @@ import { Search, Bell, LayoutDashboard, Briefcase, Users, CalendarDays, LineChar
 import * as XLSX from 'xlsx';
 import { getCurrentUser, UserSession } from '@/lib/auth';
 import { getApiUrl } from '@/lib/apiConfig';
+import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
 
 const API = getApiUrl();
 
@@ -1051,6 +1052,36 @@ export default function MasterDataPage() {
                     })()}
               </div>
             )}
+
+            {/* Master Data Audit History Section */}
+            {(() => {
+              const entityMap: Partial<Record<TabType, { name: string; title: string }>> = {
+                hotels: { name: 'Hotel', title: 'Hotels Audit History' },
+                guides: { name: 'Guide', title: 'Guides Audit History' },
+                transports: { name: 'TransportCompany', title: 'Transport Companies Audit History' },
+                drivers: { name: 'Driver', title: 'Drivers Audit History' },
+                vendors: { name: 'Vendor', title: 'Vendors Audit History' },
+                excursions: { name: 'Excursion', title: 'Excursions Audit History' },
+                tourStatuses: { name: 'TourStatus', title: 'Tour Statuses Audit History' },
+                projectStatuses: { name: 'ProjectStatus', title: 'Project Statuses Audit History' },
+                serviceCategories: { name: 'ServiceCategory', title: 'Service Categories Audit History' },
+                clients: { name: 'Client', title: 'Clients Audit History' },
+              };
+
+              const currentEntity = entityMap[activeTab] || {
+                name: 'Hotel,Guide,Driver,TransportCompany,Vendor,Excursion,ServiceCategory,Client',
+                title: 'Master Data Audit History',
+              };
+
+              return (
+                <EntityAuditHistorySection
+                  key={currentEntity.name}
+                  entityName={currentEntity.name}
+                  title={currentEntity.title}
+                  subtitle={`Chronological audit trail of created and modified records for ${currentEntity.title.toLowerCase()}`}
+                />
+              );
+            })()}
           </div>
         </div>
 
