@@ -40,6 +40,10 @@ namespace Uno_API.Services
             public decimal HotelCostPerPaxPerNight { get; set; }
             public int HotelStayCount { get; set; }
             public string HotelNames { get; set; } = string.Empty;
+            public int GroupRooms { get; set; }
+            public int TotalRoomNights { get; set; }
+            public decimal HotelCostPerRoom { get; set; }
+            public decimal HotelCostPerRoomNight { get; set; }
 
             // Guide Remuneration
             public decimal GuideCost { get; set; }
@@ -292,6 +296,26 @@ namespace Uno_API.Services
                 hotelNames = hotelServices[0].Description;
             }
 
+            // 1b. Room Allocation & Nights
+            var roomLines = hotelServices.Where(s => s.RoomCount.HasValue && s.RoomCount.Value > 0).ToList();
+            int groupRooms = 0;
+            int totalRoomNights = 0;
+
+            if (roomLines.Count > 0)
+            {
+                var byHotel = roomLines.GroupBy(s => s.HotelId ?? (object)s.Description).ToList();
+                groupRooms = (int)Math.Round(byHotel.Average(g => g.Sum(x => x.RoomCount ?? 0)));
+                totalRoomNights = roomLines.Sum(s => (s.RoomCount ?? 0) * (s.TotalNights.HasValue && s.TotalNights.Value > 0 ? s.TotalNights.Value : Math.Max(nights, 1)));
+            }
+            if (groupRooms == 0 && pax > 0)
+            {
+                groupRooms = (int)Math.Ceiling(pax / 2.0);
+                totalRoomNights = groupRooms * Math.Max(nights, 1);
+            }
+
+            decimal hotelCostPerRoom = groupRooms > 0 ? Math.Round(totalHotelCost / groupRooms, 2) : 0;
+            decimal hotelCostPerRoomNight = totalRoomNights > 0 ? Math.Round(totalHotelCost / totalRoomNights, 2) : 0;
+
             // 2. Guide Services & Personnel
             var guideServices = services.Where(s => s.GuideId.HasValue ||
                 (s.ServiceCategory != null && s.ServiceCategory.Name.Equals("Guide", StringComparison.OrdinalIgnoreCase))).ToList();
@@ -323,7 +347,23 @@ namespace Uno_API.Services
 
             // 6. Overall Financials
             var totalExpenses = totalHotelCost + totalGuideCost + totalTransportCost + totalOtherCost + excursionCost;
-            var grossRevenue = tour.TotalFee > 0 ? tour.TotalFee : tour.BaseFee;
+            
+            decimal grossRevenue = 0;
+            if (tour.TotalFee > 0)
+            {
+                grossRevenue = tour.TotalFee;
+            }
+            else if (tour.Adults > 0 || tour.Children > 0)
+            {
+                var baseRate = tour.BaseFee > 0 ? tour.BaseFee : 250m;
+                grossRevenue = (tour.Adults * baseRate) + (tour.Children * baseRate * 0.5m);
+            }
+            else
+            {
+                var baseRate = tour.BaseFee > 0 ? tour.BaseFee : 250m;
+                grossRevenue = pax * baseRate;
+            }
+
             if (totalExcursionSales > 0) grossRevenue += totalExcursionSales;
 
             var netMargin = grossRevenue - totalExpenses;
@@ -354,6 +394,10 @@ namespace Uno_API.Services
                 HotelCostPerPaxPerNight = (pax > 0 && nights > 0) ? Math.Round(totalHotelCost / (pax * nights), 2) : 0,
                 HotelStayCount = hotelServices.Count,
                 HotelNames = hotelNames,
+                GroupRooms = groupRooms,
+                TotalRoomNights = totalRoomNights,
+                HotelCostPerRoom = hotelCostPerRoom,
+                HotelCostPerRoomNight = hotelCostPerRoomNight,
 
                 GuideCost = totalGuideCost,
                 GuideCostPerPax = pax > 0 ? Math.Round(totalGuideCost / pax, 2) : 0,

@@ -38,7 +38,27 @@ namespace Uno_API.Services
             { "excel", new List<string> { "import", "template", "spreadsheet", "rooming.xlsx", "scenario" } },
             { "governance", new List<string> { "rule 4", "rule 1", "rule 2", "rule 3", "rule 5", "separate money", "cash handover" } },
             { "rule4", new List<string> { "separate money", "cash handover", "anti netting", "excursion cash", "reimbursement" } },
-            { "kpi", new List<string> { "dashboard", "metric", "sla", "pass rate", "margin", "load factor", "executive" } }
+            { "kpi", new List<string> { "dashboard", "metric", "sla", "pass rate", "margin", "load factor", "executive" } },
+            // Turkish Bilingual Synonyms
+            { "onaylandi", new List<string> { "confirmed", "advance to", "checkpoint", "gate", "status transition" } },
+            { "onaylandı", new List<string> { "confirmed", "advance to", "checkpoint", "gate", "status transition" } },
+            { "taslak", new List<string> { "draft", "proposal", "status transition", "advance to" } },
+            { "gecis", new List<string> { "transition", "status", "advance to", "criteria" } },
+            { "geçiş", new List<string> { "transition", "status", "advance to", "criteria" } },
+            { "durum", new List<string> { "status", "checkpoint", "gate", "transition" } },
+            { "komisyon", new List<string> { "commission", "guide commission", "10%", "excursion sales", "remittance" } },
+            { "oda", new List<string> { "rooming", "room", "hotel", "passenger list", "pax", "room list" } },
+            { "otel", new List<string> { "hotel", "hotels", "stay", "accommodation", "pricing basis" } },
+            { "fiyat", new List<string> { "pricing", "rate", "cost", "hotel cost", "base fee" } },
+            { "maliyet", new List<string> { "cost", "expense", "hotel cost", "total cost" } },
+            { "aktarim", new List<string> { "import", "excel", "template", "scenario", "rooming.xlsx" } },
+            { "aktarım", new List<string> { "import", "excel", "template", "scenario", "rooming.xlsx" } },
+            { "yukle", new List<string> { "upload", "import", "excel" } },
+            { "yükle", new List<string> { "upload", "import", "excel" } },
+            { "rehber", new List<string> { "guide", "lead guide", "driver", "personnel" } },
+            { "ulasim", new List<string> { "transport", "driver", "bus", "coach", "transfer" } },
+            { "ulaşım", new List<string> { "transport", "driver", "bus", "coach", "transfer" } },
+            { "ekstra", new List<string> { "excursion", "optional", "tour sales" } }
         };
 
         public LocalKnowledgeRetrievalService(UnoDbContext context)

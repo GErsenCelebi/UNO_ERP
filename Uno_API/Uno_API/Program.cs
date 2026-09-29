@@ -23,12 +23,18 @@ builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<UnoDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null)));
 
 builder.Services.AddScoped<IStorageService, StorageService>();
 builder.Services.AddHostedService<StorageMigrationService>();
 builder.Services.AddScoped<IKnowledgeRetrievalService, LocalKnowledgeRetrievalService>();
 builder.Services.AddScoped<ITourProjectLookupService, TourProjectLookupService>();
+builder.Services.AddHttpClient<ILocalLlmService, OllamaLlmService>();
 
 // Configure CORS for Next.js UI
 builder.Services.AddCors(options =>
@@ -176,7 +182,57 @@ if (initializeDatabaseOnStartup)
             @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [NewValuesJson], [Timestamp])
               SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'CREATE', 'Booking', CAST(b.[TourId] AS nvarchar(100)), 'Created booking ''' + ISNULL(b.[ServiceType], 'Booking #' + CAST(b.[Id] AS nvarchar(10))) + ''' (' + ISNULL(b.[Status], 'Confirmed') + ') for Tour #' + CAST(b.[TourId] AS nvarchar(10)), '{\""Status\"":\""' + ISNULL(b.[Status], 'Confirmed') + '\""}', '2026-08-16 09:20:00'
               FROM [Bookings] b
-              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Booking' AND a.[EntityId] = CAST(b.[TourId] AS nvarchar(100)) AND a.[Summary] LIKE '%' + ISNULL(b.[ServiceType], 'Booking #' + CAST(b.[Id] AS nvarchar(10))) + '%');"
+              WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Booking' AND a.[EntityId] = CAST(b.[TourId] AS nvarchar(100)) AND a.[Summary] LIKE '%' + ISNULL(b.[ServiceType], 'Booking #' + CAST(b.[Id] AS nvarchar(10))) + '%');",
+            // TourExcursionSales table
+            @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TourExcursionSales')
+              CREATE TABLE [TourExcursionSales] (
+                  [Id] int IDENTITY(1,1) NOT NULL,
+                  [TourId] int NOT NULL,
+                  [PassengerId] int NOT NULL,
+                  [ExcursionId] int NOT NULL,
+                  [UnitPrice] decimal(18,2) NOT NULL DEFAULT 0,
+                  [PaymentMethod] nvarchar(50) NOT NULL DEFAULT 'Cash EUR',
+                  [IsSettled] bit NOT NULL DEFAULT 0,
+                  [CreatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(),
+                  [SettledAt] datetime2 NULL,
+                  [SettledBy] nvarchar(255) NULL,
+                  CONSTRAINT [PK_TourExcursionSales] PRIMARY KEY ([Id])
+              );
+              IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_TourExcursionSales_TourId')
+                  CREATE INDEX [IX_TourExcursionSales_TourId] ON [TourExcursionSales] ([TourId]);",
+            // Seed standard master excursions
+            @"IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'BDP-Boat' OR Name = 'Danube Cruise')
+                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Danube Cruise', 'Cruise', 20.00, 35.00, 'BDP-Boat');
+              IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'PRG-KV' OR Name = 'Karlovy Vary')
+                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Karlovy Vary', 'Full Day Tour', 35.00, 65.00, 'PRG-KV');
+              IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'VN-Hallst' OR Name = 'Hallstatt Lake')
+                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Hallstatt Lake', 'Full Day Tour', 45.00, 85.00, 'VN-Hallst');
+              IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'PRG-Folk' OR Name = 'Folklore Dinner')
+                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Folklore Dinner', 'Dinner Show', 30.00, 50.00, 'PRG-Folk');",
+            // Seed guide and initial passengers for Tour 6128 if 0 passengers exist
+            @"IF NOT EXISTS (SELECT * FROM Guides WHERE Name LIKE '%Mehmet Y%')
+                  INSERT INTO Guides (Name, Language, PhoneNumber, DailyRate) VALUES ('Mehmet Yılmaz', 'Turkish, English', '+905320000001', 120.00);
+              IF EXISTS (SELECT * FROM Tours WHERE Id = 6128) AND NOT EXISTS (SELECT * FROM TourServices WHERE TourId = 6128 AND ServiceCategoryId = 4)
+              BEGIN
+                  DECLARE @GuideId INT = (SELECT TOP 1 Id FROM Guides WHERE Name LIKE '%Mehmet Y%' ORDER BY Id);
+                  INSERT INTO TourServices (TourId, ServiceCategoryId, GuideId, Description, Quantity, UnitPrice, TotalAmount, IsRevenue)
+                  VALUES (6128, 4, @GuideId, 'Guide: Mehmet Yılmaz', 7, 120.00, 840.00, 0);
+              END;
+              IF EXISTS (SELECT * FROM Tours WHERE Id = 6128) AND NOT EXISTS (SELECT * FROM Passengers WHERE TourId = 6128)
+              BEGIN
+                  INSERT INTO Passengers (TourId, FirstName, LastName, RoomType, RoomNumber, PaxType, Gender, Pax, NationalId, PassportNo, PassportType, VisaNo, Phone, Address) VALUES
+                  (6128, 'Ahmet', 'Yıldız', 'Double', 201, 'Adult', 'Male', 1, '11111111101', 'U12345678', 'Regular', '', '+905321110001', 'Istanbul'),
+                  (6128, 'Fatma', 'Yıldız', 'Double', 201, 'Adult', 'Female', 1, '11111111102', 'U12345679', 'Regular', '', '+905321110002', 'Istanbul'),
+                  (6128, 'Can', 'Demir', 'Single', 104, 'Adult', 'Male', 1, '11111111103', 'U12345680', 'Regular', '', '+905321110003', 'Ankara'),
+                  (6128, 'Elif', 'Demir', 'Triple', 302, 'Children', 'Female', 1, '11111111104', 'U12345681', 'Regular', '', '+905321110004', 'Ankara'),
+                  (6128, 'Burak', 'Kaya', 'Double', 205, 'Adult', 'Male', 1, '11111111105', 'U12345682', 'Regular', '', '+905321110005', 'Izmir'),
+                  (6128, 'Selin', 'Kaya', 'Double', 205, 'Adult', 'Female', 1, '11111111106', 'U12345683', 'Regular', '', '+905321110006', 'Izmir'),
+                  (6128, 'Hasan', 'Arslan', 'Double', 112, 'Adult', 'Male', 1, '11111111107', 'U12345684', 'Regular', '', '+905321110007', 'Bursa'),
+                  (6128, 'Merve', 'Çelik', 'Single', 115, 'Adult', 'Female', 1, '11111111108', 'U12345685', 'Regular', '', '+905321110008', 'Antalya'),
+                  (6128, 'Oğuz', 'Şen', 'Double', 310, 'Adult', 'Male', 1, '11111111109', 'U12345686', 'Regular', '', '+905321110009', 'Adana'),
+                  (6128, 'Zeynep', 'Şen', 'Double', 310, 'Adult', 'Female', 1, '11111111110', 'U12345687', 'Regular', '', '+905321110010', 'Adana');
+                  UPDATE Tours SET Pax = 10, Adults = 9, Children = 1, GuideCommission = 10.00 WHERE Id = 6128;
+              END;"
         };
 
         foreach (var sql in patches)
@@ -210,9 +266,12 @@ app.UseCors("AllowAll");
 
 var options = new RewriteOptions()
     // Next.js RSC Data requests
+    .AddRewrite(@"^_next/data/(.*)/guide/tours/([^/]+)\.txt$", "_next/data/$1/guide/tours/1.txt", skipRemainingRules: true)
     .AddRewrite(@"^_next/data/(.*)/projects/([^/]+)/tours/([^/]+)\.txt$", "_next/data/$1/projects/1/tours/1.txt", skipRemainingRules: true)
     .AddRewrite(@"^_next/data/(.*)/projects/([^/]+)\.txt$", "_next/data/$1/projects/1.txt", skipRemainingRules: true)
     // Initial HTML page loads
+    .AddRewrite(@"^dashboard/executive/?$", "dashboard/executive.html", skipRemainingRules: true)
+    .AddRewrite(@"^guide/tours/([^/]+)/?$", "guide/tours/1.html", skipRemainingRules: true)
     .AddRewrite(@"^projects/([^/]+)/tours/([^/]+)/?$", "projects/1/tours/1.html", skipRemainingRules: true)
     .AddRewrite(@"^projects/([^/]+)/?$", "projects/1.html", skipRemainingRules: true);
 app.UseRewriter(options);

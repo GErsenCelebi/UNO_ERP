@@ -25,6 +25,13 @@ namespace Uno_API.Services
 
             var q = query.Trim().ToLowerInvariant();
 
+            // -1. Tour Financial & Quality Ranking / Analytics / Extremum Intelligence (English & Turkish)
+            var rankingResponse = await TryHandleFinancialAndQualityRankingAsync(query, q, contextUrl);
+            if (rankingResponse != null)
+            {
+                return rankingResponse;
+            }
+
             // 0. Tour Financial & Operational Benchmarking / Multi-Tour Comparison
             if (q.Contains("compare") || q.Contains("comparison") || q.Contains("benchmark") || 
                 q.Contains("versus") || Regex.IsMatch(q, @"\bvs\b") || q.Contains("difference") || 
@@ -69,8 +76,8 @@ namespace Uno_API.Services
             {
                 var codeLower = t.TourCode.ToLowerInvariant();
                 
-                // Word boundary or substring match
-                if (Regex.IsMatch(q, $@"\b{Regex.Escape(codeLower)}\b", RegexOptions.IgnoreCase) || q.Contains(codeLower))
+                // Word boundary match
+                if (Regex.IsMatch(q, $@"\b{Regex.Escape(codeLower)}\b", RegexOptions.IgnoreCase))
                 {
                     return t;
                 }
@@ -78,7 +85,7 @@ namespace Uno_API.Services
                 // Match with spaces removed: e.g. "tour 1" vs "Tour1"
                 var codeNoSpaces = codeLower.Replace(" ", "").Replace("-", "").Replace("_", "");
                 var qNoSpaces = q.Replace(" ", "").Replace("-", "").Replace("_", "");
-                if (codeNoSpaces.Length >= 4 && qNoSpaces.Contains(codeNoSpaces))
+                if (codeNoSpaces.Length >= 4 && Regex.IsMatch(qNoSpaces, $@"\b{Regex.Escape(codeNoSpaces)}\b", RegexOptions.IgnoreCase))
                 {
                     return t;
                 }
@@ -106,7 +113,10 @@ namespace Uno_API.Services
                 "tour", "tours", "project", "projects", "city", "where", "today", "guide", "hotel", "hotels",
                 "margin", "revenue", "cost", "pax", "passenger", "passengers", "manifest", "schedule", "itinerary",
                 "which", "what", "show", "tell", "summarize", "summary", "give", "list", "about", "status", "rate",
-                "breakdown", "info", "information", "detail", "details", "this", "that", "these", "those"
+                "breakdown", "info", "information", "detail", "details", "this", "that", "these", "those",
+                "nasıl", "nasil", "nedir", "durum", "durumu", "durumuna", "geçilir", "gecilir", "taslak", "taslaktan",
+                "onay", "onaylandı", "onaylandi", "neden", "hangisi", "kim", "kimdir", "kaç", "kac", "nerede", "otel",
+                "rehber", "fiyat", "maliyet", "gecis", "geçiș", "kriter", "kriterleri"
             };
 
             var tokenMatches = Regex.Matches(q, @"\b([a-z0-9_-]{3,20})\b", RegexOptions.IgnoreCase);
@@ -115,7 +125,9 @@ namespace Uno_API.Services
                 var token = m.Groups[1].Value.ToLowerInvariant();
                 if (stopWords.Contains(token)) continue;
 
-                var candidate = allTours.FirstOrDefault(t => t.TourCode.ToLowerInvariant().Contains(token));
+                var candidate = allTours.FirstOrDefault(t => 
+                    t.TourCode.Equals(token, StringComparison.OrdinalIgnoreCase) ||
+                    (token.Length >= 4 && t.TourCode.ToLowerInvariant().Equals(token)));
                 if (candidate != null) return candidate;
             }
 
