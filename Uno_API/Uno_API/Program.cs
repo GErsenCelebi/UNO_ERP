@@ -258,15 +258,19 @@ if (initializeDatabaseOnStartup)
 
                     if (seedItems != null && seedItems.Count == 495)
                     {
-                        using var tx = db.Database.BeginTransaction();
-                        db.Database.ExecuteSqlRaw("DELETE FROM [AiKnowledgeItems];");
-                        foreach (var item in seedItems)
+                        var strategy = db.Database.CreateExecutionStrategy();
+                        strategy.Execute(() =>
                         {
-                            item.Id = 0; // Let SQL Server assign clean identity or insert all 495 records
-                            db.AiKnowledgeItems.Add(item);
-                        }
-                        db.SaveChanges();
-                        tx.Commit();
+                            using var tx = db.Database.BeginTransaction();
+                            db.Database.ExecuteSqlRaw("DELETE FROM [AiKnowledgeItems];");
+                            foreach (var item in seedItems)
+                            {
+                                item.Id = 0; // Let SQL Server assign clean identity or insert all 495 records
+                                db.AiKnowledgeItems.Add(item);
+                            }
+                            db.SaveChanges();
+                            tx.Commit();
+                        });
                         Console.WriteLine($"Synchronized AiKnowledgeItems table with local baseline ({seedItems.Count} items).");
                     }
                 }

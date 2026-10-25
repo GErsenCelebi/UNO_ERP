@@ -35,7 +35,7 @@ if ($RunFolder -ne "") {
 python $suiteRunner @params
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "`n✓ All tests passed successfully." -ForegroundColor Green
+    Write-Host "`n[PASS] All tests passed successfully." -ForegroundColor Green
 } else {
-    Write-Host "`n✗ Some tests failed. Please review RUN_REPORT.md in the test run directory." -ForegroundColor Red
+    Write-Host "`n[FAIL] Some tests failed. Please review RUN_REPORT.md in the test run directory." -ForegroundColor Red
 }
