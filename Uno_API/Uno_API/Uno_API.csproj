@@ -76,11 +76,12 @@
     <MakeDir Directories="wwwroot\KB" />
     <!-- Copy exported Next.js app to wwwroot -->
     <Exec Command="xcopy /Y /E /I &quot;$(UnoCrmProjectDir)\out\*&quot; &quot;wwwroot\&quot;" />
-    <!-- Copy UserManuals markdown files to wwwroot\KB for Production AI Knowledge Base indexing -->
+    <!-- Copy UserManuals markdown files and AI KB 495-item snapshot to wwwroot\KB for Production AI Knowledge Base indexing -->
     <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\KB\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
     <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\Tours\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
     <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\Projects\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
     <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\Metadata\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
+    <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\Publish\261026\ai_knowledge_local_sync_495.json&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
     
     <PropertyGroup>
       <UnoCrmHasBuilt>true</UnoCrmHasBuilt>

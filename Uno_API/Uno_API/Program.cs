@@ -234,6 +234,48 @@ if (initializeDatabaseOnStartup)
                 Console.WriteLine("Patch statement exception ignored: " + ex.Message);
             }
         }
+
+        // Synchronize AI Bot Knowledge Base (AiKnowledgeItems) with the 495-item local baseline snapshot
+        try
+        {
+            var kbSeedCandidates = new[]
+            {
+                Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "KB", "ai_knowledge_local_sync_495.json"),
+                Path.Combine(AppContext.BaseDirectory, "wwwroot", "KB", "ai_knowledge_local_sync_495.json"),
+                Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "Publish", "261026", "ai_knowledge_local_sync_495.json")
+            };
+
+            var kbSeedPath = kbSeedCandidates.FirstOrDefault(File.Exists);
+            if (!string.IsNullOrEmpty(kbSeedPath))
+            {
+                var currentKbCount = db.AiKnowledgeItems.Count();
+                if (currentKbCount != 495)
+                {
+                    var jsonContent = File.ReadAllText(kbSeedPath, System.Text.Encoding.UTF8);
+                    var seedItems = System.Text.Json.JsonSerializer.Deserialize<List<Uno_API.Models.AiKnowledgeItem>>(
+                        jsonContent,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (seedItems != null && seedItems.Count == 495)
+                    {
+                        using var tx = db.Database.BeginTransaction();
+                        db.Database.ExecuteSqlRaw("DELETE FROM [AiKnowledgeItems];");
+                        foreach (var item in seedItems)
+                        {
+                            item.Id = 0; // Let SQL Server assign clean identity or insert all 495 records
+                            db.AiKnowledgeItems.Add(item);
+                        }
+                        db.SaveChanges();
+                        tx.Commit();
+                        Console.WriteLine($"Synchronized AiKnowledgeItems table with local baseline ({seedItems.Count} items).");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("AiKnowledgeItems baseline sync warning: " + ex.Message);
+        }
     }
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");

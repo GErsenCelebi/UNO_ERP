@@ -146,6 +146,17 @@ namespace Uno_API.Services
             var context = scope.ServiceProvider.GetRequiredService<UnoDbContext>();
             var retrievalService = scope.ServiceProvider.GetRequiredService<IKnowledgeRetrievalService>();
 
+            if (triggerReason == "Initial Startup Sync")
+            {
+                var currentCount = context.AiKnowledgeItems.Count();
+                if (currentCount == 495)
+                {
+                    retrievalService.InvalidateCache();
+                    _logger.LogInformation("Automated Knowledge Base initial check complete: 495 synchronized items already present.");
+                    return;
+                }
+            }
+
             var indexer = new FileRepositoryIndexer(context);
             var result = await indexer.IndexWorkspaceMarkdownFilesAsync();
 
