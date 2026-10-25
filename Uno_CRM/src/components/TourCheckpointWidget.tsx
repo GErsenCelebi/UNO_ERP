@@ -74,8 +74,8 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
 
   if (loading) {
     return (
-      <div className="mt-4 bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex items-center justify-center text-xs text-slate-400 gap-2">
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+      <div className="mt-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 gap-2">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400" />
         Evaluating transition checkpoints...
       </div>
     );
@@ -87,11 +87,11 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
   const targetName = STATUS_NAMES[data.targetStatusId] || `Status #${data.targetStatusId}`;
 
   return (
-    <div className="mt-2 bg-white dark:bg-[#1E293B] rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden">
+    <div className="mt-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden">
       {/* Collapsible Bar Header */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-slate-900 text-white px-3 py-1.5 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-800 transition-colors select-none"
+        className="bg-slate-900 dark:bg-slate-950 text-white px-3 py-1.5 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-800 dark:hover:bg-slate-900 transition-colors select-none"
       >
         <div className="flex items-center gap-2 min-w-0">
           {data.canAdvance ? (
@@ -137,7 +137,7 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
       </div>
 
       {message && (
-        <div className={`px-3 py-1 text-[11px] font-semibold ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-100' : 'bg-rose-50 text-rose-800 border-b border-rose-100'}`}>
+        <div className={`px-3 py-1 text-[11px] font-semibold ${message.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-b border-emerald-100 dark:border-emerald-800' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-b border-rose-100 dark:border-rose-800'}`}>
           {message.text}
         </div>
       )}

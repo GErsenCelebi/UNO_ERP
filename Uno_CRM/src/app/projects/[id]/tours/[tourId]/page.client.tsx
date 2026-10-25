@@ -2094,11 +2094,11 @@ export default function TourDetailPage() {
               
               {/* LEFT COLUMN: Main Tour Information & Financial Breakdown (Expanded to 8-9 Cols) */}
               <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="px-4 py-1.5 border-b border-slate-100 bg-gradient-to-r from-indigo-50/70 to-slate-50 flex justify-between items-center">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <div className="px-4 py-1.5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-indigo-50/70 to-slate-50 dark:from-slate-800/80 dark:to-slate-900 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-bold text-slate-800">Tour Information</h2>
-                      <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• View and edit tour details</span>
+                      <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Tour Information</h2>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-400 font-normal hidden sm:inline">• View and edit tour details</span>
                     </div>
                     {!isEditing && (
                       <div className="flex items-center gap-2">
@@ -2123,46 +2123,46 @@ export default function TourDetailPage() {
                     <form onSubmit={handleUpdateTour} className="p-6 space-y-5">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Tour Code</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Tour Code</label>
                           <input required type="text" value={editData.tourCode} onChange={e => setEditData({ ...editData, tourCode: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Destination</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Destination</label>
                           <input required type="text" value={editData.destination} onChange={e => setEditData({ ...editData, destination: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Adults</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Adults</label>
                           <input required type="number" min="1" value={editData.adults === ('' as any) ? '' : (editData.adults || 1)} onChange={e => setEditData({ ...editData, adults: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Children</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Children</label>
                           <input required type="number" min="0" value={editData.children === ('' as any) ? '' : (editData.children || 0)} onChange={e => setEditData({ ...editData, children: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Infants</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Infants</label>
                           <input required type="number" min="0" value={editData.infants === ('' as any) ? '' : (editData.infants || 0)} onChange={e => setEditData({ ...editData, infants: e.target.value === '' ? ('' as any) : parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Base Fee (€)</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Base Fee (€)</label>
                           <input required type="number" min="0" value={editData.baseFee === ('' as any) ? '' : (editData.baseFee || 0)} onChange={e => setEditData({ ...editData, baseFee: e.target.value === '' ? ('' as any) : parseFloat(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" />
                         </div>
                       </div>
                       
                       {editData.baseFee > 0 && (
-                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex justify-between items-center text-sm">
-                          <span className="font-semibold text-emerald-800">Dynamic Total (Adults + 50% Children)</span>
-                          <span className="font-bold text-emerald-900 text-lg">€{(((editData.adults || 0) * (editData.baseFee || 0)) + ((editData.children || 0) * (editData.baseFee || 0) * 0.5)).toLocaleString()}</span>
+                        <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-100 dark:border-emerald-800/60 p-4 rounded-xl flex justify-between items-center text-sm">
+                          <span className="font-semibold text-emerald-800 dark:text-emerald-300">Dynamic Total (Adults + 50% Children)</span>
+                          <span className="font-bold text-emerald-900 dark:text-emerald-200 text-lg">€{(((editData.adults || 0) * (editData.baseFee || 0)) + ((editData.children || 0) * (editData.baseFee || 0) * 0.5)).toLocaleString()}</span>
                         </div>
                       )}
-                      <div id="flight-info-section" className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 space-y-4">
-                        <h3 className="text-sm font-semibold text-slate-800 mb-2">Flight Information</h3>
+                      <div id="flight-info-section" className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mt-4 space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">Flight Information</h3>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
-                              <label className="block text-sm font-medium text-slate-700">Arrival Flight</label>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Arrival Flight</label>
                               {editData.arrivalFlight && (
                                 <a
                                   href={getFlightAwareUrl(editData.arrivalFlight)}
@@ -2176,21 +2176,21 @@ export default function TourDetailPage() {
                                 </a>
                               )}
                             </div>
-                            <input type="text" value={editData.arrivalFlight || ''} onChange={e => setEditData({ ...editData, arrivalFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1234" />
+                            <input type="text" value={editData.arrivalFlight || ''} onChange={e => setEditData({ ...editData, arrivalFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" placeholder="e.g. TK 1234" />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival Date & Time</label>
-                            <input required type="datetime-local" value={editData.arrivalDate} onChange={e => setEditData({ ...editData, arrivalDate: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Arrival Date & Time</label>
+                            <input required type="datetime-local" value={editData.arrivalDate} onChange={e => setEditData({ ...editData, arrivalDate: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Arrival City/Airport</label>
-                            <input type="text" value={editData.arrivalAirport || ''} onChange={e => setEditData({ ...editData, arrivalAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. IST / Istanbul" />
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Arrival City/Airport</label>
+                            <input type="text" value={editData.arrivalAirport || ''} onChange={e => setEditData({ ...editData, arrivalAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" placeholder="e.g. IST / Istanbul" />
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-4 mt-4">
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
-                              <label className="block text-sm font-medium text-slate-700">Departure Flight</label>
+                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Departure Flight</label>
                               {editData.departureFlight && (
                                 <a
                                   href={getFlightAwareUrl(editData.departureFlight)}
@@ -2204,22 +2204,22 @@ export default function TourDetailPage() {
                                 </a>
                               )}
                             </div>
-                            <input type="text" value={editData.departureFlight || ''} onChange={e => setEditData({ ...editData, departureFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. TK 1235" />
+                            <input type="text" value={editData.departureFlight || ''} onChange={e => setEditData({ ...editData, departureFlight: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" placeholder="e.g. TK 1235" />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure Date & Time</label>
-                            <input required type="datetime-local" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Departure Date & Time</label>
+                            <input required type="datetime-local" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Departure City/Airport</label>
-                            <input type="text" value={editData.departureAirport || ''} onChange={e => setEditData({ ...editData, departureAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="e.g. BUD / Budapest" />
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Departure City/Airport</label>
+                            <input type="text" value={editData.departureAirport || ''} onChange={e => setEditData({ ...editData, departureAirport: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" placeholder="e.g. BUD / Budapest" />
                           </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-4">
                         {projects.length > 0 && (
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Project</label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Assigned Project</label>
                             <select value={editData.projectId} onChange={e => setEditData({ ...editData, projectId: parseInt(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800">
                               {projects.map((p: any) => (
                                 <option key={p.id} value={p.id}>{p.projectCode} — {p.description || p.client?.name || `Project #${p.id}`}</option>
@@ -2229,7 +2229,7 @@ export default function TourDetailPage() {
                         )}
                         {tourStatuses.length > 0 && (
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Status</label>
                             <select 
                               value={editData.tourStatusId} 
                               onChange={e => setEditData({ ...editData, tourStatusId: parseInt(e.target.value) })} 
@@ -2252,7 +2252,7 @@ export default function TourDetailPage() {
                           </div>
                         )}
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Assigned Guide</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Assigned Guide</label>
                           <select value={editData.guideId || ''} onChange={e => setEditData({ ...editData, guideId: e.target.value })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-800">
                             <option value="">No Guide Assigned</option>
                             {guides.map((g: any) => (
@@ -2261,7 +2261,7 @@ export default function TourDetailPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1.5">Guide Commission (%)</label>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Guide Commission (%)</label>
                           <input 
                             type="number" 
                             step="0.1" 
@@ -2276,7 +2276,7 @@ export default function TourDetailPage() {
                       </div>
 
                       <div className="pt-2 flex gap-3">
-                        <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl">Cancel</button>
+                        <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl">Cancel</button>
                         <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-60">
                           {saving ? 'Saving...' : 'Save Changes'}
                         </button>
@@ -2321,7 +2321,7 @@ export default function TourDetailPage() {
                       <div className="grid grid-cols-5 gap-4">
                         <div>
                           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Tour Code</p>
-                          <p className="text-xs font-bold text-slate-800">{tour.tourCode}</p>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{tour.tourCode}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Assigned Project</p>
@@ -2332,7 +2332,7 @@ export default function TourDetailPage() {
                         </div>
                         <div>
                           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Destination</p>
-                          <p className="text-xs font-bold text-slate-800 flex items-center truncate" title={tour.destination}>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center truncate" title={tour.destination}>
                             <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-400 shrink-0" />
                             <span className="truncate">{tour.destination}</span>
                           </p>
@@ -2340,7 +2340,7 @@ export default function TourDetailPage() {
                         <div className="min-w-0">
                           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Status</p>
                           <div className="flex items-center gap-1 flex-nowrap whitespace-nowrap min-w-0">
-                            <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">
+                            <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">
                               {tour.tourStatus?.name || 'N/A'}
                             </span>
                             {missingMainServices.length > 0 && (
@@ -2363,7 +2363,7 @@ export default function TourDetailPage() {
                             const allGuides = Array.from(new Set(svcGuides));
                             const guideText = allGuides.length > 0 ? allGuides.join(', ') : 'Unassigned';
                             return (
-                              <p className="text-xs font-bold text-slate-700 flex items-center gap-1 truncate" title={`Guide(s): ${guideText}`}>
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1 truncate" title={`Guide(s): ${guideText}`}>
                                 <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                 <span className="truncate">{guideText}</span>
                               </p>
@@ -2379,11 +2379,11 @@ export default function TourDetailPage() {
                             const totalPax = pivot.totalPax;
 
                             return (
-                              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
+                              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs bg-white dark:bg-slate-900">
                                   {/* HEADER BAR (CLICKABLE TO COLLAPSE/EXPAND TABLE) */}
                                   <div 
                                     onClick={() => setIsBreakdownTableExpanded(prev => !prev)}
-                                    className="p-3 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 text-xs font-bold cursor-pointer hover:bg-slate-800 transition-colors select-none"
+                                    className="p-3 bg-slate-900 dark:bg-slate-950 text-white flex flex-wrap items-center justify-between gap-3 text-xs font-bold cursor-pointer hover:bg-slate-800 dark:hover:bg-slate-900 transition-colors select-none"
                                   >
                                     <div className="flex items-center gap-2">
                                       <button type="button" className="p-0.5 rounded bg-slate-800 text-slate-300">
@@ -2437,16 +2437,16 @@ export default function TourDetailPage() {
                                           <col className="w-[15%]" />
                                           <col className="w-[15%]" />
                                         </colgroup>
-                                        <thead className="bg-slate-100/90 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200">
+                                        <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] border-b border-slate-200 dark:border-slate-700">
                                           <tr>
                                             <th className="px-3 py-2">Service Category / Line Item</th>
                                             <th className="px-2.5 py-2">Details</th>
-                                            <th className="px-2.5 py-2 text-right bg-rose-50/60 text-rose-700">Cost / Pax</th>
-                                            <th className="px-2.5 py-2 text-right bg-sky-50/60 text-sky-700">Revenue / Pax</th>
+                                            <th className="px-2.5 py-2 text-right bg-rose-50/60 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300">Cost / Pax</th>
+                                            <th className="px-2.5 py-2 text-right bg-sky-50/60 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300">Revenue / Pax</th>
                                           </tr>
                                         </thead>
 
-                                        <tbody className="divide-y divide-slate-100">
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                           {pivot.groups.length === 0 ? (
                                             <tr>
                                               <td colSpan={4} className="p-6 text-center text-slate-400">
@@ -2477,12 +2477,12 @@ export default function TourDetailPage() {
                                                 <React.Fragment key={group.groupName}>
                                                   <tr
                                                     onClick={() => togglePivotRow(group.groupName)}
-                                                    className="bg-slate-50/90 hover:bg-slate-100 transition-colors cursor-pointer select-none font-bold text-slate-800 text-[11px] border-b border-slate-200/80"
+                                                    className="bg-slate-50/90 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer select-none font-bold text-slate-800 dark:text-slate-200 text-[11px] border-b border-slate-200/80 dark:border-slate-700"
                                                   >
                                                     <td className="px-3 py-2 truncate">
                                                       <div className="flex items-center gap-1.5">
                                                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
-                                                        <span className="flex items-center gap-1.5 text-slate-900 font-extrabold truncate">
+                                                        <span className="flex items-center gap-1.5 text-slate-900 dark:text-slate-100 font-extrabold truncate">
                                                           {group.groupName.includes('Hotel') && <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
                                                           {group.groupName.includes('Transport') && <Truck className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
                                                           {group.groupName.includes('Excursion') && <Compass className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
@@ -2490,7 +2490,7 @@ export default function TourDetailPage() {
                                                           {group.groupName.includes('Revenue') && <DollarSign className="w-3.5 h-3.5 text-sky-600 shrink-0" />}
                                                           <span className="truncate">{group.groupName}</span>
                                                         </span>
-                                                        <span className="bg-white border border-slate-200 text-slate-500 px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0">
+                                                        <span className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0">
                                                           {group.items.length}
                                                         </span>
                                                       </div>
@@ -2500,7 +2500,7 @@ export default function TourDetailPage() {
                                                       {group.bucketName}
                                                     </td>
 
-                                                    <td className="px-2.5 py-2 text-right font-bold text-rose-700 bg-rose-50/40 whitespace-nowrap">
+                                                    <td className="px-2.5 py-2 text-right font-bold text-rose-700 dark:text-rose-300 bg-rose-50/40 dark:bg-rose-950/30 whitespace-nowrap">
                                                       {group.totalCost > 0 ? (
                                                         <div>
                                                           <span>€{group.costPerPax.toFixed(2)}</span>
@@ -2509,7 +2509,7 @@ export default function TourDetailPage() {
                                                       ) : '—'}
                                                     </td>
 
-                                                    <td className="px-2.5 py-2 text-right font-bold text-sky-700 bg-sky-50/40 whitespace-nowrap">
+                                                    <td className="px-2.5 py-2 text-right font-bold text-sky-700 dark:text-sky-300 bg-sky-50/40 dark:bg-sky-950/30 whitespace-nowrap">
                                                       {group.totalRevenue > 0 ? (
                                                         <div>
                                                           <span>€{group.revenuePerPax.toFixed(2)}</span>
@@ -2528,19 +2528,19 @@ export default function TourDetailPage() {
                                                       : (item.revenue > 0 ? Math.round((item.revenue / totalPax) * 100) / 100 : 0);
 
                                                     return (
-                                                      <tr key={item.id} className="hover:bg-slate-50 transition-colors text-[11px] bg-white border-b border-slate-100">
-                                                        <td className="px-3 py-1.5 pl-6 text-slate-700 font-medium">
+                                                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors text-[11px] bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+                                                        <td className="px-3 py-1.5 pl-6 text-slate-700 dark:text-slate-200 font-medium">
                                                           <div className="flex items-center gap-1.5">
                                                             <span className="w-1 h-1 rounded-full bg-slate-400 shrink-0"></span>
                                                             <span className="break-words leading-tight">{item.description}</span>
                                                           </div>
                                                         </td>
 
-                                                        <td className="px-2.5 py-1.5 text-slate-500 text-[10px] leading-snug break-words whitespace-normal">
+                                                        <td className="px-2.5 py-1.5 text-slate-500 dark:text-slate-400 text-[10px] leading-snug break-words whitespace-normal">
                                                           {item.detailsText || `${item.qty} x €${item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                         </td>
 
-                                                        <td className="px-2.5 py-1.5 text-right text-rose-600 font-semibold bg-rose-50/20 whitespace-nowrap">
+                                                        <td className="px-2.5 py-1.5 text-right text-rose-600 dark:text-rose-300 font-semibold bg-rose-50/20 dark:bg-rose-950/20 whitespace-nowrap">
                                                           {item.cost !== 0 ? (
                                                             <div>
                                                               <span className={item.cost < 0 ? "text-emerald-600 font-bold" : ""}>
@@ -2553,7 +2553,7 @@ export default function TourDetailPage() {
                                                           ) : '—'}
                                                         </td>
 
-                                                        <td className="px-2.5 py-1.5 text-right text-sky-600 font-semibold bg-sky-50/20 whitespace-nowrap">
+                                                        <td className="px-2.5 py-1.5 text-right text-sky-600 dark:text-sky-300 font-semibold bg-sky-50/20 dark:bg-sky-950/20 whitespace-nowrap">
                                                           {item.revenue > 0 ? (
                                                             <div>
                                                               <span>€{itemRevenuePerPax.toFixed(2)}</span>
@@ -2570,7 +2570,7 @@ export default function TourDetailPage() {
                                           )}
                                         </tbody>
 
-                                        <tfoot className="bg-slate-900 text-white font-bold text-[11px]">
+                                        <tfoot className="bg-slate-900 dark:bg-slate-950 text-white font-bold text-[11px]">
                                           <tr>
                                             <td className="px-3 py-2 uppercase tracking-wider text-slate-200">
                                               Total ({totalPax} Pax)
@@ -2600,11 +2600,11 @@ export default function TourDetailPage() {
                           })()}
                         </div>
                       </div>
-                      <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
-                          <div className="flex flex-wrap items-center gap-y-1.5 text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                      <div className="border-t border-slate-100 dark:border-slate-800 pt-4 grid grid-cols-2 gap-4">
+                          <div className="flex flex-wrap items-center gap-y-1.5 text-sm text-slate-600 dark:text-slate-300 bg-slate-50/80 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-700/80">
                             <PlaneLanding className="w-4 h-4 mr-2 text-indigo-500 shrink-0" />
                             <span className="font-medium mr-1.5">Arrival:</span> {new Date(tour.arrivalDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                            {tour.arrivalAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.arrivalAirport}</span>}
+                            {tour.arrivalAirport && <span className="ml-2 text-xs bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded-full font-bold">{tour.arrivalAirport}</span>}
                             {tour.arrivalFlight && (
                               <div className="inline-flex items-center gap-1.5 ml-2">
                                 <a
@@ -2612,7 +2612,7 @@ export default function TourDetailPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title={`Check ${tour.arrivalFlight} live status on FlightAware`}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-white border border-indigo-200/80 dark:border-indigo-800 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
                                 >
                                   <span>{tour.arrivalFlight}</span>
                                   <ExternalLink className="w-3 h-3 text-indigo-500 group-hover:text-indigo-700 shrink-0" />
@@ -2627,7 +2627,7 @@ export default function TourDetailPage() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         title={`View ${tour.arrivalFlight} on FlightRadar24 live radar`}
-                                        className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-[10px] font-bold tracking-tight transition-all cursor-pointer shadow-2xs"
+                                        className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-md text-[10px] font-bold tracking-tight transition-all cursor-pointer shadow-2xs"
                                       >
                                         Radar24
                                       </a>
@@ -2638,10 +2638,10 @@ export default function TourDetailPage() {
                               </div>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-y-1.5 text-sm text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                          <div className="flex flex-wrap items-center gap-y-1.5 text-sm text-slate-600 dark:text-slate-300 bg-slate-50/80 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-700/80">
                             <PlaneTakeoff className="w-4 h-4 mr-2 text-indigo-500 shrink-0" />
                             <span className="font-medium mr-1.5">Departure:</span> {new Date(tour.endDate).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                            {tour.departureAirport && <span className="ml-2 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold">{tour.departureAirport}</span>}
+                            {tour.departureAirport && <span className="ml-2 text-xs bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded-full font-bold">{tour.departureAirport}</span>}
                             {tour.departureFlight && (
                               <div className="inline-flex items-center gap-1.5 ml-2">
                                 <a
@@ -2649,7 +2649,7 @@ export default function TourDetailPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title={`Check ${tour.departureFlight} live status on FlightAware`}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-white border border-indigo-200/80 dark:border-indigo-800 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
                                 >
                                   <span>{tour.departureFlight}</span>
                                   <ExternalLink className="w-3 h-3 text-indigo-500 group-hover:text-indigo-700 shrink-0" />
@@ -2664,7 +2664,7 @@ export default function TourDetailPage() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         title={`View ${tour.departureFlight} on FlightRadar24 live radar`}
-                                        className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-[10px] font-bold tracking-tight transition-all cursor-pointer shadow-2xs"
+                                        className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-md text-[10px] font-bold tracking-tight transition-all cursor-pointer shadow-2xs"
                                       >
                                         Radar24
                                       </a>
@@ -2718,21 +2718,21 @@ export default function TourDetailPage() {
                         const hotelReservationsList = Object.values(hotelReservationsMap);
 
                         return (
-                          <div className="border-t border-slate-100 pt-5 mt-4">
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-indigo-600" />
                                 Hotel Reservations & Stays
                               </h3>
-                              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
                                 {hotelReservationsList.length} {hotelReservationsList.length === 1 ? 'Hotel' : 'Hotels'}
                               </span>
                             </div>
 
                             {hotelReservationsList.length > 0 ? (
-                              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-                                <table className="w-full text-xs text-left text-slate-700">
-                                  <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] border-b border-slate-200">
+                              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                <table className="w-full text-xs text-left text-slate-700 dark:text-slate-300">
+                                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-200 dark:border-slate-700">
                                     <tr>
                                       <th className="px-4 py-2.5">Hotel Name</th>
                                       <th className="px-4 py-2.5">Dates / Stay</th>
@@ -2740,24 +2740,24 @@ export default function TourDetailPage() {
                                       <th className="px-4 py-2.5">Room Details</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-slate-100 bg-white">
+                                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                                     {hotelReservationsList.map((hRes, idx) => (
-                                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="px-4 py-3 font-bold text-slate-800">
+                                      <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-100">
                                           <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                                               <Building2 className="w-3.5 h-3.5" />
                                             </div>
                                             <span>{hRes.hotelName}</span>
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600 font-medium">
+                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">
                                           <div className="flex items-center gap-1.5">
                                             <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
                                             <span>{hRes.startDate} – {hRes.endDate}</span>
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600 font-medium">
+                                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">
                                           <div className="flex items-center gap-1.5">
                                             <MapPin className="w-3.5 h-3.5 text-rose-400" />
                                             <span>{hRes.city}</span>
@@ -2767,7 +2767,7 @@ export default function TourDetailPage() {
                                           {hRes.rooms.length > 0 ? (
                                             <div className="flex flex-wrap gap-1">
                                               {hRes.rooms.map((r, rIdx) => (
-                                                <span key={rIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">
+                                                <span key={rIdx} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent dark:border-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">
                                                   {r}
                                                 </span>
                                               ))}
@@ -2782,7 +2782,7 @@ export default function TourDetailPage() {
                                 </table>
                               </div>
                             ) : (
-                              <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-400 dark:text-slate-500">
                                 No hotel reservations attached to this tour yet.
                               </div>
                             )}
@@ -2796,9 +2796,9 @@ export default function TourDetailPage() {
               </div>
 
               {/* RIGHT COLUMN (3-4 Cols): Compact Operational Remarks & Special Tour Notes Card */}
-              <div className="lg:col-span-4 xl:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-3 sticky top-6">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <div className="lg:col-span-4 xl:col-span-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3 sticky top-6">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                     <FileText className="w-4 h-4 text-blue-600" />
                     Operational Remarks
                   </h3>
@@ -2827,7 +2827,7 @@ export default function TourDetailPage() {
                   rows={10}
                   value={tourNotes}
                   onChange={e => setTourNotes(e.target.value)}
-                  className="w-full p-3 bg-slate-50/90 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400 font-medium leading-relaxed resize-y"
+                  className="w-full p-3 bg-slate-50/90 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium leading-relaxed resize-y"
                   placeholder="Type special tour instructions, client preferences, operational remarks, guide notes, flight arrival/departure details..."
                 />
               </div>
@@ -3009,7 +3009,7 @@ export default function TourDetailPage() {
                           </button>
 
                           {isHotelDiscountExpanded && (
-                            <div className="p-4 space-y-3 bg-white/90">
+                            <div className="p-4 space-y-3 bg-white/90 dark:bg-slate-900/90">
                               <div className="flex items-center justify-between">
                                 <h5 className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
                                   <Tag className="w-3.5 h-3.5 text-emerald-600" /> Hotel Discounts & Deductions
@@ -3086,7 +3086,7 @@ export default function TourDetailPage() {
                           </button>
 
                           {isAccommodationExpanded && (
-                            <div className="p-4 space-y-4 bg-white/90">
+                            <div className="p-4 space-y-4 bg-white/90 dark:bg-slate-900/90">
                               {/* 2. Guide Accommodation */}
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between">
@@ -3392,11 +3392,11 @@ export default function TourDetailPage() {
 
           return (
             <div className="p-6 max-w-6xl mx-auto">
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-slate-50 flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-blue-50 to-slate-50 dark:from-slate-800/80 dark:to-slate-900 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-base md:text-lg font-bold text-slate-800">Passenger & Booking List</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">Manage passengers, rooming assignments, and booking details for this tour.</p>
+                    <h2 className="text-base md:text-lg font-bold text-slate-800 dark:text-slate-100">Passenger & Booking List</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage passengers, rooming assignments, and booking details for this tour.</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     {/* Search Bar */}
@@ -3407,7 +3407,7 @@ export default function TourDetailPage() {
                         placeholder="Search passengers..."
                         value={bookingSearchQuery}
                         onChange={(e) => setBookingSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all text-slate-800"
+                        className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all text-slate-800 dark:text-slate-100"
                       />
                       {bookingSearchQuery && (
                         <button onClick={() => setBookingSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -3437,7 +3437,7 @@ export default function TourDetailPage() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase text-xs">
                       <tr>
                         <th className="px-4 py-3">Room #</th>
                         <th className="px-4 py-3">Pax Type</th>
@@ -3455,7 +3455,7 @@ export default function TourDetailPage() {
                         <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {filteredPassengers.length === 0 ? (
                         <tr>
                           <td colSpan={14} className="px-4 py-8 text-center text-slate-400">
@@ -3464,7 +3464,7 @@ export default function TourDetailPage() {
                         </tr>
                       ) : (
                         filteredPassengers.map((p: any) => (
-                        <tr key={p.id} className="hover:bg-slate-50">
+                        <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                           <td className="px-4 py-3 font-extrabold text-blue-700">
                             {p.roomNumber ? `Room ${p.roomNumber}` : '-'}
                           </td>
@@ -3484,17 +3484,17 @@ export default function TourDetailPage() {
                               );
                             })()}
                           </td>
-                          <td className="px-4 py-3 font-semibold text-slate-800">{p.firstName || '-'}</td>
-                          <td className="px-4 py-3 font-semibold text-slate-800">{p.lastName || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.gender || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.nationalId || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.passportNo || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.passportType || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.visaNo || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.phone || '-'}</td>
-                          <td className="px-4 py-3 text-slate-600">{formatDate(p.dateOfBirth, '-')}</td>
-                          <td className="px-4 py-3 text-slate-600 font-medium">{p.roomType || '-'}</td>
-                          <td className="px-4 py-3 text-center font-medium text-slate-700">{p.pax}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{p.firstName || '-'}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{p.lastName || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.gender || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.nationalId || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.passportNo || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.passportType || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.visaNo || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{p.phone || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(p.dateOfBirth, '-')}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">{p.roomType || '-'}</td>
+                          <td className="px-4 py-3 text-center font-medium text-slate-700 dark:text-slate-200">{p.pax}</td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button onClick={() => openEditPassengerModal(p)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit Passenger">
@@ -3509,9 +3509,9 @@ export default function TourDetailPage() {
                       ))
                     )}
                   </tbody>
-                  <tfoot className="bg-slate-50 border-t border-slate-200 text-xs font-bold text-slate-700">
+                  <tfoot className="bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300">
                     <tr>
-                      <td colSpan={2} className="px-4 py-3 text-slate-800 font-extrabold">
+                      <td colSpan={2} className="px-4 py-3 text-slate-800 dark:text-slate-100 font-extrabold">
                         Total ({totalGuestRooms} Rooms)
                       </td>
                       <td colSpan={9} className="px-4 py-3 text-slate-500 text-right font-medium">
@@ -3535,14 +3535,14 @@ export default function TourDetailPage() {
               </div>
 
               {/* Total Room Types Summary Card at the end of Booking Tab */}
-              <div className="p-5 bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/30 border-t border-slate-200">
+              <div className="p-5 bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/30 dark:from-slate-900 dark:via-slate-800/40 dark:to-slate-900 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="p-1.5 bg-blue-600 text-white rounded-lg shadow-xs">
                         <BedDouble className="w-4 h-4" />
                       </span>
-                      <h3 className="font-extrabold text-sm text-slate-800 tracking-tight">
+                      <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-100 tracking-tight">
                         Total Room Types & Capacity Summary
                       </h3>
                       <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">
@@ -3560,11 +3560,11 @@ export default function TourDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="px-3.5 py-1.5 bg-white border border-blue-200 rounded-xl shadow-xs text-center">
+                    <div className="px-3.5 py-1.5 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-900/60 rounded-xl shadow-xs text-center">
                       <p className="text-[10px] uppercase font-bold text-slate-400">Total Rooms</p>
                       <p className="text-base font-black text-blue-700">{totalGuestRooms} <span className="text-xs font-semibold text-slate-500">Rooms</span></p>
                     </div>
-                    <div className="px-3.5 py-1.5 bg-white border border-indigo-200 rounded-xl shadow-xs text-center">
+                    <div className="px-3.5 py-1.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/60 rounded-xl shadow-xs text-center">
                       <p className="text-[10px] uppercase font-bold text-slate-400">Total Guests</p>
                       <p className="text-base font-black text-indigo-700">{totalGuestPax} <span className="text-xs font-semibold text-slate-500">Pax</span></p>
                     </div>
@@ -3573,7 +3573,7 @@ export default function TourDetailPage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
                   {/* Double Rooms */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                  <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs">
                     <div className="flex items-center justify-between text-slate-500 mb-1">
                       <span className="text-[11px] font-bold text-slate-700">Double</span>
                       <BedDouble className="w-3.5 h-3.5 text-blue-500" />
@@ -3583,7 +3583,7 @@ export default function TourDetailPage() {
                   </div>
 
                   {/* Twin Rooms */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                  <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs">
                     <div className="flex items-center justify-between text-slate-500 mb-1">
                       <span className="text-[11px] font-bold text-slate-700">Twin</span>
                       <BedDouble className="w-3.5 h-3.5 text-indigo-500" />
@@ -3593,7 +3593,7 @@ export default function TourDetailPage() {
                   </div>
 
                   {/* Single Rooms */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                  <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs">
                     <div className="flex items-center justify-between text-slate-500 mb-1">
                       <span className="text-[11px] font-bold text-slate-700">Single</span>
                       <BedSingle className="w-3.5 h-3.5 text-emerald-500" />
@@ -3603,7 +3603,7 @@ export default function TourDetailPage() {
                   </div>
 
                   {/* Triple Rooms */}
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                  <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xs">
                     <div className="flex items-center justify-between text-slate-500 mb-1">
                       <span className="text-[11px] font-bold text-slate-700">Triple</span>
                       <Users className="w-3.5 h-3.5 text-purple-500" />
@@ -3613,7 +3613,7 @@ export default function TourDetailPage() {
                   </div>
 
                   {/* Extra Beds (Children) */}
-                  <div className="p-3 bg-white border border-amber-200/80 rounded-xl shadow-xs bg-amber-50/20">
+                  <div className="p-3 bg-white dark:bg-slate-800 border border-amber-200/80 dark:border-amber-900/60 rounded-xl shadow-xs bg-amber-50/20 dark:bg-amber-950/20">
                     <div className="flex items-center justify-between text-amber-700 mb-1">
                       <span className="text-[11px] font-bold">Extra Bed</span>
                       <span className="text-xs">🧒</span>
@@ -3623,7 +3623,7 @@ export default function TourDetailPage() {
                   </div>
 
                   {/* Infant Cots */}
-                  <div className="p-3 bg-white border border-rose-200/80 rounded-xl shadow-xs bg-rose-50/20">
+                  <div className="p-3 bg-white dark:bg-slate-800 border border-rose-200/80 dark:border-rose-900/60 rounded-xl shadow-xs bg-rose-50/20 dark:bg-rose-950/20">
                     <div className="flex items-center justify-between text-rose-700 mb-1">
                       <span className="text-[11px] font-bold">Baby Cot</span>
                       <span className="text-xs">👶</span>
@@ -4014,10 +4014,10 @@ export default function TourDetailPage() {
             <div className="p-3 sm:p-4 max-w-[1680px] w-full mx-auto space-y-3">
               
               {/* ──── TOP HEADER SLIM STRIP ──── */}
-              <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs px-3.5 py-2 space-y-2">
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs px-3.5 py-2 space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                       <CalendarDays className="w-4 h-4 text-blue-600" />
                       <span>Tour Calendar & Operating Itinerary</span>
                     </h2>
@@ -4031,7 +4031,7 @@ export default function TourDetailPage() {
                 </div>
 
                 {/* ──── SINGLE-LINE CONTROLS (FILTER + DAY JUMP + VIEW MODE) ──── */}
-                <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2.5 text-xs overflow-x-auto scrollbar-thin">
+                <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2.5 text-xs overflow-x-auto scrollbar-thin">
                   {/* Left: Filter Chips */}
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter:</span>
@@ -4042,7 +4042,7 @@ export default function TourDetailPage() {
                         className={`px-2 py-0.5 rounded-md text-[11px] font-semibold capitalize transition-all shrink-0 ${
                           calendarFilter === filterKey
                             ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                       >
                         {filterKey === 'all' ? `All Items (${daysWithData.length} Days)` : filterKey}
@@ -4050,7 +4050,7 @@ export default function TourDetailPage() {
                     ))}
                   </div>
 
-                  <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+                  <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
 
                   {/* Middle: Day Jump Bar */}
                   <div className="flex items-center gap-1 shrink overflow-x-auto scrollbar-none">
@@ -4058,7 +4058,7 @@ export default function TourDetailPage() {
                     <button
                       onClick={() => setSelectedCalendarDay(null)}
                       className={`px-2 py-0.5 rounded-md font-semibold text-[11px] shrink-0 transition-all ${
-                        selectedCalendarDay === null ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        selectedCalendarDay === null ? 'bg-slate-900 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
                       All Days ({totalDays})
@@ -4072,7 +4072,7 @@ export default function TourDetailPage() {
                             ? 'bg-blue-600 text-white font-bold shadow-2xs'
                             : d.isToday
                             ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
-                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80'
+                            : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700'
                         }`}
                       >
                         <span className="font-bold">Day {d.dayIndex}</span>
@@ -4081,14 +4081,14 @@ export default function TourDetailPage() {
                     ))}
                   </div>
 
-                  <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+                  <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
 
                   {/* Right: View Mode Toggle */}
-                  <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-md border border-slate-200/80 shrink-0">
+                  <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md border border-slate-200/80 dark:border-slate-700 shrink-0">
                     <button
                       onClick={() => setCalendarViewMode('grid')}
                       className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
-                        calendarViewMode === 'grid' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                        calendarViewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       Day Grid View
@@ -4096,7 +4096,7 @@ export default function TourDetailPage() {
                     <button
                       onClick={() => setCalendarViewMode('timeline')}
                       className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
-                        calendarViewMode === 'timeline' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                        calendarViewMode === 'timeline' ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       Timeline Itinerary
@@ -4107,7 +4107,7 @@ export default function TourDetailPage() {
 
               {/* ──── DAY-BY-DAY CALENDAR VIEW (GRID OR TIMELINE) ──── */}
               {filteredDays.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-slate-400 dark:text-slate-500">
                   <CalendarDays className="w-10 h-10 mx-auto mb-2 opacity-40 text-slate-400" />
                   <p className="font-medium">No days match the active filter</p>
                   <button onClick={() => { setCalendarFilter('all'); setSelectedCalendarDay(null); }} className="mt-3 text-xs text-blue-600 font-bold hover:underline">
@@ -4120,7 +4120,7 @@ export default function TourDetailPage() {
                   {filteredDays.map(day => (
                     <div
                       key={day.dayIndex}
-                      className={`bg-white rounded-2xl border transition-all shadow-xs hover:shadow-md flex flex-col overflow-hidden ${
+                      className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all shadow-xs hover:shadow-md flex flex-col overflow-hidden ${
                         day.isToday
                           ? 'border-blue-400 ring-2 ring-blue-100'
                           : day.isArrivalDay
@@ -4131,7 +4131,7 @@ export default function TourDetailPage() {
                       }`}
                     >
                       {/* Day Card Header */}
-                      <div className="p-3 bg-gradient-to-r from-slate-50 to-indigo-50/30 border-b border-slate-100 flex items-center justify-between gap-2">
+                      <div className="p-3 bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-slate-800/80 dark:to-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className={`px-2 py-0.5 rounded-lg text-xs font-black shrink-0 ${
                             day.isArrivalDay
@@ -4143,7 +4143,7 @@ export default function TourDetailPage() {
                             Day {day.dayIndex}
                           </span>
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-slate-800 block truncate">
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block truncate">
                               {day.dayOfWeek}, {day.formattedDate}
                             </span>
                           </div>
@@ -4170,10 +4170,10 @@ export default function TourDetailPage() {
                       </div>
 
                       {/* Prominent City Banner for this Day */}
-                      <div className="px-3 py-1.5 bg-violet-50/90 border-b border-violet-100 flex items-center justify-between gap-1">
+                      <div className="px-3 py-1.5 bg-violet-50/90 dark:bg-violet-950/40 border-b border-violet-100 dark:border-violet-900/60 flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 min-w-0">
                           <MapPin className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-                          <span className="text-xs font-bold text-violet-950 truncate" title={`Day ${day.dayIndex} City: ${day.city}`}>
+                          <span className="text-xs font-bold text-violet-950 dark:text-violet-200 truncate" title={`Day ${day.dayIndex} City: ${day.city}`}>
                             {day.city}
                           </span>
                         </div>
@@ -4253,7 +4253,7 @@ export default function TourDetailPage() {
 
                         {/* 2. HOTEL RESERVATIONS */}
                         {day.hotels.map((hotel, hIdx) => (
-                          <div key={hIdx} className="p-2.5 rounded-xl border border-violet-200/80 bg-white space-y-1.5 shadow-2xs">
+                          <div key={hIdx} className="p-2.5 rounded-xl border border-violet-200/80 dark:border-violet-900/60 bg-white dark:bg-slate-800 space-y-1.5 shadow-2xs">
                             <div className="flex items-center justify-between gap-1">
                               <div className="flex items-center gap-1.5 font-bold text-slate-900 min-w-0">
                                 <div className="w-5 h-5 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
@@ -4528,7 +4528,7 @@ export default function TourDetailPage() {
       {/* ──── ADD / EDIT PASSENGER MODAL ──── */}
       {isPassengerModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-xl shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
               <h2 className="text-base font-bold text-slate-800">{editingPassengerId ? 'Edit' : 'Add'} Passenger / Booking</h2>
               <button onClick={() => setIsPassengerModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
@@ -4645,7 +4645,7 @@ export default function TourDetailPage() {
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex gap-3">
-                <button type="button" onClick={() => setIsPassengerModalOpen(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl">Cancel</button>
+                <button type="button" onClick={() => setIsPassengerModalOpen(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl">Cancel</button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-60">
                   {saving ? 'Saving...' : (editingPassengerId ? 'Update Passenger' : 'Add Passenger')}
                 </button>
@@ -4658,7 +4658,7 @@ export default function TourDetailPage() {
       {/* ──── ADD SERVICE MODAL ──── */}
       {isServiceModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className={`bg-white rounded-2xl w-full ${serviceType === 'Hotel' ? 'max-w-4xl' : 'max-w-xl'} shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto`}>
+          <div className={`bg-white dark:bg-slate-900 rounded-2xl w-full ${serviceType === 'Hotel' ? 'max-w-4xl' : 'max-w-xl'} shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto`}>
             <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
               <h2 className="text-lg font-bold text-slate-800">{editingServiceId ? 'Edit' : 'Add'} {serviceType} Service</h2>
               <button onClick={() => setIsServiceModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
@@ -5577,7 +5577,7 @@ export default function TourDetailPage() {
                           const newAssignments = [...newService.guideAssignments];
                           newAssignments[index].guideId = e.target.value;
                           setNewService({ ...newService, guideAssignments: newAssignments });
-                        }} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm">
+                        }} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100">
                           <option value="">Select a Guide...</option>
                           {guides.map((g: any) => <option key={g.id} value={g.id}>{g.name} — {g.language} (€{g.dailyRate}/day)</option>)}
                         </select>
@@ -5593,7 +5593,7 @@ export default function TourDetailPage() {
                             newAssignments[index].startDate = newStart;
                             newAssignments[index].quantity = qty;
                             setNewService({ ...newService, guideAssignments: newAssignments });
-                          }} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                          }} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1.5">End Date</label>
@@ -5604,7 +5604,7 @@ export default function TourDetailPage() {
                             newAssignments[index].endDate = newEnd;
                             newAssignments[index].quantity = qty;
                             setNewService({ ...newService, guideAssignments: newAssignments });
-                          }} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                          }} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" />
                         </div>
                       </div>
 
@@ -5624,7 +5624,7 @@ export default function TourDetailPage() {
                               const newAssignments = [...newService.guideAssignments];
                               newAssignments[index].unitPrice = parseFloat(e.target.value);
                               setNewService({ ...newService, guideAssignments: newAssignments });
-                            }} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" />
+                            }} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" />
                           </div>
                         </div>
                       )}
@@ -5869,11 +5869,11 @@ export default function TourDetailPage() {
                       <input required type="number" min="0" value={newService.pax ?? (tour?.pax || 0)} onChange={e => setNewService({ ...newService, pax: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Children</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Children</label>
                       <input required type="number" min="0" value={newService.children ?? (tour?.children || 0)} onChange={e => setNewService({ ...newService, children: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Infants</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Infants</label>
                       <input required type="number" min="0" value={newService.infants ?? (tour?.infants || 0)} onChange={e => setNewService({ ...newService, infants: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm" />
                     </div>
                   </div>
@@ -5913,7 +5913,7 @@ export default function TourDetailPage() {
               )}
 
               <div className="pt-2 flex gap-3">
-                <button type="button" onClick={() => setIsServiceModalOpen(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl">Cancel</button>
+                <button type="button" onClick={() => setIsServiceModalOpen(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl">Cancel</button>
                 <button type="submit" className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm">{editingServiceId ? 'Save Changes' : 'Add Service'}</button>
               </div>
             </form>
@@ -5941,11 +5941,11 @@ export default function TourDetailPage() {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">Invoices</h2>
-                  <p className="text-sm text-slate-500 mt-1">Manage generated invoices and supplier attachments for this tour</p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Invoices</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage generated invoices and supplier attachments for this tour</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setIsAttachModalOpen(true)} className="flex items-center px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors gap-1.5 border border-slate-200 shadow-2xs">
+                  <button onClick={() => setIsAttachModalOpen(true)} className="flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs">
                     <Paperclip className="w-4 h-4 text-slate-500" /> Attach Invoice File
                   </button>
                   <button onClick={handleCreateNewInvoice} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5 shadow-2xs">
@@ -5955,18 +5955,18 @@ export default function TourDetailPage() {
               </div>
 
               {invoices.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-10 text-center">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <h3 className="text-base font-medium text-slate-800 mb-1">No generated invoices yet</h3>
+                  <h3 className="text-base font-medium text-slate-800 dark:text-slate-100 mb-1">No generated invoices yet</h3>
                   <p className="text-slate-500 text-xs mb-4">Create an in-app invoice for this tour.</p>
                   <button onClick={handleCreateNewInvoice} className="inline-flex items-center px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-medium transition-colors">
                     Create Invoice
                   </button>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase text-xs">
                       <tr>
                         <th className="px-6 py-4">Invoice No</th>
                         <th className="px-6 py-4">Name</th>
@@ -5976,14 +5976,14 @@ export default function TourDetailPage() {
                         <th className="px-6 py-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {invoices.map(inv => (
                         <tr key={inv.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 font-medium text-slate-800">{inv.invoiceNo}</td>
-                          <td className="px-6 py-4 text-slate-600">{inv.name}</td>
-                          <td className="px-6 py-4 text-slate-600">{formatDate(inv.date)}</td>
-                          <td className="px-6 py-4 text-slate-600">{inv.toCompany || '-'}</td>
-                          <td className="px-6 py-4 font-semibold text-slate-800">{getCurrencySymbol(inv.currency)}{inv.totalAmount.toLocaleString()}</td>
+                          <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-100">{inv.invoiceNo}</td>
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{inv.name}</td>
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{formatDate(inv.date)}</td>
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{inv.toCompany || '-'}</td>
+                          <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">{getCurrencySymbol(inv.currency)}{inv.totalAmount.toLocaleString()}</td>
                           <td className="px-6 py-4 text-right">
                             <button onClick={() => setCurrentInvoice(inv)} className="text-blue-600 hover:text-blue-800 font-medium text-xs px-3 py-1 bg-blue-50 rounded-lg mr-2">View</button>
                             <button onClick={() => { setEditingInvoiceData(inv); setIsInvoiceEditing(true); setCurrentInvoice(null); }} className="text-slate-500 hover:text-slate-800 p-1.5"><Edit className="w-4 h-4" /></button>
@@ -5997,10 +5997,10 @@ export default function TourDetailPage() {
               )}
 
               {/* Attached Invoice Files Subsection */}
-              <div className="pt-6 border-t border-slate-200">
+              <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                       <Paperclip className="w-4 h-4 text-blue-600" /> Attached Invoice Files & Receipts
                     </h3>
                     <p className="text-xs text-slate-500">External supplier invoices, excursion receipts, and documents attached to this tour</p>
@@ -6011,7 +6011,7 @@ export default function TourDetailPage() {
                 </div>
 
                 {attachments.length === 0 ? (
-                  <div className="bg-slate-50 rounded-xl border border-dashed border-slate-300 p-6 text-center">
+                  <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center">
                     <Paperclip className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="text-slate-500 text-xs font-medium mb-2">No files attached to this tour yet.</p>
                     <button onClick={() => setIsAttachModalOpen(true)} className="inline-flex items-center px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors">
@@ -6019,7 +6019,7 @@ export default function TourDetailPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
                     {attachments.map(att => (
                       <div key={att.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                         <div className="flex items-center gap-3">
@@ -6027,7 +6027,7 @@ export default function TourDetailPage() {
                             {att.fileName.endsWith('.pdf') ? 'PDF' : att.fileName.match(/\.(png|jpg|jpeg)$/i) ? 'IMG' : 'DOC'}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                               {att.fileName}
                             </p>
                             {att.description && <p className="text-xs text-slate-500 mt-0.5">{att.description}</p>}
@@ -6068,7 +6068,7 @@ export default function TourDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm print:border-none print:shadow-none">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm print:border-none print:shadow-none">
               {/* Toolbar */}
               <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center rounded-t-2xl print:hidden">
                 <button onClick={() => { setIsInvoiceEditing(false); setCurrentInvoice(null); }} className="flex items-center text-sm font-medium text-slate-600 hover:text-slate-800">
@@ -6228,7 +6228,7 @@ export default function TourDetailPage() {
                   </div>
                 ) : (
                   // View / Print Layout
-                  <div className="bg-white">
+                  <div className="bg-white dark:bg-slate-900">
                     {/* Header */}
                     <div className="flex justify-between items-start mb-16">
                       <div>
@@ -6269,7 +6269,7 @@ export default function TourDetailPage() {
                     {!currentInvoice.isSimpleView && (
                       <div className="mb-12">
                         <table className="w-full text-sm text-left">
-                          <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 uppercase text-xs">
                             <tr>
                               <th className="px-4 py-3 rounded-l-lg">Description</th>
                               <th className="px-4 py-3 text-center">Qty</th>
@@ -6277,7 +6277,7 @@ export default function TourDetailPage() {
                               <th className="px-4 py-3 text-right rounded-r-lg">Total</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100">
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {(typeof currentInvoice.linesJson === 'string' ? JSON.parse(currentInvoice.linesJson) : currentInvoice.linesJson).map((line: any, idx: number) => (
                               <tr key={idx}>
                                 <td className="px-4 py-3 font-medium text-slate-800">{line.description}</td>
@@ -6311,7 +6311,7 @@ export default function TourDetailPage() {
       {/* Attach Invoice File Modal */}
       {isAttachModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                 <Paperclip className="w-5 h-5 text-blue-600" /> Attach Invoice File
