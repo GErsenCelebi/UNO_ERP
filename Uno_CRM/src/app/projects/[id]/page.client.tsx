@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Trash2, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Trash2, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink, TrendingUp, Scale } from 'lucide-react';
 import Can from '@/components/Can';
 import { getAuthHeaders } from '@/lib/auth';
 import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
@@ -57,22 +57,22 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
       {...attributes}
       {...listeners}
       onClick={() => window.location.href = `/projects/${projectId}/tours/${tour.id}`}
-      className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm cursor-pointer mb-3 hover:shadow-md hover:border-blue-300 transition-all group"
+      className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm cursor-pointer mb-3 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all group"
     >
       <div className="flex justify-between items-start mb-2">
-        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{tour.tourCode}</span>
-        <div className="flex items-center text-slate-500 text-xs font-medium">
+        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded-md">{tour.tourCode}</span>
+        <div className="flex items-center text-slate-500 dark:text-slate-400 text-xs font-medium">
           <UsersIcon className="w-3 h-3 mr-1" /> {tour.pax} Pax
         </div>
       </div>
-      <h4 className="font-bold text-slate-800 text-sm mb-1 flex items-center">
+      <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1 flex items-center">
         <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-400" /> {tour.destination}
       </h4>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
         {formatDate(tour.arrivalDate)} — {formatDate(tour.endDate)}
       </p>
-      <div className="space-y-1.5 border-t border-slate-100 pt-3">
-        <div className="flex items-center text-xs text-slate-600">
+      <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3">
+        <div className="flex items-center text-xs text-slate-600 dark:text-slate-300">
           <PlaneLanding className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
           {tour.arrivalFlight && tour.arrivalFlight !== 'TBD' ? (
             <a
@@ -81,7 +81,7 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               title={`Track ${tour.arrivalFlight} live on FlightAware`}
-              className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate cursor-pointer"
+              className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate cursor-pointer"
             >
               <span>{tour.arrivalFlight}</span>
               <ExternalLink className="w-2.5 h-2.5 shrink-0" />
@@ -90,7 +90,7 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
             <span className="truncate text-slate-400">{tour.arrivalFlight || 'TBD'}</span>
           )}
         </div>
-        <div className="flex items-center text-xs text-slate-600">
+        <div className="flex items-center text-xs text-slate-600 dark:text-slate-300">
           <PlaneTakeoff className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
           {tour.departureFlight && tour.departureFlight !== 'TBD' ? (
             <a
@@ -99,7 +99,7 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               title={`Track ${tour.departureFlight} live on FlightAware`}
-              className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate cursor-pointer"
+              className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate cursor-pointer"
             >
               <span>{tour.departureFlight}</span>
               <ExternalLink className="w-2.5 h-2.5 shrink-0" />
@@ -117,10 +117,10 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
 function DroppableColumn({ status, tours, projectId }: { status: TourStatus; tours: Tour[]; projectId: number }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${status.id}` });
   return (
-    <div className={`kanban-column flex flex-col rounded-2xl w-80 shrink-0 border overflow-hidden h-full transition-colors ${isOver ? 'border-blue-400 bg-blue-50/60' : 'bg-slate-100/50 border-slate-200'}`}>
-      <div className="p-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center sticky top-0 z-10">
-        <h3 className="font-bold text-slate-700">{status.name}</h3>
-        <span className="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-full">{tours.length}</span>
+    <div className={`kanban-column flex flex-col rounded-2xl w-80 shrink-0 border overflow-hidden h-full transition-colors ${isOver ? 'border-blue-400 bg-blue-50/60 dark:bg-blue-950/40' : 'bg-slate-100/50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'}`}>
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/80 flex justify-between items-center sticky top-0 z-10">
+        <h3 className="font-bold text-slate-700 dark:text-slate-200">{status.name}</h3>
+        <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded-full">{tours.length}</span>
       </div>
       <div ref={setNodeRef} className="flex-1 overflow-y-auto p-3 min-h-[80px]">
         <SortableContext id={`col-${status.id}`} items={tours.map(t => t.id.toString())} strategy={verticalListSortingStrategy}>
@@ -387,7 +387,7 @@ export default function ProjectDetailPage() {
     <button
       onClick={() => setActiveTab(tab)}
       className={`flex items-center px-5 py-3 font-medium text-sm border-b-2 transition-colors ${
-        activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+        activeTab === tab ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
       }`}
     >
       <Icon className="w-4 h-4 mr-2" /> {label}
@@ -398,36 +398,36 @@ export default function ProjectDetailPage() {
   if (!project) return <div className="p-8 text-center text-slate-500">Project not found</div>;
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 w-full">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B0F19] w-full">
       {/* Header */}
-      <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 shrink-0 shadow-sm z-10">
-        <button onClick={() => router.push('/projects')} className="mr-4 p-2 hover:bg-slate-100 rounded-full transition-colors">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+      <header className="h-16 bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-slate-800 flex items-center px-6 shrink-0 shadow-sm z-10">
+        <button onClick={() => router.push('/projects')} className="mr-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             {project.client?.avatarUrl && (
-              <img src={`/${project.client.avatarUrl}`} alt="Client Logo" className="w-8 h-8 rounded-full object-cover border border-slate-200" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src={`/${project.client.avatarUrl}`} alt="Client Logo" className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             )}
-            <h1 className="font-bold text-lg text-slate-800">{project.projectCode}</h1>
+            <h1 className="font-bold text-lg text-slate-800 dark:text-white">{project.projectCode}</h1>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {getClientName()} | {formatDate(project.startDate)} → {formatDate(project.endDate)} | Est. Budget: €{Number(project.approxBudget || 0).toLocaleString()}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {getClientName()} | {formatDate(project.startDate)} → {formatDate(project.endDate)} | Est. Total Revenue: €{Number(project.approxBudget || 0).toLocaleString()}
           </p>
         </div>
         <div className="flex gap-2">
-          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">{tours.length} Tours</span>
+          <span className="bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-semibold">{tours.length} Tours</span>
           {totalServiceCost > 0 && (
-            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-semibold">Cost: €{totalServiceCost.toLocaleString()}</span>
+            <span className="bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-sm font-semibold">Cost: €{totalServiceCost.toLocaleString()}</span>
           )}
           {totalRevenue > 0 && (
-            <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold">Revenue: €{totalRevenue.toLocaleString()}</span>
+            <span className="bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-sm font-semibold">Revenue: €{totalRevenue.toLocaleString()}</span>
           )}
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 bg-white px-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F172A] px-6">
         {tabBtn('overview', 'Overview', Briefcase)}
         {tabBtn('tours', 'Tours', MapPin)}
         {tabBtn('dashboard', 'Dashboard', LayoutDashboard)}
@@ -439,11 +439,11 @@ export default function ProjectDetailPage() {
         {/* ──── OVERVIEW TAB ──── */}
         {activeTab === 'overview' && (
           <div className="p-6 max-w-3xl mx-auto">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="px-4 py-1.5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-slate-50 flex justify-between items-center">
+            <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+              <div className="px-4 py-1.5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-blue-50 to-slate-50 dark:from-slate-900/60 dark:to-slate-800/60 flex justify-between items-center">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-sm font-bold text-slate-800">Project Information</h2>
-                  <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• View and edit project details</span>
+                  <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Project Information</h2>
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500 font-normal hidden sm:inline">• View and edit project details</span>
                 </div>
                 {!isEditing && (
                   <div className="flex items-center gap-2">
@@ -468,36 +468,36 @@ export default function ProjectDetailPage() {
                 <form onSubmit={handleUpdateProject} className="p-4 space-y-3.5">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Project Code</label>
-                      <input required type="text" value={editData.projectCode} onChange={e => setEditData({ ...editData, projectCode: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Project Code</label>
+                      <input required type="text" value={editData.projectCode} onChange={e => setEditData({ ...editData, projectCode: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Client</label>
-                      <select value={editData.clientId} onChange={e => setEditData({ ...editData, clientId: parseInt(e.target.value) })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs">
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Client</label>
+                      <select value={editData.clientId} onChange={e => setEditData({ ...editData, clientId: parseInt(e.target.value) })} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs">
                         {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
-                    <input type="text" value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                    <input type="text" value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
-                      <input required type="date" value={editData.startDate} onChange={e => setEditData({ ...editData, startDate: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date</label>
+                      <input required type="date" value={editData.startDate} onChange={e => setEditData({ ...editData, startDate: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">End Date</label>
-                      <input required type="date" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">End Date</label>
+                      <input required type="date" value={editData.endDate} onChange={e => setEditData({ ...editData, endDate: e.target.value })} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Estimated Budget (€)</label>
-                      <input required type="number" min="0" step="100" value={editData.approxBudget} onChange={e => setEditData({ ...editData, approxBudget: parseFloat(e.target.value) })} className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Estimated Total Revenue (€)</label>
+                      <input required type="number" min="0" step="100" value={editData.approxBudget} onChange={e => setEditData({ ...editData, approxBudget: parseFloat(e.target.value) })} className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs" />
                     </div>
                   </div>
                   <div className="pt-1.5 flex gap-2">
-                    <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg">Cancel</button>
+                    <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
                     <button type="submit" disabled={saving} className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs disabled:opacity-60">
                       {saving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -507,39 +507,39 @@ export default function ProjectDetailPage() {
                 <div className="p-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3.5">
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Project Code</p>
-                      <p className="text-xs font-bold text-slate-800">{project.projectCode}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Project Code</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{project.projectCode}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Client</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Client</p>
                       <div className="flex items-center gap-1.5">
                         {project.client?.avatarUrl && (
                           <img src={`/${project.client.avatarUrl}`} alt="Client Logo" className="w-4 h-4 rounded-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         )}
-                        <p className="text-xs font-bold text-slate-800">{getClientName()}</p>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{getClientName()}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Start Date</p>
-                      <p className="text-xs text-slate-700">{formatDate(project.startDate)}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Start Date</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{formatDate(project.startDate)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">End Date</p>
-                      <p className="text-xs text-slate-700">{formatDate(project.endDate)}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">End Date</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{formatDate(project.endDate)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Estimated Budget</p>
-                      <p className="text-xs font-bold text-emerald-600">€{Number(project.approxBudget || 0).toLocaleString()}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Estimated Total Revenue</p>
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">€{Number(project.approxBudget || 0).toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Tours</p>
-                      <p className="text-xs font-bold text-blue-600">{tours.length} tours</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Tours</p>
+                      <p className="text-xs font-bold text-blue-600 dark:text-blue-400">{tours.length} tours</p>
                     </div>
                   </div>
                   {project.description && (
-                    <div className="border-t border-slate-100 pt-2.5">
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Description</p>
-                      <p className="text-xs text-slate-700">{project.description}</p>
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2.5">
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Description</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300">{project.description}</p>
                     </div>
                   )}
                 </div>
@@ -659,22 +659,116 @@ export default function ProjectDetailPage() {
         {/* ──── FINANCE TAB ──── */}
         {activeTab === 'finance' && (
           <div className="p-4 space-y-3 max-w-6xl mx-auto">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">Estimated Budget</p>
-                <h3 className="text-lg font-bold text-blue-600 leading-tight">€{Number(project.approxBudget || 0).toLocaleString()}</h3>
+            {/* 5 Financial KPI Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {/* 1. Estimated Total Revenue (Target) */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight truncate">Est. Total Revenue</span>
+                    <div className="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+                      <DollarSign className="w-3 h-3 text-blue-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-blue-600 leading-tight">€{Number(project.approxBudget || 0).toLocaleString()}</h3>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 truncate">Contract Target Budget</p>
               </div>
-              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">Total Service Cost</p>
-                <h3 className="text-lg font-bold text-red-600 leading-tight">€{totalServiceCost.toLocaleString()}</h3>
+
+              {/* 2. Actual Revenue (Realized) */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight truncate">Actual Revenue</span>
+                    <div className="w-5 h-5 rounded-md bg-sky-50 flex items-center justify-center shrink-0">
+                      <DollarSign className="w-3 h-3 text-sky-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-sky-600 leading-tight">€{totalRevenue.toLocaleString()}</h3>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 truncate">
+                  {project.approxBudget ? Math.round((totalRevenue / project.approxBudget) * 100) : 0}% Realized to date
+                </p>
               </div>
-              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">Remaining</p>
-                <h3 className={`text-lg font-bold leading-tight ${(project.approxBudget || 0) - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  €{((project.approxBudget || 0) - totalServiceCost).toLocaleString()}
-                </h3>
+
+              {/* 3. Total Service Cost (Expenses) */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight truncate">Total Service Cost</span>
+                    <div className="w-5 h-5 rounded-md bg-red-50 flex items-center justify-center shrink-0">
+                      <LineChart className="w-3 h-3 text-red-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-red-600 leading-tight">€{totalServiceCost.toLocaleString()}</h3>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 truncate">Across {tours.length} Tours</p>
+              </div>
+
+              {/* 4. Projected Net Profit */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight truncate">Projected Net Profit</span>
+                    <div className="w-5 h-5 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
+                      <TrendingUp className="w-3 h-3 text-emerald-600" />
+                    </div>
+                  </div>
+                  <h3 className={`text-base sm:text-lg font-bold leading-tight ${(project.approxBudget || 0) - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {(project.approxBudget || 0) - totalServiceCost >= 0 ? '+' : ''}€{((project.approxBudget || 0) - totalServiceCost).toLocaleString()}
+                  </h3>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 truncate">
+                  {project.approxBudget ? (((project.approxBudget - totalServiceCost) / project.approxBudget) * 100).toFixed(1) : 0}% Projected Margin
+                </p>
+              </div>
+
+              {/* 5. Current Net Balance (Actual Realized P/L) */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight truncate">Current Net Balance</span>
+                    <div className={`w-5 h-5 rounded-md ${totalRevenue - totalServiceCost >= 0 ? 'bg-emerald-50' : 'bg-amber-50'} flex items-center justify-center shrink-0`}>
+                      <Scale className={`w-3 h-3 ${totalRevenue - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-amber-600'}`} />
+                    </div>
+                  </div>
+                  <h3 className={`text-base sm:text-lg font-bold leading-tight ${totalRevenue - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {totalRevenue - totalServiceCost >= 0 ? '+' : '-'}€{Math.abs(totalRevenue - totalServiceCost).toLocaleString()}
+                  </h3>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 truncate">Actual Revenue − Cost</p>
               </div>
             </div>
+
+            {/* Revenue Progress & Realization Bar */}
+            {project.approxBudget > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3">
+                <div className="flex justify-between items-center mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-slate-800">Estimated Total Revenue Progress</h3>
+                    <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">• Actual Revenue vs Estimated Contract Target</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-slate-500 text-[11px]">
+                      €{totalRevenue.toLocaleString()} of €{Number(project.approxBudget).toLocaleString()}
+                    </span>
+                    <span className="font-bold text-slate-700 bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded text-[11px]">
+                      {Math.min(100, Math.round((totalRevenue / project.approxBudget) * 100))}%
+                    </span>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all bg-sky-500"
+                    style={{ width: `${Math.min(100, (totalRevenue / project.approxBudget) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center mt-1 text-[10px] text-slate-400">
+                  <span className="text-sky-600 font-medium">Realized Revenue: €{totalRevenue.toLocaleString()}</span>
+                  <span className="text-slate-500 font-medium">Unrealized Target: €{Math.max(0, (project.approxBudget || 0) - totalRevenue).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden mb-3">
               <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2 bg-gradient-to-r from-blue-50/50 to-slate-50/50">
@@ -739,6 +833,21 @@ export default function ProjectDetailPage() {
                       )
                     })}
                   </tbody>
+                  <tfoot className="bg-slate-50/90 font-bold text-slate-800 border-t-2 border-slate-200 text-xs">
+                    <tr>
+                      <td className="px-3 py-2 text-blue-600">Total ({tours.length} Tours)</td>
+                      <td className="px-3 py-2 text-slate-400">-</td>
+                      <td className="px-3 py-2 text-slate-400">-</td>
+                      <td className="px-3 py-2">{totalPax}</td>
+                      <td className="px-3 py-2 text-slate-400">-</td>
+                      <td className="px-3 py-2 text-amber-600">€{totalServiceCost.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-blue-600">€{totalSales.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-sky-600">€{totalRevenue.toLocaleString()}</td>
+                      <td className={`px-3 py-2 font-bold ${totalRevenue - totalServiceCost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {totalRevenue - totalServiceCost >= 0 ? '+' : '-'}€{Math.abs(totalRevenue - totalServiceCost).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>

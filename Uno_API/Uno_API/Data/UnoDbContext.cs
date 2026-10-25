@@ -37,6 +37,7 @@ namespace Uno_API.Data
         public DbSet<TourStatusCheckpoint> TourStatusCheckpoints { get; set; } = null!;
         public DbSet<AiKnowledgeItem> AiKnowledgeItems { get; set; } = null!;
         public DbSet<TourAttachment> TourAttachments { get; set; } = null!;
+        public DbSet<TourExcursionSale> TourExcursionSales { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -54,6 +55,7 @@ namespace Uno_API.Data
             modelBuilder.Entity<Hotel>().Property(x => x.DblEbPaxRate).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Project>().Property(x => x.ApproxBudget).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<TourService>().Property(x => x.Quantity).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<TourExcursionSale>().Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<TransportCompany>().Property(x => x.DailyRate).HasColumnType("decimal(18,2)");
 
             foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))

@@ -106,6 +106,39 @@ namespace Uno_API.Controllers
                 return NotFound();
             }
 
+            // Auto-heal: If tour.Pax == 0 but passengers exist in database, synchronize pax count automatically
+            if (tour.Pax == 0 && tour.Passengers != null && tour.Passengers.Any())
+            {
+                var payingPax = tour.Passengers.Where(p => 
+                    !p.FirstName.ToUpper().Contains("DRIVER") &&
+                    !p.FirstName.ToUpper().Contains("GUIDE") &&
+                    !p.FirstName.ToUpper().Contains("REHBER") &&
+                    !p.FirstName.ToUpper().Contains("KAPTAN") &&
+                    !p.FirstName.ToUpper().Contains("SOFOR") &&
+                    !p.FirstName.ToUpper().Contains("SOFÖR") &&
+                    !p.FirstName.ToUpper().Contains("ŞÖFÖR")).ToList();
+
+                DateTime tourRefDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
+                int pAdultsCount = payingPax.Count(p => !PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, tourRefDate) && !(p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK"))));
+                int pChildrenCount = payingPax.Count(p => PassengerAgeHelper.IsChild(p.DateOfBirth, p.PaxType, tourRefDate));
+                int pInfantsCount = payingPax.Count(p => p.PaxType != null && (p.PaxType.ToUpper().Contains("INFANT") || p.PaxType.ToUpper().Contains("BEBEK") || p.PaxType.ToUpper().Contains("INF")));
+
+                int totalCount = pAdultsCount + pChildrenCount + pInfantsCount;
+                if (totalCount == 0) totalCount = tour.Passengers.Count;
+
+                tour.Adults = pAdultsCount > 0 ? pAdultsCount : totalCount;
+                tour.Children = pChildrenCount;
+                tour.Infants = pInfantsCount;
+                tour.Pax = totalCount;
+
+                if (tour.BaseFee > 0)
+                {
+                    tour.TotalFee = (tour.Adults * tour.BaseFee) + (tour.Children * tour.BaseFee * 0.5m);
+                }
+
+                await _context.SaveChangesAsync();
+            }
+
             tour.MissingMainServices = MainServicesHelper.GetMissingMainServices(tour, tour.TourServices);
             return tour;
         }

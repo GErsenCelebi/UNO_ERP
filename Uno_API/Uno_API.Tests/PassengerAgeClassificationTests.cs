@@ -81,6 +81,85 @@ namespace Uno_API.Tests
             Assert.Equal("Adult", PassengerAgeHelper.DeterminePaxType(new DateTime(2014, 9, 17), null, arrivalDate));    // 12 yrs 0 days
             Assert.Equal("Adult", PassengerAgeHelper.DeterminePaxType(new DateTime(2010, 1, 1), null, arrivalDate));     // 16 yrs
             Assert.Equal("Infant", PassengerAgeHelper.DeterminePaxType(new DateTime(2025, 12, 1), null, arrivalDate));   // < 2 yrs
+
+            // DoB takes precedence even if PaxType contradicts
+            Assert.Equal("Children", PassengerAgeHelper.DeterminePaxType(new DateTime(2017, 3, 10), "Adult", arrivalDate));
+            Assert.Equal("Adult", PassengerAgeHelper.DeterminePaxType(new DateTime(2010, 1, 1), "Children", arrivalDate));
+
+            // Fallback to PaxType when DoB is blank
+            Assert.Equal("Children", PassengerAgeHelper.DeterminePaxType(null, "Children", arrivalDate));
+            Assert.Equal("Children", PassengerAgeHelper.DeterminePaxType(null, "CHD", arrivalDate));
+            Assert.Equal("Children", PassengerAgeHelper.DeterminePaxType(null, "Çocuk", arrivalDate));
+            Assert.Equal("Infant", PassengerAgeHelper.DeterminePaxType(null, "Infant", arrivalDate));
+            Assert.Equal("Adult", PassengerAgeHelper.DeterminePaxType(null, "Adult", arrivalDate));
+        }
+
+        [Fact]
+        public void DeterminePaxType_Throws_WhenBothDoBAndPaxTypeBlank()
+        {
+            var arrivalDate = new DateTime(2026, 9, 17);
+
+            var ex1 = Assert.Throws<InvalidOperationException>(() => PassengerAgeHelper.DeterminePaxType(null, null, arrivalDate));
+            Assert.Equal("Both DoB and PaxType fields are blank please fill one at least of them", ex1.Message);
+
+            var ex2 = Assert.Throws<InvalidOperationException>(() => PassengerAgeHelper.DeterminePaxType(null, "", arrivalDate));
+            Assert.Equal("Both DoB and PaxType fields are blank please fill one at least of them", ex2.Message);
+
+            var ex3 = Assert.Throws<InvalidOperationException>(() => PassengerAgeHelper.DeterminePaxType(null, "   ", arrivalDate));
+            Assert.Equal("Both DoB and PaxType fields are blank please fill one at least of them", ex3.Message);
+        }
+
+        [Fact]
+        public async Task PassengersController_RejectsCreateAndUpdate_WhenBothDoBAndPaxTypeBlank()
+        {
+            var db = GetInMemoryDbContext("Test_BothBlank_Rejection");
+            var tour = new Tour
+            {
+                Id = 99,
+                TourCode = "TR-VALIDATE-1",
+                Destination = "Prague",
+                ArrivalDate = new DateTime(2026, 9, 17),
+                EndDate = new DateTime(2026, 9, 24)
+            };
+            db.Tours.Add(tour);
+            await db.SaveChangesAsync();
+
+            var controller = new PassengersController(db);
+
+            // Attempt Create with both DoB and PaxType blank
+            var createResult = await controller.CreatePassenger(new Passenger
+            {
+                TourId = 99,
+                FirstName = "NoDob",
+                LastName = "NoType",
+                DateOfBirth = null,
+                PaxType = null
+            });
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(createResult);
+            Assert.Equal("Both DoB and PaxType fields are blank please fill one at least of them", badRequest.Value);
+
+            // Verify no passenger was created
+            Assert.Empty(db.Passengers.Where(p => p.TourId == 99));
+
+            // Create valid passenger first
+            var validCreate = await controller.CreatePassenger(new Passenger
+            {
+                TourId = 99,
+                FirstName = "Valid",
+                LastName = "Passenger",
+                DateOfBirth = new DateTime(1995, 5, 20),
+                PaxType = null
+            });
+            Assert.IsType<CreatedAtActionResult>(validCreate);
+            var createdP = await db.Passengers.FirstAsync(p => p.TourId == 99);
+
+            // Attempt Update to wipe both DoB and PaxType
+            createdP.DateOfBirth = null;
+            createdP.PaxType = "";
+            var updateResult = await controller.UpdatePassenger(createdP.Id, createdP);
+            var badRequestUpdate = Assert.IsType<BadRequestObjectResult>(updateResult);
+            Assert.Equal("Both DoB and PaxType fields are blank please fill one at least of them", badRequestUpdate.Value);
         }
 
         [Fact]

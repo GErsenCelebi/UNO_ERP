@@ -19,27 +19,46 @@ namespace Uno_API.Controllers
     {
         private readonly UnoDbContext _context;
         private readonly IStorageService _storageService;
+        private readonly ITourProjectLookupService _tourProjectLookupService;
 
-        public TourImportController(UnoDbContext context, IStorageService storageService)
+        public TourImportController(UnoDbContext context, IStorageService storageService, ITourProjectLookupService tourProjectLookupService)
         {
             _context = context;
             _storageService = storageService;
+            _tourProjectLookupService = tourProjectLookupService;
         }
 
         [HttpPost("import")]
-        public async Task<IActionResult> Import([FromForm] IFormFile? roomingFile = null, [FromForm] IFormFile? salesFile = null, [FromForm] IFormFile? masterdataFile = null)
+        public async Task<IActionResult> Import(
+            [FromForm] IFormFile? roomingFile = null, 
+            [FromForm] IFormFile? salesFile = null, 
+            [FromForm] IFormFile? masterdataFile = null,
+            [FromForm] string? targetTourCode = null,
+            [FromForm] string? targetProjectCode = null)
         {
             if (roomingFile == null && salesFile == null && masterdataFile == null)
             {
                 return BadRequest("No file was uploaded. Please select a Rooming, Sales, or MasterData file to import.");
             }
 
-            var client = await _context.Clients.FirstOrDefaultAsync();
-            if (client == null)
+            // Pre-validate Rooming sheet passengers before any database transactions or modifications
+            if (roomingFile != null)
             {
-                client = new Client { Name = "Default Client" };
-                _context.Clients.Add(client);
-                await _context.SaveChangesAsync();
+                using var roomingValidationStream = roomingFile.OpenReadStream();
+                using var wbValidationRooming = new XLWorkbook(roomingValidationStream);
+                var wsValidationRooming = wbValidationRooming.Worksheets.FirstOrDefault(w => 
+                    w.Name.Equals("Rooming", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Rooms", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Room", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Passengers", StringComparison.OrdinalIgnoreCase));
+
+                if (wsValidationRooming != null && !ValidateRoomingSheetPax(wsValidationRooming, out string? roomingError))
+                {
+                    return BadRequest(new { 
+                        error = roomingError ?? PassengerAgeHelper.BothBlankErrorMessage,
+                        message = roomingError ?? PassengerAgeHelper.BothBlankErrorMessage 
+                    });
+                }
             }
 
             // 1. Determine primary workbook to extract Tour & Project metadata
@@ -53,8 +72,33 @@ namespace Uno_API.Controllers
 
             using var primaryWb = new XLWorkbook(primaryStream);
 
-            string tourCode = "";
-            string projectName = "";
+            if (roomingFile == null)
+            {
+                var wsPrimaryRooming = primaryWb.Worksheets.FirstOrDefault(w => 
+                    w.Name.Equals("Rooming", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Rooms", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Room", StringComparison.OrdinalIgnoreCase) ||
+                    w.Name.Equals("Passengers", StringComparison.OrdinalIgnoreCase));
+
+                if (wsPrimaryRooming != null && !ValidateRoomingSheetPax(wsPrimaryRooming, out string? primaryRoomingError))
+                {
+                    return BadRequest(new { 
+                        error = primaryRoomingError ?? PassengerAgeHelper.BothBlankErrorMessage,
+                        message = primaryRoomingError ?? PassengerAgeHelper.BothBlankErrorMessage 
+                    });
+                }
+            }
+
+            var client = await _context.Clients.FirstOrDefaultAsync();
+            if (client == null)
+            {
+                client = new Client { Name = "Default Client" };
+                _context.Clients.Add(client);
+                await _context.SaveChangesAsync();
+            }
+
+            string tourCode = targetTourCode?.Trim() ?? "";
+            string projectName = targetProjectCode?.Trim() ?? "";
             string destination = "";
             DateTime? arrivalDate = null;
             DateTime? endDate = null;
@@ -674,6 +718,9 @@ namespace Uno_API.Controllers
                         }
                     }
 
+                    // Save all added passengers to the database first so the subsequent DB query returns them
+                    await _context.SaveChangesAsync();
+
                     DateTime tourRefDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
                     var allTourPassengers = await _context.Passengers.Where(p => p.TourId == tour.Id).ToListAsync();
                     var payingPax = allTourPassengers.Where(p => 
@@ -695,10 +742,18 @@ namespace Uno_API.Controllers
                         tour.Children = pChildrenCount;
                         tour.Infants = pInfantsCount;
                         tour.Pax = pAdultsCount + pChildrenCount + pInfantsCount;
-                        if (tour.BaseFee > 0)
-                        {
-                            tour.TotalFee = (tour.Adults * tour.BaseFee) + (tour.Children * tour.BaseFee * 0.5m);
-                        }
+                    }
+                    else if (pAdults + pChildren + pInfants > 0)
+                    {
+                        tour.Adults = pAdults;
+                        tour.Children = pChildren;
+                        tour.Infants = pInfants;
+                        tour.Pax = pAdults + pChildren + pInfants;
+                    }
+
+                    if (tour.Pax > 0 && tour.BaseFee > 0)
+                    {
+                        tour.TotalFee = (tour.Adults * tour.BaseFee) + (tour.Children * tour.BaseFee * 0.5m);
                     }
                     await _context.SaveChangesAsync();
                 }
@@ -890,6 +945,16 @@ namespace Uno_API.Controllers
                         }
                     }
                 }
+
+                // Execute the exact same smart rooming matching module!
+                try
+                {
+                    await _tourProjectLookupService.ExecuteSmartRoomingForTourAsync(tour.Id, false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[TourImport] Warning executing smart rooming module: {ex.Message}");
+                }
             }
 
             // 5. Process Sales File (if provided)
@@ -1066,6 +1131,140 @@ namespace Uno_API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Import Successful", TourId = tour.Id, TourCode = tour.TourCode, Pax = tour.Pax });
+        }
+
+        private static bool ValidateRoomingSheetPax(IXLWorksheet wsRooming, out string? errorMessage)
+        {
+            errorMessage = null;
+            if (wsRooming == null || wsRooming.RangeUsed() == null || wsRooming.RowsUsed().Count() < 2)
+            {
+                return true;
+            }
+
+            string jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "Config", "ExcelMapping.json");
+            Dictionary<string, Dictionary<string, System.Text.Json.JsonElement>>? mappings = null;
+            if (System.IO.File.Exists(jsonPath))
+            {
+                try
+                {
+                    var mappingJson = System.IO.File.ReadAllText(jsonPath);
+                    mappings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, System.Text.Json.JsonElement>>>(mappingJson);
+                }
+                catch { }
+            }
+
+            var roomingHeaders = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var headerRow = wsRooming.Row(1);
+            int lastCol = headerRow.LastCellUsed()?.Address.ColumnNumber ?? 20;
+            for (int c = 1; c <= lastCol; c++)
+            {
+                string hName = headerRow.Cell(c).GetString().Trim();
+                if (!string.IsNullOrEmpty(hName) && !roomingHeaders.ContainsKey(hName))
+                {
+                    roomingHeaders[hName] = c;
+                    if (mappings != null && mappings.ContainsKey("Rooming"))
+                    {
+                        foreach (var kvp in mappings["Rooming"])
+                        {
+                            if (kvp.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            {
+                                foreach (var alias in kvp.Value.EnumerateArray())
+                                {
+                                    if (alias.GetString()?.Equals(hName, StringComparison.OrdinalIgnoreCase) == true)
+                                    {
+                                        if (!roomingHeaders.ContainsKey(kvp.Key)) roomingHeaders[kvp.Key] = c;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            string NormalizeHeader(string h)
+            {
+                if (string.IsNullOrEmpty(h)) return string.Empty;
+                return new string(h.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+            }
+
+            int GetCol(params string[] headerNames)
+            {
+                foreach (var name in headerNames)
+                {
+                    if (roomingHeaders.ContainsKey(name)) return roomingHeaders[name];
+                }
+
+                foreach (var name in headerNames)
+                {
+                    string normSearch = NormalizeHeader(name);
+                    if (string.IsNullOrEmpty(normSearch)) continue;
+                    foreach (var kvp in roomingHeaders)
+                    {
+                        string normKey = NormalizeHeader(kvp.Key);
+                        if (string.IsNullOrEmpty(normKey)) continue;
+                        if (normKey.Contains(normSearch) || normSearch.Contains(normKey)) return kvp.Value;
+                    }
+                }
+                return -1;
+            }
+
+            string GetVal(IXLRow r, params string[] headerNames)
+            {
+                int c = GetCol(headerNames);
+                if (c != -1)
+                {
+                    var cellVal = r.Cell(c).GetString().Trim();
+                    if (!string.IsNullOrEmpty(cellVal)) return cellVal;
+                }
+                return string.Empty;
+            }
+
+            int lastRow = wsRooming.LastRowUsed()!.RowNumber();
+            for (int r = 2; r <= lastRow; r++)
+            {
+                var row = wsRooming.Row(r);
+                string col1 = row.Cell(1).GetString().Trim();
+
+                string firstName = GetVal(row, "FirstName", "Yolcu Adı", "Name", "Adı", "First Name", "PassengerName");
+                string lastName = GetVal(row, "LastName", "Yolcu Soyadı", "Soyadı", "Surname", "Last Name");
+
+                if (string.IsNullOrEmpty(firstName))
+                {
+                    if (!string.IsNullOrEmpty(col1) && !col1.Contains("-")) firstName = col1;
+                }
+
+                if (string.IsNullOrEmpty(lastName) && firstName.Contains(" "))
+                {
+                    int lastSpace = firstName.LastIndexOf(' ');
+                    lastName = firstName.Substring(lastSpace + 1);
+                    firstName = firstName.Substring(0, lastSpace);
+                }
+
+                if (string.IsNullOrEmpty(firstName)) continue;
+
+                bool isStaff = firstName.Equals("DRIVER", StringComparison.OrdinalIgnoreCase) 
+                            || firstName.Equals("GUIDE", StringComparison.OrdinalIgnoreCase)
+                            || firstName.Equals("REHBER", StringComparison.OrdinalIgnoreCase)
+                            || firstName.Equals("KAPTAN", StringComparison.OrdinalIgnoreCase)
+                            || firstName.Equals("SOFOR", StringComparison.OrdinalIgnoreCase)
+                            || firstName.Equals("SOFÖR", StringComparison.OrdinalIgnoreCase)
+                            || firstName.Equals("ŞÖFÖR", StringComparison.OrdinalIgnoreCase)
+                            || (lastName != null && (lastName.Equals("DRIVER", StringComparison.OrdinalIgnoreCase) || lastName.Equals("GUIDE", StringComparison.OrdinalIgnoreCase) || lastName.Equals("REHBER", StringComparison.OrdinalIgnoreCase)));
+
+                if (isStaff) continue;
+
+                string paxType = GetVal(row, "PaxType", "Pax Type", "Yolcu Tipi");
+                int dobCol = GetCol("DateOfBirth", "Doğum Tar", "Doğum Tarihi", "DOB", "Birth Date");
+                DateTime? dob = dobCol != -1 ? ParseExcelDate(row.Cell(dobCol)) : null;
+
+                if (!dob.HasValue && string.IsNullOrWhiteSpace(paxType))
+                {
+                    errorMessage = PassengerAgeHelper.BothBlankErrorMessage;
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static DateTime? ParseExcelDate(IXLCell? cell)

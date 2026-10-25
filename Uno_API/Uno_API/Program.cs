@@ -32,6 +32,7 @@ builder.Services.AddDbContext<UnoDbContext>(options =>
 
 builder.Services.AddScoped<IStorageService, StorageService>();
 builder.Services.AddHostedService<StorageMigrationService>();
+builder.Services.AddHostedService<KnowledgeBaseWatcherService>();
 builder.Services.AddScoped<IKnowledgeRetrievalService, LocalKnowledgeRetrievalService>();
 builder.Services.AddScoped<ITourProjectLookupService, TourProjectLookupService>();
 builder.Services.AddHttpClient<ILocalLlmService, OllamaLlmService>();
@@ -58,7 +59,7 @@ if (initializeDatabaseOnStartup)
         // Make sure database exists
         db.Database.EnsureCreated();
         
-        string[] patches = new string[]
+        var patches = new List<string>
         {
             @"IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_Tours_Guides_GuideId') ALTER TABLE [Tours] DROP CONSTRAINT [FK_Tours_Guides_GuideId];",
             @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TourAttachments') CREATE TABLE [TourAttachments] ([Id] int IDENTITY(1,1) NOT NULL, [TourId] int NOT NULL, [FileName] nvarchar(255) NOT NULL, [FilePath] nvarchar(500) NOT NULL, [FileType] nvarchar(100) NULL, [FileSize] bigint NOT NULL DEFAULT 0, [Description] nvarchar(500) NULL, [UploadedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT [PK_TourAttachments] PRIMARY KEY ([Id]));",
@@ -104,26 +105,12 @@ if (initializeDatabaseOnStartup)
             @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TourStatusCheckpoints') CREATE TABLE [TourStatusCheckpoints] ([Id] int IDENTITY(1,1) NOT NULL, [TargetStatusId] int NOT NULL, [CheckpointKey] nvarchar(100) NOT NULL, [Name] nvarchar(200) NOT NULL, [Description] nvarchar(500) NOT NULL, [IsMandatory] bit NOT NULL DEFAULT 1, [WarningThresholdDays] int NULL, CONSTRAINT [PK_TourStatusCheckpoints] PRIMARY KEY ([Id]));",
             @"IF NOT EXISTS (SELECT 1 FROM [TourStatuses]) BEGIN SET IDENTITY_INSERT [TourStatuses] ON; INSERT INTO [TourStatuses] ([Id], [Name], [OrderIndex]) VALUES (1, 'Draft', 1), (2, 'Proposal', 2), (3, 'Confirmed', 3), (4, 'In Progress', 4), (5, 'Completed', 5), (6, 'Cancelled', 6); SET IDENTITY_INSERT [TourStatuses] OFF; END",
             @"IF NOT EXISTS (SELECT 1 FROM [ProjectStatuses]) BEGIN SET IDENTITY_INSERT [ProjectStatuses] ON; INSERT INTO [ProjectStatuses] ([Id], [Name], [OrderIndex]) VALUES (1, 'Draft', 1), (2, 'Planning', 2), (3, 'Active', 3), (4, 'On Hold', 4), (5, 'Completed', 5), (6, 'Cancelled', 6); SET IDENTITY_INSERT [ProjectStatuses] OFF; END",
-            @"IF EXISTS (SELECT * FROM sys.tables WHERE name = 'AiKnowledgeItems') BEGIN UPDATE [AiKnowledgeItems] SET [Keywords] = 'excel, import, project, tour, rooming, sales, master data, scenarios, filename, format' WHERE [Id] IN (268, 328) OR [Keywords] LIKE '%excel%'; END",
-            @"IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Hotels]') AND name = 'PricingBasis') UPDATE [Hotels] SET [PricingBasis] = NULL;",
-            @"UPDATE [Tours] SET [Pax] = [Adults] + [Children] WHERE ([Pax] IS NULL OR [Pax] = 0) AND ([Adults] > 0 OR [Children] > 0);",
-            @"UPDATE [Tours] SET [Pax] = 44, [Adults] = 44 WHERE [Id] = 6128 AND ([Pax] IS NULL OR [Pax] = 0);",
+            @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AiKnowledgeItems') CREATE TABLE [AiKnowledgeItems] ([Id] int IDENTITY(1,1) NOT NULL, [SourceType] nvarchar(50) NOT NULL DEFAULT 'DocumentationRepo', [SourceFile] nvarchar(250) NULL, [Category] nvarchar(100) NOT NULL DEFAULT 'General', [SubTopic] nvarchar(100) NULL, [TriggerQueries] nvarchar(max) NULL, [QuestionPattern] nvarchar(500) NOT NULL DEFAULT '', [Keywords] nvarchar(max) NOT NULL DEFAULT '', [AnswerMarkdown] nvarchar(max) NOT NULL DEFAULT '', [TargetUrl] nvarchar(250) NULL, [ActionLabel] nvarchar(100) NULL, [IsActive] bit NOT NULL DEFAULT 1, [CreatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(), [UpdatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(), CONSTRAINT [PK_AiKnowledgeItems] PRIMARY KEY ([Id]));",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'SubTopic') ALTER TABLE [AiKnowledgeItems] ADD [SubTopic] nvarchar(100) NULL;",
             @"IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[AiKnowledgeItems]') AND name = 'TriggerQueries') ALTER TABLE [AiKnowledgeItems] ADD [TriggerQueries] nvarchar(max) NULL;",
-            // Map former unassigned AuditLogs (from initial batch test runs) to the respective tours
-            @"UPDATE [AuditLogs] SET [EntityId] = '6114', [Summary] = 'Updated Tour TestTour1 status to Confirmed', [UserId] = 3 WHERE [Id] = 1 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6115', [Summary] = 'Updated Tour TestTour2 status to Confirmed', [UserId] = 3 WHERE [Id] = 2 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6116', [Summary] = 'Updated Tour TestTour3 status to Confirmed', [UserId] = 3 WHERE [Id] = 3 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6117', [Summary] = 'Updated Tour TestTour4 status to Confirmed', [UserId] = 3 WHERE [Id] = 4 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6118', [Summary] = 'Updated Tour TestTour5 status to Confirmed', [UserId] = 3 WHERE [Id] = 5 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6119', [Summary] = 'Updated Tour TestTour6 status to Confirmed', [UserId] = 3 WHERE [Id] = 6 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6120', [Summary] = 'Updated Tour TestTour7 status to Confirmed', [UserId] = 3 WHERE [Id] = 7 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6121', [Summary] = 'Updated Tour TestTour8 status to Confirmed', [UserId] = 3 WHERE [Id] = 8 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6122', [Summary] = 'Updated Tour TestTour9 status to Confirmed', [UserId] = 3 WHERE [Id] = 9 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6123', [Summary] = 'Updated Tour TestTour10 status to Confirmed', [UserId] = 3 WHERE [Id] = 10 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6124', [Summary] = 'Updated Tour TestTour11 status to Confirmed', [UserId] = 3 WHERE [Id] = 11 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6125', [Summary] = 'Updated Tour TestTour12 status to Confirmed', [UserId] = 3 WHERE [Id] = 12 AND [EntityId] = '1';",
-            @"UPDATE [AuditLogs] SET [EntityId] = '6128', [Summary] = 'Updated Tour ABCDTEST status to Confirmed', [UserId] = 3 WHERE [Id] = 13 AND [EntityId] = '1';",
+            @"IF EXISTS (SELECT * FROM sys.tables WHERE name = 'AiKnowledgeItems') BEGIN UPDATE [AiKnowledgeItems] SET [Keywords] = 'excel, import, project, tour, rooming, sales, master data, scenarios, filename, format' WHERE [Id] IN (268, 328) OR [Keywords] LIKE '%excel%'; END",
+            @"UPDATE [Tours] SET [Pax] = [Adults] + [Children] WHERE ([Pax] IS NULL OR [Pax] = 0) AND ([Adults] > 0 OR [Children] > 0);",
+            // Baseline CREATE audit logs (idempotent WHERE NOT EXISTS)
             @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [Timestamp])
               SELECT 2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'CREATE', 'Project', CAST(p.[Id] AS nvarchar(100)), 'Created project ' + COALESCE(p.[ProjectCode], CAST(p.[Id] AS nvarchar(100))), '2026-08-16 08:30:00'
               FROM [Projects] p
@@ -160,19 +147,6 @@ if (initializeDatabaseOnStartup)
               SELECT 1, 'Evren', 'evren@uno-dmc.cz', 'Administrator', 'CREATE', 'ServiceCategory', CAST(sc.[Id] AS nvarchar(100)), 'Created service category ' + COALESCE(sc.[Name], CAST(sc.[Id] AS nvarchar(100))), '2026-06-01 08:00:00'
               FROM [ServiceCategories] sc
               WHERE NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'ServiceCategory' AND a.[EntityId] = CAST(sc.[Id] AS nvarchar(100)) AND a.[Action] = 'CREATE');",
-            // Project updates
-            @"IF NOT EXISTS (SELECT 1 FROM [AuditLogs] WHERE [EntityName] = 'Project' AND [EntityId] = '6101' AND [Action] = 'UPDATE')
-                INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
-                VALUES (2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'UPDATE', 'Project', '6101', 'Updated project TEST-20260829 status to Planning', '{\""ProjectStatusId\"":1}', '{\""ProjectStatusId\"":2,\""ApproxBudget\"":45000}', '2026-08-20 14:10:00');",
-            @"IF NOT EXISTS (SELECT 1 FROM [AuditLogs] WHERE [EntityName] = 'Project' AND [EntityId] = '5063' AND [Action] = 'UPDATE')
-                INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
-                VALUES (2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'UPDATE', 'Project', '5063', 'Updated project Orta Avrupa -BVP status to Active', '{\""ProjectStatusId\"":1}', '{\""ProjectStatusId\"":3,\""ApproxBudget\"":120000}', '2026-06-15 11:20:00');",
-            // Tour Confirmed & Completed updates for Project 5063
-            @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
-              SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'UPDATE', 'Tour', CAST(t.[Id] AS nvarchar(100)), 'Updated Tour ' + t.[TourCode] + ' status to Confirmed', '{\""TourStatusId\"":2}', '{\""TourStatusId\"":3}', DATEADD(day, -10, t.[ArrivalDate])
-              FROM [Tours] t
-              WHERE t.[ProjectId] = 5063 AND t.[TourStatusId] IN (3, 4, 5)
-                AND NOT EXISTS (SELECT 1 FROM [AuditLogs] a WHERE a.[EntityName] = 'Tour' AND a.[EntityId] = CAST(t.[Id] AS nvarchar(100)) AND a.[Action] = 'UPDATE');",
             // TourServices baseline audit logs
             @"INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [NewValuesJson], [Timestamp])
               SELECT 3, 'Tuana', 'tuana@uno-dmc.cz', 'TourAdmin', 'CREATE', 'TourService', CAST(ts.[TourId] AS nvarchar(100)), 'Added service ''' + ISNULL(ts.[Description], 'Service #' + CAST(ts.[Id] AS nvarchar(10))) + ''' (Qty: ' + CAST(CAST(ts.[Quantity] AS int) AS nvarchar(10)) + ', Unit: €' + CAST(ts.[UnitPrice] AS nvarchar(20)) + ') to Tour #' + CAST(ts.[TourId] AS nvarchar(10)), '{\""Quantity\"":' + CAST(ts.[Quantity] AS nvarchar(20)) + ',\""UnitPrice\"":' + CAST(ts.[UnitPrice] AS nvarchar(20)) + '}', '2026-08-16 09:15:00'
@@ -199,41 +173,55 @@ if (initializeDatabaseOnStartup)
                   CONSTRAINT [PK_TourExcursionSales] PRIMARY KEY ([Id])
               );
               IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_TourExcursionSales_TourId')
-                  CREATE INDEX [IX_TourExcursionSales_TourId] ON [TourExcursionSales] ([TourId]);",
-            // Seed standard master excursions
-            @"IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'BDP-Boat' OR Name = 'Danube Cruise')
-                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Danube Cruise', 'Cruise', 20.00, 35.00, 'BDP-Boat');
-              IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'PRG-KV' OR Name = 'Karlovy Vary')
-                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Karlovy Vary', 'Full Day Tour', 35.00, 65.00, 'PRG-KV');
-              IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'VN-Hallst' OR Name = 'Hallstatt Lake')
-                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Hallstatt Lake', 'Full Day Tour', 45.00, 85.00, 'VN-Hallst');
-              IF NOT EXISTS (SELECT * FROM Excursions WHERE TourCode = 'PRG-Folk' OR Name = 'Folklore Dinner')
-                  INSERT INTO Excursions (Name, Type, Price, SalePrice, TourCode) VALUES ('Folklore Dinner', 'Dinner Show', 30.00, 50.00, 'PRG-Folk');",
-            // Seed guide and initial passengers for Tour 6128 if 0 passengers exist
-            @"IF NOT EXISTS (SELECT * FROM Guides WHERE Name LIKE '%Mehmet Y%')
-                  INSERT INTO Guides (Name, Language, PhoneNumber, DailyRate) VALUES ('Mehmet Yılmaz', 'Turkish, English', '+905320000001', 120.00);
-              IF EXISTS (SELECT * FROM Tours WHERE Id = 6128) AND NOT EXISTS (SELECT * FROM TourServices WHERE TourId = 6128 AND ServiceCategoryId = 4)
-              BEGIN
-                  DECLARE @GuideId INT = (SELECT TOP 1 Id FROM Guides WHERE Name LIKE '%Mehmet Y%' ORDER BY Id);
-                  INSERT INTO TourServices (TourId, ServiceCategoryId, GuideId, Description, Quantity, UnitPrice, TotalAmount, IsRevenue)
-                  VALUES (6128, 4, @GuideId, 'Guide: Mehmet Yılmaz', 7, 120.00, 840.00, 0);
-              END;
-              IF EXISTS (SELECT * FROM Tours WHERE Id = 6128) AND NOT EXISTS (SELECT * FROM Passengers WHERE TourId = 6128)
-              BEGIN
-                  INSERT INTO Passengers (TourId, FirstName, LastName, RoomType, RoomNumber, PaxType, Gender, Pax, NationalId, PassportNo, PassportType, VisaNo, Phone, Address) VALUES
-                  (6128, 'Ahmet', 'Yıldız', 'Double', 201, 'Adult', 'Male', 1, '11111111101', 'U12345678', 'Regular', '', '+905321110001', 'Istanbul'),
-                  (6128, 'Fatma', 'Yıldız', 'Double', 201, 'Adult', 'Female', 1, '11111111102', 'U12345679', 'Regular', '', '+905321110002', 'Istanbul'),
-                  (6128, 'Can', 'Demir', 'Single', 104, 'Adult', 'Male', 1, '11111111103', 'U12345680', 'Regular', '', '+905321110003', 'Ankara'),
-                  (6128, 'Elif', 'Demir', 'Triple', 302, 'Children', 'Female', 1, '11111111104', 'U12345681', 'Regular', '', '+905321110004', 'Ankara'),
-                  (6128, 'Burak', 'Kaya', 'Double', 205, 'Adult', 'Male', 1, '11111111105', 'U12345682', 'Regular', '', '+905321110005', 'Izmir'),
-                  (6128, 'Selin', 'Kaya', 'Double', 205, 'Adult', 'Female', 1, '11111111106', 'U12345683', 'Regular', '', '+905321110006', 'Izmir'),
-                  (6128, 'Hasan', 'Arslan', 'Double', 112, 'Adult', 'Male', 1, '11111111107', 'U12345684', 'Regular', '', '+905321110007', 'Bursa'),
-                  (6128, 'Merve', 'Çelik', 'Single', 115, 'Adult', 'Female', 1, '11111111108', 'U12345685', 'Regular', '', '+905321110008', 'Antalya'),
-                  (6128, 'Oğuz', 'Şen', 'Double', 310, 'Adult', 'Male', 1, '11111111109', 'U12345686', 'Regular', '', '+905321110009', 'Adana'),
-                  (6128, 'Zeynep', 'Şen', 'Double', 310, 'Adult', 'Female', 1, '11111111110', 'U12345687', 'Regular', '', '+905321110010', 'Adana');
-                  UPDATE Tours SET Pax = 10, Adults = 9, Children = 1, GuideCommission = 10.00 WHERE Id = 6128;
-              END;"
+                  CREATE INDEX [IX_TourExcursionSales_TourId] ON [TourExcursionSales] ([TourId]);"
         };
+
+        if (app.Environment.IsDevelopment())
+        {
+            patches.AddRange(new string[]
+            {
+                @"UPDATE [Tours] SET [Pax] = 44, [Adults] = 44 WHERE [Id] = 6128 AND ([Pax] IS NULL OR [Pax] = 0);",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6114', [Summary] = 'Updated Tour TestTour1 status to Confirmed', [UserId] = 3 WHERE [Id] = 1 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6115', [Summary] = 'Updated Tour TestTour2 status to Confirmed', [UserId] = 3 WHERE [Id] = 2 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6116', [Summary] = 'Updated Tour TestTour3 status to Confirmed', [UserId] = 3 WHERE [Id] = 3 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6117', [Summary] = 'Updated Tour TestTour4 status to Confirmed', [UserId] = 3 WHERE [Id] = 4 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6118', [Summary] = 'Updated Tour TestTour5 status to Confirmed', [UserId] = 3 WHERE [Id] = 5 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6119', [Summary] = 'Updated Tour TestTour6 status to Confirmed', [UserId] = 3 WHERE [Id] = 6 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6120', [Summary] = 'Updated Tour TestTour7 status to Confirmed', [UserId] = 3 WHERE [Id] = 7 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6121', [Summary] = 'Updated Tour TestTour8 status to Confirmed', [UserId] = 3 WHERE [Id] = 8 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6122', [Summary] = 'Updated Tour TestTour9 status to Confirmed', [UserId] = 9 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6123', [Summary] = 'Updated Tour TestTour10 status to Confirmed', [UserId] = 3 WHERE [Id] = 10 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6124', [Summary] = 'Updated Tour TestTour11 status to Confirmed', [UserId] = 3 WHERE [Id] = 11 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6125', [Summary] = 'Updated Tour TestTour12 status to Confirmed', [UserId] = 3 WHERE [Id] = 12 AND [EntityId] = '1';",
+                @"UPDATE [AuditLogs] SET [EntityId] = '6128', [Summary] = 'Updated Tour ABCDTEST status to Confirmed', [UserId] = 3 WHERE [Id] = 13 AND [EntityId] = '1';",
+                @"IF EXISTS (SELECT 1 FROM [Projects] WHERE [Id] = 6101 AND [ProjectCode] = 'TEST-20260829') AND NOT EXISTS (SELECT 1 FROM [AuditLogs] WHERE [EntityName] = 'Project' AND [EntityId] = '6101' AND [Action] = 'UPDATE')
+                    INSERT INTO [AuditLogs] ([UserId], [UserName], [UserEmail], [UserRole], [Action], [EntityName], [EntityId], [Summary], [OldValuesJson], [NewValuesJson], [Timestamp])
+                    VALUES (2, 'G. Ersen Çelebi', 'gersencelebi@gmail.com', 'Administrator', 'UPDATE', 'Project', '6101', 'Updated project TEST-20260829 status to Planning', '{\""ProjectStatusId\"":1}', '{\""ProjectStatusId\"":2,\""ApproxBudget\"":45000}', '2026-08-20 14:10:00');",
+                @"IF NOT EXISTS (SELECT * FROM Guides WHERE Name LIKE '%Mehmet Y%')
+                      INSERT INTO Guides (Name, Language, PhoneNumber, DailyRate) VALUES ('Mehmet Yılmaz', 'Turkish, English', '+905320000001', 120.00);
+                  IF EXISTS (SELECT * FROM Tours WHERE Id = 6128) AND NOT EXISTS (SELECT * FROM TourServices WHERE TourId = 6128 AND ServiceCategoryId = 4)
+                  BEGIN
+                      DECLARE @GuideId INT = (SELECT TOP 1 Id FROM Guides WHERE Name LIKE '%Mehmet Y%' ORDER BY Id);
+                      INSERT INTO TourServices (TourId, ServiceCategoryId, GuideId, Description, Quantity, UnitPrice, TotalAmount, IsRevenue)
+                      VALUES (6128, 4, @GuideId, 'Guide: Mehmet Yılmaz', 7, 120.00, 840.00, 0);
+                  END;
+                  IF EXISTS (SELECT * FROM Tours WHERE Id = 6128) AND NOT EXISTS (SELECT * FROM Passengers WHERE TourId = 6128)
+                  BEGIN
+                      INSERT INTO Passengers (TourId, FirstName, LastName, RoomType, RoomNumber, PaxType, Gender, Pax, NationalId, PassportNo, PassportType, VisaNo, Phone, Address) VALUES
+                      (6128, 'Ahmet', 'Yıldız', 'Double', 201, 'Adult', 'Male', 1, '11111111101', 'U12345678', 'Regular', '', '+905321110001', 'Istanbul'),
+                      (6128, 'Fatma', 'Yıldız', 'Double', 201, 'Adult', 'Female', 1, '11111111102', 'U12345679', 'Regular', '', '+905321110002', 'Istanbul'),
+                      (6128, 'Can', 'Demir', 'Single', 104, 'Adult', 'Male', 1, '11111111103', 'U12345680', 'Regular', '', '+905321110003', 'Ankara'),
+                      (6128, 'Elif', 'Demir', 'Triple', 302, 'Children', 'Female', 1, '11111111104', 'U12345681', 'Regular', '', '+905321110004', 'Ankara'),
+                      (6128, 'Burak', 'Kaya', 'Double', 205, 'Adult', 'Male', 1, '11111111105', 'U12345682', 'Regular', '', '+905321110005', 'Izmir'),
+                      (6128, 'Selin', 'Kaya', 'Double', 205, 'Adult', 'Female', 1, '11111111106', 'U12345683', 'Regular', '', '+905321110006', 'Izmir'),
+                      (6128, 'Hasan', 'Arslan', 'Double', 112, 'Adult', 'Male', 1, '11111111107', 'U12345684', 'Regular', '', '+905321110007', 'Bursa'),
+                      (6128, 'Merve', 'Çelik', 'Single', 115, 'Adult', 'Female', 1, '11111111108', 'U12345685', 'Regular', '', '+905321110008', 'Antalya'),
+                      (6128, 'Oğuz', 'Şen', 'Double', 310, 'Adult', 'Male', 1, '11111111109', 'U12345686', 'Regular', '', '+905321110009', 'Adana'),
+                      (6128, 'Zeynep', 'Şen', 'Double', 310, 'Adult', 'Female', 1, '11111111110', 'U12345687', 'Regular', '', '+905321110010', 'Adana');
+                      UPDATE Tours SET Pax = 10, Adults = 9, Children = 1, GuideCommission = 10.00 WHERE Id = 6128;
+                  END;"
+            });
+        }
 
         foreach (var sql in patches)
         {
@@ -273,7 +261,15 @@ var options = new RewriteOptions()
     .AddRewrite(@"^dashboard/executive/?$", "dashboard/executive.html", skipRemainingRules: true)
     .AddRewrite(@"^guide/tours/([^/]+)/?$", "guide/tours/1.html", skipRemainingRules: true)
     .AddRewrite(@"^projects/([^/]+)/tours/([^/]+)/?$", "projects/1/tours/1.html", skipRemainingRules: true)
-    .AddRewrite(@"^projects/([^/]+)/?$", "projects/1.html", skipRemainingRules: true);
+    .AddRewrite(@"^projects/([^/]+)/?$", "projects/1.html", skipRemainingRules: true)
+    .AddRewrite(@"^master-data/?$", "master-data.html", skipRemainingRules: true)
+    .AddRewrite(@"^tour-calendar/?$", "tour-calendar.html", skipRemainingRules: true)
+    .AddRewrite(@"^tours/?$", "tours.html", skipRemainingRules: true)
+    .AddRewrite(@"^projects/?$", "projects.html", skipRemainingRules: true)
+    .AddRewrite(@"^finance/?$", "finance.html", skipRemainingRules: true)
+    .AddRewrite(@"^bookings/?$", "bookings.html", skipRemainingRules: true)
+    .AddRewrite(@"^settings/?$", "settings.html", skipRemainingRules: true)
+    .AddRewrite(@"^audit-logs/?$", "audit-logs.html", skipRemainingRules: true);
 app.UseRewriter(options);
 
 app.UseDefaultFiles();

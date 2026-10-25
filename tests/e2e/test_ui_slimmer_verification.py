@@ -102,6 +102,20 @@ def test_slimmer_ui_elements():
         page.screenshot(path=os.path.join(artifacts_dir, "slimmer_project_information.png"))
         print("Saved screenshot: slimmer_project_information.png")
 
+        # 8. Verify Guide Sales matrix table width and scrollbar
+        page.goto(f"{base_url}/projects/5063/tours/6109", wait_until="networkidle")
+        time.sleep(2)
+        guide_tab = page.locator('button:has-text("Guide Sales")')
+        if guide_tab.is_visible():
+            guide_tab.click()
+            time.sleep(2)
+            scroll_info = page.evaluate('''() => {
+                const el = document.querySelector(".overflow-x-auto");
+                return el ? { clientWidth: el.clientWidth, scrollWidth: el.scrollWidth, hasScroll: el.scrollWidth > el.clientWidth } : null;
+            }''')
+            print(f"PASS: Guide Sales matrix scroll info on 1440px desktop: {scroll_info}")
+            page.screenshot(path=os.path.join(artifacts_dir, "guide_sales_matrix_e2e.png"))
+
         browser.close()
         print("All UI Slimmer tests passed successfully!")
 

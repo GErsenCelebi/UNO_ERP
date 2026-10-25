@@ -298,86 +298,86 @@ function ExcelImportPanel() {
   const salesRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden flex-1 p-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+    <div className="bg-slate-50 dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex-1 p-6 space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h3 className="text-xl font-bold text-slate-800">Excel Import Hub</h3>
-          <p className="text-sm text-slate-500">Select the dedicated import section based on your Excel template type.</p>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white">Excel Import Hub</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Select the dedicated import section based on your Excel template type.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* CARD 1: MASTER DATA */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-emerald-100 dark:border-emerald-900/40 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs uppercase tracking-wider">1. Master Catalogs</span>
-              <a href="/templates/MasterData_Import_Template.xlsx" download className="p-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg flex items-center gap-1 border border-emerald-200">
+              <span className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-xs uppercase tracking-wider">1. Master Catalogs</span>
+              <a href="/templates/MasterData_Import_Template.xlsx" download className="p-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
                 <Download className="w-3.5 h-3.5" /> Template
               </a>
             </div>
-            <h4 className="font-bold text-slate-800 text-base mb-1">Master Data Import</h4>
-            <p className="text-xs text-slate-500 mb-4">Import Clients, Hotels, Guides, Transport Companies, Drivers, Excursions, and Projects.</p>
+            <h4 className="font-bold text-slate-800 dark:text-white text-base mb-1">Master Data Import</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Import Clients, Hotels, Guides, Transport Companies, Drivers, Excursions, and Projects.</p>
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
           </div>
           <div
             onClick={() => !importing && fileRef.current?.click()}
             onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
             onDrop={e => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); }}
-            className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${importing ? 'border-emerald-300 bg-emerald-50/20' : 'border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50/30'}`}
+            className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${importing ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/20 dark:bg-emerald-950/20' : 'border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/30'}`}
           >
             <Upload className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-            <span className="text-xs font-bold text-slate-700 block">Drop Master Excel</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Drop Master Excel</span>
             <span className="text-[10px] text-slate-400">or click to browse</span>
           </div>
         </div>
 
         {/* CARD 2: TOUR & ROOMING */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-indigo-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-indigo-100 dark:border-indigo-900/40 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs uppercase tracking-wider">2. Tour & Rooming</span>
-              <a href="/api/tourtemplates/tour-import" download className="p-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 rounded-lg flex items-center gap-1 border border-indigo-200">
+              <span className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold text-xs uppercase tracking-wider">2. Tour & Rooming</span>
+              <a href="/api/tourtemplates/tour-import" download className="p-2 text-xs font-semibold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg flex items-center gap-1 border border-indigo-200 dark:border-indigo-800">
                 <Download className="w-3.5 h-3.5" /> Template
               </a>
             </div>
-            <h4 className="font-bold text-slate-800 text-base mb-1">Tour & Rooming Import</h4>
-            <p className="text-xs text-slate-500 mb-4">Import Flights, Passenger Rooming Lists, and Hotel Allocations.</p>
+            <h4 className="font-bold text-slate-800 dark:text-white text-base mb-1">Tour & Rooming Import</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Import Flights, Passenger Rooming Lists, and Hotel Allocations.</p>
             <input ref={roomingRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { if (e.target.files?.[0]) handleTourRoomingFile(e.target.files[0]); }} />
           </div>
           <div
             onClick={() => !importing && roomingRef.current?.click()}
             onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
             onDrop={e => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.files?.[0]) handleTourRoomingFile(e.dataTransfer.files[0]); }}
-            className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${importing ? 'border-indigo-300 bg-indigo-50/20' : 'border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+            className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${importing ? 'border-indigo-300 dark:border-indigo-700 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-indigo-200 dark:border-indigo-800/80 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/30'}`}
           >
             <Upload className="w-6 h-6 text-indigo-500 mx-auto mb-2" />
-            <span className="text-xs font-bold text-slate-700 block">Drop Rooming List Excel</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Drop Rooming List Excel</span>
             <span className="text-[10px] text-slate-400">or click to browse</span>
           </div>
         </div>
 
         {/* CARD 3: TOUR SALES & BASE SERVICES */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-amber-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-amber-100 dark:border-amber-900/40 flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="p-2.5 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs uppercase tracking-wider">3. Tour Sales & Fees</span>
-              <a href="/api/tourtemplates/sales-import" download className="p-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 rounded-lg flex items-center gap-1 border border-amber-200">
+              <span className="p-2.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl font-bold text-xs uppercase tracking-wider">3. Tour Sales & Fees</span>
+              <a href="/api/tourtemplates/sales-import" download className="p-2 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg flex items-center gap-1 border border-amber-200 dark:border-amber-800">
                 <Download className="w-3.5 h-3.5" /> Template (v2)
               </a>
             </div>
-            <h4 className="font-bold text-slate-800 text-base mb-1">Tour Sales & Base Fees</h4>
-            <p className="text-xs text-slate-500 mb-4">Import Excursion Sales Grid (Checkboxes) & Base Invoicing Fees.</p>
+            <h4 className="font-bold text-slate-800 dark:text-white text-base mb-1">Tour Sales & Base Fees</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Import Excursion Sales Grid (Checkboxes) & Base Invoicing Fees.</p>
             <input ref={salesRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { if (e.target.files?.[0]) handleTourSalesFile(e.target.files[0]); }} />
           </div>
           <div
             onClick={() => !importing && salesRef.current?.click()}
             onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
             onDrop={e => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.files?.[0]) handleTourSalesFile(e.dataTransfer.files[0]); }}
-            className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${importing ? 'border-amber-300 bg-amber-50/20' : 'border-amber-200 hover:border-amber-400 hover:bg-amber-50/30'}`}
+            className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${importing ? 'border-amber-300 dark:border-amber-700 bg-amber-50/20 dark:bg-amber-950/20' : 'border-amber-200 dark:border-amber-800/80 hover:border-amber-400 dark:hover:border-amber-600 hover:bg-amber-50/30 dark:hover:bg-amber-950/30'}`}
           >
             <Upload className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-            <span className="text-xs font-bold text-slate-700 block">Drop Excursion Sales Excel</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Drop Excursion Sales Excel</span>
             <span className="text-[10px] text-slate-400">or click to browse</span>
           </div>
         </div>
@@ -571,163 +571,145 @@ export default function MasterDataPage() {
 
   return (
     <>
-        <header className="h-10 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 sticky top-0">
-          <div className="flex items-center gap-6">
-            {activeTab !== 'kpis' && activeTab !== 'excelImport' && (
-              <button onClick={() => openModal()} className="flex items-center px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all hover:-translate-y-0.5 text-xs">
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add {currentConfig.title}
-              </button>
-            )}
-
+        <header className="bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shrink-0 z-20 sticky top-0 shadow-2xs">
+          {/* Top Tier: Title, Section Category Menu (from 2nd SS), Bell */}
+          <div className="h-12 px-6 flex items-center justify-between gap-4">
             {/* Page Title */}
-            <div className="flex items-center">
-              <h1 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                <div className="p-0.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded shadow-sm">
-                  <Database className="w-3 h-3 text-white" />
-                </div>
-                Master Data
-              </h1>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="p-1 bg-gradient-to-br from-blue-500 to-indigo-600 rounded shadow-xs">
+                <Database className="w-3.5 h-3.5 text-white" />
+              </div>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Master Data</h1>
+            </div>
+
+            {/* Category Navigation Menu (from 2nd SS) */}
+            <div className="flex items-center gap-1.5 bg-slate-100/90 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-2xs">
+              {SECTIONS.map((section) => {
+                const SectionIcon = section.icon;
+                const hasActiveTab = section.tabs.includes(activeTab);
+                return (
+                  <button
+                    key={section.label}
+                    onClick={() => {
+                      if (!hasActiveTab) setActiveTab(section.tabs[0]);
+                    }}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
+                      hasActiveTab
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200/70 dark:ring-slate-700'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className={`p-0.5 bg-gradient-to-br ${section.gradient} rounded ${hasActiveTab ? 'shadow-2xs opacity-100' : 'opacity-70'}`}>
+                      <SectionIcon className="w-3 h-3 text-white" />
+                    </div>
+                    <span>{section.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Notification Bell */}
+            <div className="flex items-center justify-end shrink-0">
+              <button suppressHydrationWarning className="relative p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-slate-50 dark:bg-slate-800 rounded-full hover:bg-blue-50 dark:hover:bg-slate-700">
+                <Bell className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <button suppressHydrationWarning className="relative p-1.5 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-full hover:bg-blue-50">
-              <Bell className="w-4 h-4" />
-            </button>
-            <div className="flex items-center space-x-2 border-l border-slate-200 pl-4">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                {user?.name ? user.name.charAt(0) : 'G'}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-800">{user?.name || 'G. Ersen Çelebi'}</span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{user?.role || 'Administrator'}</span>
-              </div>
+
+          {/* Sub-Tier: Active section sub-tabs */}
+          {SECTIONS.filter(s => s.tabs.includes(activeTab)).map(section => (
+            <div key={section.label} className="px-6 py-2 bg-slate-50/70 dark:bg-slate-900/70 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto">
+              {section.tabs.map((key) => {
+                const isActive = activeTab === key;
+                const config = TAB_CONFIG[key];
+                const Icon = config.icon;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={`flex items-center px-3 py-1 font-semibold text-xs rounded-lg transition-all shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-400 shadow-2xs border border-blue-200 dark:border-blue-900/60'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 mr-1.5" />
+                    {config.title}
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          ))}
         </header>
 
-        <div className="flex-1 overflow-auto p-8 flex flex-col bg-slate-50/50 relative">
-          <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none"></div>
+        <div className="flex-1 overflow-auto p-4 md:p-6 flex flex-col bg-slate-50/50 dark:bg-[#0B0F19] relative">
+          <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-50/50 dark:from-blue-950/20 to-transparent pointer-events-none"></div>
 
-          <div className="w-full px-4 md:px-8 mx-auto flex-1 flex flex-col relative z-0 mt-4">
-
-            {/* Section Headers - horizontal top bar */}
-            <div className="mb-4 shrink-0">
-              <div className="flex gap-2">
-                {SECTIONS.map((section) => {
-                  const SectionIcon = section.icon;
-                  const hasActiveTab = section.tabs.includes(activeTab);
-                  return (
-                    <button
-                      key={section.label}
-                      onClick={() => {
-                        if (!hasActiveTab) setActiveTab(section.tabs[0]);
-                      }}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                        hasActiveTab
-                          ? 'bg-white shadow-sm ring-1 ring-slate-200'
-                          : 'bg-white/40 hover:bg-white/70 text-slate-400 hover:text-slate-600'
-                      }`}
-                    >
-                      <div className={`p-1 bg-gradient-to-br ${section.gradient} rounded ${hasActiveTab ? 'shadow-sm' : 'opacity-60'}`}>
-                        <SectionIcon className="w-3 h-3 text-white" />
-                      </div>
-                      <span className={`text-xs font-bold tracking-wide ${hasActiveTab ? 'text-slate-800' : 'text-slate-400'}`}>
-                        {section.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Active section tabs */}
-              {SECTIONS.filter(s => s.tabs.includes(activeTab)).map(section => (
-                <div key={section.label} className="flex flex-wrap gap-1.5 mt-3 pl-1">
-                  {section.tabs.map((key) => {
-                    const isActive = activeTab === key;
-                    const config = TAB_CONFIG[key];
-                    const Icon = config.icon;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setActiveTab(key)}
-                        className={`flex items-center px-3 py-1.5 font-medium text-xs rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? 'bg-white text-blue-700 shadow-sm shadow-blue-500/10 ring-1 ring-blue-200'
-                            : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 mr-1.5" />
-                        {config.title}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+          <div className="w-full px-2 md:px-4 mx-auto flex-1 flex flex-col relative z-0">
 
             {activeTab === 'excelImport' ? (
               <ExcelImportPanel />
             ) : activeTab === 'kpis' ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1">
+              <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex-1">
                 <div className="p-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {/* KPI Cards */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 rounded-2xl p-6 border border-blue-100 dark:border-blue-900/50">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-blue-500 rounded-xl">
                           <Briefcase className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-semibold text-slate-600">Active Projects</span>
+                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Active Projects</span>
                       </div>
-                      <p className="text-3xl font-extrabold text-slate-900">—</p>
-                      <p className="text-xs text-slate-500 mt-1">Total active projects</p>
+                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white">—</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total active projects</p>
                     </div>
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-900/50">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-emerald-500 rounded-xl">
                           <TrendingUp className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-semibold text-slate-600">Total Revenue</span>
+                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Total Revenue</span>
                       </div>
-                      <p className="text-3xl font-extrabold text-slate-900">—</p>
-                      <p className="text-xs text-slate-500 mt-1">Across all confirmed tours</p>
+                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white">—</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Across all confirmed tours</p>
                     </div>
-                    <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-6 border border-violet-100">
+                    <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40 rounded-2xl p-6 border border-violet-100 dark:border-violet-900/50">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-violet-500 rounded-xl">
                           <Target className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-semibold text-slate-600">Conversion Rate</span>
+                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Conversion Rate</span>
                       </div>
-                      <p className="text-3xl font-extrabold text-slate-900">—</p>
-                      <p className="text-xs text-slate-500 mt-1">Proposals → Confirmed</p>
+                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white">—</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Proposals → Confirmed</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 rounded-2xl p-6 border border-amber-100 dark:border-amber-900/50">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-amber-500 rounded-xl">
                           <Activity className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-semibold text-slate-600">Tours In Progress</span>
+                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Tours In Progress</span>
                       </div>
-                      <p className="text-3xl font-extrabold text-slate-900">—</p>
-                      <p className="text-xs text-slate-500 mt-1">Currently running tours</p>
+                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white">—</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Currently running tours</p>
                     </div>
-                    <div className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl p-6 border border-rose-100">
+                    <div className="bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/40 dark:to-pink-950/40 rounded-2xl p-6 border border-rose-100 dark:border-rose-900/50">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 bg-rose-500 rounded-xl">
                           <DollarSign className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-semibold text-slate-600">Avg. Service Cost</span>
+                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Avg. Service Cost</span>
                       </div>
-                      <p className="text-3xl font-extrabold text-slate-900">—</p>
-                      <p className="text-xs text-slate-500 mt-1">Per tour average</p>
+                      <p className="text-3xl font-extrabold text-slate-900 dark:text-white">—</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Per tour average</p>
                     </div>
                   </div>
-                  <div className="mt-8 p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-center">
-                    <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                    <h3 className="text-sm font-bold text-slate-600 mb-1">Detailed Reports Coming Soon</h3>
+                  <div className="mt-8 p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center">
+                    <BarChart3 className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                    <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Detailed Reports Coming Soon</h3>
                     <p className="text-xs text-slate-400">Revenue breakdowns, occupancy rates, service utilization charts, and more will be available here.</p>
                   </div>
                 </div>
@@ -737,9 +719,9 @@ export default function MasterDataPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col justify-between">
+              <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex-1 flex flex-col justify-between">
                 {/* Search & Action Bar */}
-                <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="relative flex-1 w-full sm:max-w-md">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -750,10 +732,10 @@ export default function MasterDataPage() {
                         setSearchQuery(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all text-slate-800"
+                      className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all text-slate-800 dark:text-slate-100"
                     />
                     {searchQuery && (
-                      <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     )}
@@ -944,25 +926,25 @@ export default function MasterDataPage() {
                   return (
                     <>
                       <div className="overflow-x-auto flex-1">
-                        <table className="min-w-full divide-y divide-slate-200">
-                            <thead className="bg-slate-50">
+                        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                            <thead className="bg-slate-50 dark:bg-slate-900/60">
                               <tr>
                                 {currentConfig.fields.map(f => (
-                                  <th key={f.key} className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{f.label}</th>
+                                  <th key={f.key} className="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{f.label}</th>
                                 ))}
-                                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
+                            <tbody className="bg-white dark:bg-[#1E293B] divide-y divide-slate-200 dark:divide-slate-800">
                               {paginatedData.map((item, idx) => (
-                                <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
+                                <tr key={item.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                   {currentConfig.fields.map(f => (
                                     <td key={f.key} className="px-6 py-4 whitespace-nowrap">
-                                      <div className="text-sm font-medium text-slate-900">
+                                      <div className="text-sm font-medium text-slate-900 dark:text-slate-200">
                                         {f.type === 'select' 
                                           ? (selectOptions[f.key]?.find(opt => opt.id === item[f.key])?.[(f as any).optionLabel || 'name'] || item[f.key]) 
                                           : f.type === 'image' && item[f.key]
-                                            ? <img src={`/${item[f.key]}`} alt="Logo" className="w-10 h-10 rounded-full object-cover border border-slate-200" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/40?text=No+Logo'; }} />
+                                            ? <img src={`/${item[f.key]}`} alt="Logo" className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/40?text=No+Logo'; }} />
                                             : f.type === 'boolean'
                                               ? (item[f.key] ? 'Yes' : 'No')
                                               : (item[f.key] || '-')}
@@ -970,10 +952,10 @@ export default function MasterDataPage() {
                                     </td>
                                   ))}
                                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => openModal(item)} className="text-blue-600 hover:text-blue-900 mr-4 p-1 rounded hover:bg-blue-50">
+                                    <button onClick={() => openModal(item)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-4 p-1 rounded hover:bg-blue-50 dark:hover:bg-slate-800">
                                       <Edit2 className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50">
+                                    <button onClick={() => handleDelete(item.id)} className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-slate-800">
                                       <Trash2 className="w-4 h-4" />
                                     </button>
                                   </td>
@@ -984,21 +966,21 @@ export default function MasterDataPage() {
                           </div>
 
                           {/* PAGINATION FOOTER */}
-                          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-                            <div className="text-xs text-slate-500 font-medium">
-                              Showing <span className="font-bold text-slate-800">{totalRecords > 0 ? startIndex + 1 : 0}</span> to <span className="font-bold text-slate-800">{endIndex}</span> of <span className="font-bold text-slate-800">{totalRecords}</span> records
+                          <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                              Showing <span className="font-bold text-slate-800 dark:text-slate-200">{totalRecords > 0 ? startIndex + 1 : 0}</span> to <span className="font-bold text-slate-800 dark:text-slate-200">{endIndex}</span> of <span className="font-bold text-slate-800 dark:text-slate-200">{totalRecords}</span> records
                             </div>
 
                             <div className="flex items-center gap-6">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-slate-600">Rows per page:</span>
+                                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Rows per page:</span>
                                 <select
                                   value={pageSize}
                                   onChange={(e) => {
                                     setPageSize(Number(e.target.value));
                                     setCurrentPage(1);
                                   }}
-                                  className="px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm cursor-pointer"
+                                  className="px-2.5 py-1 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm cursor-pointer"
                                 >
                                   <option value={25}>25</option>
                                   <option value={50}>50</option>
@@ -1010,7 +992,7 @@ export default function MasterDataPage() {
                                 <button
                                   onClick={() => setCurrentPage(1)}
                                   disabled={currentPage === 1}
-                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                   title="First Page"
                                 >
                                   <ChevronsLeft className="w-4 h-4" />
@@ -1018,20 +1000,20 @@ export default function MasterDataPage() {
                                 <button
                                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                   disabled={currentPage === 1}
-                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                   title="Previous Page"
                                 >
                                   <ChevronLeft className="w-4 h-4" />
                                 </button>
 
-                                <span className="px-3 py-1 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                <span className="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">
                                   Page {currentPage} of {totalPages}
                                 </span>
 
                                 <button
                                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                   disabled={currentPage >= totalPages}
-                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                   title="Next Page"
                                 >
                                   <ChevronRight className="w-4 h-4" />
@@ -1039,7 +1021,7 @@ export default function MasterDataPage() {
                                 <button
                                   onClick={() => setCurrentPage(totalPages)}
                                   disabled={currentPage >= totalPages}
-                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                   title="Last Page"
                                 >
                                   <ChevronsRight className="w-4 h-4" />
@@ -1087,17 +1069,17 @@ export default function MasterDataPage() {
 
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className={`bg-white rounded-2xl shadow-2xl w-full ${currentConfig.fields.length > 4 ? 'max-w-3xl' : 'max-w-md'} max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100`}>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className={`bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full ${currentConfig.fields.length > 4 ? 'max-w-3xl' : 'max-w-md'} max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-100 dark:border-slate-800`}>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 shrink-0">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <div className="p-2 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg">
                   {React.createElement(currentConfig.icon, { className: "w-5 h-5" })}
                 </div>
-                <h2 className="text-lg font-bold text-slate-800">{editingItem ? `Edit ${currentConfig.title}` : `Add New ${currentConfig.title}`}</h2>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white">{editingItem ? `Edit ${currentConfig.title}` : `Add New ${currentConfig.title}`}</h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-full transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1240,14 +1222,14 @@ export default function MasterDataPage() {
                 <div className={`grid grid-cols-1 ${currentConfig.fields.length > 4 ? 'md:grid-cols-2 gap-x-6 gap-y-4' : 'gap-4'}`}>
                   {currentConfig.fields.map(f => (
                     <div key={f.key} className={f.key === 'name' || f.key === 'avatarUrl' ? 'md:col-span-2' : ''}>
-                      <label htmlFor={f.key} className="block text-xs font-semibold text-slate-700 mb-1.5">{f.label}</label>
+                      <label htmlFor={f.key} className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{f.label}</label>
                       {f.type === 'select' ? (
                         <select
                           id={f.key}
                           required={(f as any).required !== false}
                           value={formData[f.key] === null || formData[f.key] === undefined ? '' : formData[f.key]}
                           onChange={e => setFormData({...formData, [f.key]: e.target.value === "" ? null : Number(e.target.value)})}
-                          className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100"
                         >
                           <option value="" disabled={(f as any).required !== false} hidden={(f as any).required !== false}>
                             {(f as any).required === false ? 'None' : 'Select an option'}
@@ -1263,9 +1245,9 @@ export default function MasterDataPage() {
                             type="checkbox"
                             checked={!!formData[f.key]}
                             onChange={e => setFormData({...formData, [f.key]: e.target.checked})}
-                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="text-xs text-slate-600 font-medium">Enable {f.label}</span>
+                          <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Enable {f.label}</span>
                         </div>
                       ) : (
                         <input 
@@ -1274,7 +1256,7 @@ export default function MasterDataPage() {
                           type={f.type === 'number' ? 'number' : 'text'} 
                           value={formData[f.key] || ''} 
                           onChange={e => setFormData({...formData, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})} 
-                          className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm" 
+                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 text-sm text-slate-800 dark:text-slate-100" 
                         />
                       )}
                     </div>
@@ -1284,8 +1266,8 @@ export default function MasterDataPage() {
             </form>
 
             {/* Sticky Action Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex justify-end space-x-3 shrink-0">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 text-slate-600 font-semibold text-xs hover:bg-slate-200/60 rounded-xl transition-colors">Cancel</button>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-end space-x-3 shrink-0">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 text-slate-600 dark:text-slate-400 font-semibold text-xs hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition-colors">Cancel</button>
               <button type="submit" form="master-data-modal-form" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all">{editingItem ? 'Save Changes' : 'Create Record'}</button>
             </div>
           </div>

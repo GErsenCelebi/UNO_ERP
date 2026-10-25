@@ -48,6 +48,11 @@ namespace Uno_API.Controllers
                 return BadRequest("Invalid TourId.");
             }
 
+            if (!PassengerAgeHelper.HasPaxClassification(passenger.DateOfBirth, passenger.PaxType))
+            {
+                return BadRequest(PassengerAgeHelper.BothBlankErrorMessage);
+            }
+
             DateTime refDate = tour.ArrivalDate != default ? tour.ArrivalDate : DateTime.Today;
             passenger.PaxType = PassengerAgeHelper.DeterminePaxType(passenger.DateOfBirth, passenger.PaxType, refDate);
 
@@ -66,6 +71,11 @@ namespace Uno_API.Controllers
         {
             if (id != passenger.Id) return BadRequest();
 
+            if (!PassengerAgeHelper.HasPaxClassification(passenger.DateOfBirth, passenger.PaxType))
+            {
+                return BadRequest(PassengerAgeHelper.BothBlankErrorMessage);
+            }
+
             var dbP = await _context.Passengers.FindAsync(id);
             if (dbP == null) return NotFound();
 
@@ -82,6 +92,7 @@ namespace Uno_API.Controllers
             dbP.PassportType = passenger.PassportType;
             dbP.VisaNo = passenger.VisaNo;
             dbP.RoomType = passenger.RoomType;
+            dbP.RoomNumber = passenger.RoomNumber;
             dbP.Address = passenger.Address;
             dbP.Pax = passenger.Pax > 0 ? passenger.Pax : 1;
             dbP.PaxType = PassengerAgeHelper.DeterminePaxType(passenger.DateOfBirth, passenger.PaxType, refDate);
@@ -136,11 +147,12 @@ namespace Uno_API.Controllers
 
             foreach (var p in payingPassengers)
             {
-                int paxVal = p.Pax > 0 ? p.Pax : 1;
-                string pType = PassengerAgeHelper.DeterminePaxType(p.DateOfBirth, p.PaxType, refDate);
-                if (pType == "Infant") infantCount += paxVal;
-                else if (pType == "Children") childCount += paxVal;
-                else adultCount += paxVal;
+                string pType = PassengerAgeHelper.HasPaxClassification(p.DateOfBirth, p.PaxType)
+                    ? PassengerAgeHelper.DeterminePaxType(p.DateOfBirth, p.PaxType, refDate)
+                    : "Adult";
+                if (pType == "Infant") infantCount += 1;
+                else if (pType == "Children") childCount += 1;
+                else adultCount += 1;
             }
 
             if (tour.BaseFee == 0) tour.BaseFee = 250m;

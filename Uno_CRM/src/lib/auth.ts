@@ -73,9 +73,10 @@ export function canDeleteTours(role?: string): boolean {
 export function getAuthHeaders(): Record<string, string> {
   const user = getCurrentUser();
   if (!user) return {};
+  const safeName = user.name ? encodeURIComponent(user.name) : '';
   return {
     'X-User-Role': user.role || '',
-    'X-User-Name': user.name || '',
+    'X-User-Name': safeName,
     'X-User-Email': user.email || ''
   };
 }

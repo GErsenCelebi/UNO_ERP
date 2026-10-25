@@ -5,6 +5,7 @@ namespace Uno_API.Services
     public static class PassengerAgeHelper
     {
         public const int ChildMaxAge = 12; // Lower than 12 years old is marked as children; 12 and above are adult
+        public const string BothBlankErrorMessage = "Both DoB and PaxType fields are blank please fill one at least of them";
 
         /// <summary>
         /// Calculates the exact calendar age in whole years from birthDate to referenceDate.
@@ -17,6 +18,14 @@ namespace Uno_API.Services
                 age--;
             }
             return age;
+        }
+
+        /// <summary>
+        /// Checks whether at least one of birthDate or existingPaxType is provided.
+        /// </summary>
+        public static bool HasPaxClassification(DateTime? birthDate, string? existingPaxType)
+        {
+            return birthDate.HasValue || !string.IsNullOrWhiteSpace(existingPaxType);
         }
 
         /// <summary>
@@ -42,6 +51,9 @@ namespace Uno_API.Services
 
         /// <summary>
         /// Returns the standardized PaxType ("Children", "Adult", or "Infant") based on birthDate or existing type.
+        /// If DoB is filled: age >= 12 -> "Adult", age < 12 -> "Children" (and age < 2 -> "Infant"), even if paxType is blank.
+        /// If DoB is blank but paxType is filled: evaluates paxType.
+        /// If both are blank: throws InvalidOperationException with BothBlankErrorMessage.
         /// </summary>
         public static string DeterminePaxType(DateTime? birthDate, string? existingPaxType, DateTime referenceDate)
         {
@@ -67,7 +79,44 @@ namespace Uno_API.Services
                 return "Adult";
             }
 
-            return "Adult";
+            throw new InvalidOperationException(BothBlankErrorMessage);
+        }
+
+        /// <summary>
+        /// Safely attempts to determine PaxType, returning false and setting errorMessage if both fields are blank.
+        /// </summary>
+        public static bool TryDeterminePaxType(DateTime? birthDate, string? existingPaxType, DateTime referenceDate, out string paxType, out string? errorMessage)
+        {
+            if (birthDate.HasValue)
+            {
+                int age = CalculateAge(birthDate.Value, referenceDate);
+                paxType = age < 2 ? "Infant" : (age < ChildMaxAge ? "Children" : "Adult");
+                errorMessage = null;
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(existingPaxType))
+            {
+                var pt = existingPaxType.ToUpperInvariant();
+                if (pt.Contains("CHILD") || pt.Contains("CHD") || pt.Contains("ÇOCUK") || pt.Contains("COCUK"))
+                {
+                    paxType = "Children";
+                }
+                else if (pt.Contains("INFANT") || pt.Contains("BEBEK") || pt.Contains("INF"))
+                {
+                    paxType = "Infant";
+                }
+                else
+                {
+                    paxType = "Adult";
+                }
+                errorMessage = null;
+                return true;
+            }
+
+            paxType = string.Empty;
+            errorMessage = BothBlankErrorMessage;
+            return false;
         }
     }
 }

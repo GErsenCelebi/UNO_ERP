@@ -87,7 +87,7 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
   const targetName = STATUS_NAMES[data.targetStatusId] || `Status #${data.targetStatusId}`;
 
   return (
-    <div className="mt-2 bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+    <div className="mt-2 bg-white dark:bg-[#1E293B] rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden">
       {/* Collapsible Bar Header */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
@@ -144,33 +144,33 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
 
       {/* Expandable Checkpoints Checklist Grid */}
       {isOpen && (
-        <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1.5 bg-slate-50/50 border-t border-slate-100">
+        <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1.5 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
           {data.checkpoints.map(chk => (
             <div
               key={chk.id || chk.checkpointKey}
               className={`px-2.5 py-1 rounded-md border flex items-start gap-1.5 transition-colors ${
                 chk.isSatisfied
-                  ? 'bg-white border-emerald-200/80 shadow-2xs'
+                  ? 'bg-white dark:bg-slate-800/80 border-emerald-200/80 dark:border-emerald-800/50 shadow-2xs'
                   : chk.isMandatory
-                  ? 'bg-rose-50/50 border-rose-200/80'
-                  : 'bg-amber-50/50 border-amber-200/80'
+                  ? 'bg-rose-50/50 dark:bg-rose-950/30 border-rose-200/80 dark:border-rose-900/50'
+                  : 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-900/50'
               }`}
             >
               {chk.isSatisfied ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               ) : (
-                <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                <XCircle className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 shrink-0 mt-0.5" />
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
-                  <span className={`text-[10.5px] font-bold truncate ${chk.isSatisfied ? 'text-slate-800' : 'text-slate-900'}`}>
+                  <span className={`text-[10.5px] font-bold truncate ${chk.isSatisfied ? 'text-slate-800 dark:text-slate-200' : 'text-slate-900 dark:text-slate-100'}`}>
                     {chk.name}
                   </span>
                   {chk.isMandatory && !chk.isSatisfied && (
-                    <span className="text-[8px] font-bold text-rose-700 bg-rose-100 px-1 py-0 rounded">REQUIRED</span>
+                    <span className="text-[8px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/50 px-1 py-0 rounded">REQUIRED</span>
                   )}
                 </div>
-                <p className="text-[9.5px] text-slate-500 leading-tight">{chk.reason}</p>
+                <p className="text-[9.5px] text-slate-500 dark:text-slate-400 leading-tight">{chk.reason}</p>
               </div>
             </div>
           ))}

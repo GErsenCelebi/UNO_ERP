@@ -242,6 +242,13 @@ namespace Uno_API.Controllers
                         string address = row.Cell(14).GetString().Trim();
 
                         DateTime refDate = currentTour.ArrivalDate != default ? currentTour.ArrivalDate : DateTime.Today;
+                        if (!dob.HasValue)
+                        {
+                            return BadRequest(new { 
+                                error = PassengerAgeHelper.BothBlankErrorMessage,
+                                message = PassengerAgeHelper.BothBlankErrorMessage
+                            });
+                        }
                         string paxType = PassengerAgeHelper.DeterminePaxType(dob, null, refDate);
 
                         importedPassengers.Add(new Passenger

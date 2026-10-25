@@ -25,6 +25,13 @@ namespace Uno_API.Services
 
             var q = query.Trim().ToLowerInvariant();
 
+            // -2. Intelligent Rooming Review, Matching & Database Assignment
+            var roomingResponse = await TryHandleRoomingReviewAndSetAsync(query, q, contextUrl);
+            if (roomingResponse != null)
+            {
+                return roomingResponse;
+            }
+
             // -1. Tour Financial & Quality Ranking / Analytics / Extremum Intelligence (English & Turkish)
             var rankingResponse = await TryHandleFinancialAndQualityRankingAsync(query, q, contextUrl);
             if (rankingResponse != null)

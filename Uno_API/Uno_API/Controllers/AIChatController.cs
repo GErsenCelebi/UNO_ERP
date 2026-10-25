@@ -40,6 +40,11 @@ namespace Uno_API.Controllers
         public List<string> Sheets { get; set; } = new();
         public List<ExcelInconsistencyDto> Inconsistencies { get; set; } = new();
         public bool CanCommit { get; set; } = true;
+        public bool HasIncompleteHotelBookings { get; set; } = false;
+        public int HotelBookingsCount { get; set; } = 0;
+        public int? MatchedTourId { get; set; }
+        public int? MatchedProjectId { get; set; }
+        public string HotelBookingPrompt { get; set; } = string.Empty;
     }
     public class AIChatRequest
     {
@@ -47,6 +52,25 @@ namespace Uno_API.Controllers
         public string? ContextUrl { get; set; }
         public string? Role { get; set; }
         public string? Category { get; set; }
+    }
+
+    public class GroundedDatapointDto
+    {
+        public string Field { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public string? Entity { get; set; }
+        public string Source { get; set; } = string.Empty;
+        public bool Verified { get; set; } = true;
+        public double Confidence { get; set; } = 1.0;
+    }
+
+    public class ConfidenceReportDto
+    {
+        public double Score { get; set; } = 1.0; // 0.0 - 1.0
+        public string Level { get; set; } = "High"; // "High", "Moderate", "Low"
+        public string GroundingType { get; set; } = "Live SQL Database"; // "Live SQL Database", "Authoritative SOP", "Inferred RAG", "General AI"
+        public string VerificationSummary { get; set; } = string.Empty;
+        public List<GroundedDatapointDto> Datapoints { get; set; } = new();
     }
 
     public class AIChatResponse
@@ -57,6 +81,7 @@ namespace Uno_API.Controllers
         public string Mode { get; set; } = "Local-Hybrid-RAG";
         public string? SourceDocument { get; set; }
         public string? Category { get; set; }
+        public ConfidenceReportDto? Confidence { get; set; }
     }
 
     public class QuickActionLink
@@ -95,13 +120,10 @@ namespace Uno_API.Controllers
             }
 
             // 0. Specific Entity Live Database Lookup (Specific Tour, Project, Current City, Guide, Hotel, Margin, Pax)
+            AIChatResponse? specificEntityResponse = null;
             try
             {
-                var specificEntityResponse = await _entityLookupService.TryHandleSpecificEntityQueryAsync(request.Query, request.ContextUrl, request.Role);
-                if (specificEntityResponse != null)
-                {
-                    return Ok(specificEntityResponse);
-                }
+                specificEntityResponse = await _entityLookupService.TryHandleSpecificEntityQueryAsync(request.Query, request.ContextUrl, request.Role);
             }
             catch (Exception ex)
             {
@@ -109,6 +131,83 @@ namespace Uno_API.Controllers
             }
 
             var q = request.Query.Trim().ToLower();
+            bool isTurkish = DetectTurkishLanguageInQuery(request.Query);
+            var isLlmAvailable = await _llmService.IsLlmAvailableAsync();
+
+            if (specificEntityResponse != null)
+            {
+                if (isLlmAvailable)
+                {
+                    try
+                    {
+                        var langInstruction = isTurkish
+                            ? "The user query is in Turkish. Formulate your complete answer concisely in natural, professional Turkish using markdown. Retain exact numbers, currencies, tour codes, and markdown comparison tables from the factual data."
+                            : "The user query is in English. Formulate your complete answer concisely in clear, professional English using markdown. Retain exact numbers, currencies, tour codes, and markdown comparison tables from the factual data.";
+
+                        var systemPrompt = "You are the AI Assistant Copilot for UNO ERP, a tour operating enterprise platform.\n" +
+                                           "Your role is to explain workflows, tour rankings, and system financials based on verified live database facts.\n" +
+                                           $"{langInstruction}\n" +
+                                           "Preserve markdown tables and exact numbers. Do not alter financial figures.";
+
+                        var userPrompt = $"Verified Database Facts & Calculations:\n\"\"\"\n{specificEntityResponse.Answer}\n\"\"\"\n\nUser Question: {request.Query}";
+
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                        var llmAnswer = await _llmService.GenerateChatResponseAsync(
+                            systemPrompt,
+                            userPrompt,
+                            options: new LlmGenerationOptions { MaxTokens = 450, Temperature = 0.2f },
+                            cancellationToken: cts.Token);
+
+                        if (!string.IsNullOrWhiteSpace(llmAnswer))
+                        {
+                            // If original answer contains a full structured table or HIL warning, preserve it
+                            bool hasPreservedStructure = specificEntityResponse.Answer.Contains("| Room #") ||
+                                                         specificEntityResponse.Answer.Contains("| Oda No") ||
+                                                         specificEntityResponse.Answer.Contains("Human-in-the-Loop") ||
+                                                         specificEntityResponse.Answer.Contains("HIL");
+
+                            if (hasPreservedStructure)
+                            {
+                                int preserveIdx = -1;
+                                if (specificEntityResponse.Answer.Contains("### ⚠️"))
+                                    preserveIdx = specificEntityResponse.Answer.IndexOf("### ⚠️");
+                                else if (specificEntityResponse.Answer.Contains("### ✅"))
+                                    preserveIdx = specificEntityResponse.Answer.IndexOf("### ✅");
+                                else if (specificEntityResponse.Answer.Contains("### 📋"))
+                                    preserveIdx = specificEntityResponse.Answer.IndexOf("### 📋");
+
+                                if (preserveIdx > 0)
+                                {
+                                    string cleanLlmIntro = llmAnswer.Trim();
+                                    int llmHeaderIdx = cleanLlmIntro.IndexOf("###");
+                                    if (llmHeaderIdx > 0)
+                                    {
+                                        cleanLlmIntro = cleanLlmIntro.Substring(0, llmHeaderIdx).Trim();
+                                    }
+
+                                    specificEntityResponse.Answer = cleanLlmIntro + "\n\n" + specificEntityResponse.Answer.Substring(preserveIdx);
+                                }
+                                else
+                                {
+                                    specificEntityResponse.Answer = specificEntityResponse.Answer;
+                                }
+                            }
+                            else
+                            {
+                                specificEntityResponse.Answer = llmAnswer.Trim();
+                            }
+                            specificEntityResponse.Mode = $"Local-LLM ({_llmService.GetConfiguredModelName()})";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[AIChatController] Ollama synthesis over SQL facts timed out or errored: {ex.Message}");
+                    }
+                }
+
+                return Ok(SanitizeResponse(specificEntityResponse));
+            }
+
             var response = new AIChatResponse();
             var links = new List<QuickActionLink>();
 
@@ -125,11 +224,25 @@ namespace Uno_API.Controllers
                     $"• **Combined Tour Package Revenue**: `€{totalRev:N2}`\n\n" +
                     "Would you like to inspect specific departures on the Tours board or verify upcoming status gate checkpoints?";
 
+                response.Confidence = new ConfidenceReportDto
+                {
+                    Score = 1.0,
+                    Level = "High",
+                    GroundingType = "Live SQL Database",
+                    VerificationSummary = "Tours and financial rollups queried directly from SQL Server table [Tours]. 0% hallucination risk.",
+                    Datapoints = new List<GroundedDatapointDto>
+                    {
+                        new GroundedDatapointDto { Field = "Total Tours", Value = $"{tourCount} departures", Source = "SQL: Tours (Count)", Verified = true, Confidence = 1.0 },
+                        new GroundedDatapointDto { Field = "Confirmed Status", Value = $"{confirmedTours} groups", Source = "SQL: Tours (TourStatusId = 3)", Verified = true, Confidence = 1.0 },
+                        new GroundedDatapointDto { Field = "Combined Revenue", Value = $"€{totalRev:N2}", Source = "SQL: Tours (TotalFee)", Verified = true, Confidence = 1.0 }
+                    }
+                };
+
                 links.Add(new QuickActionLink { Label = "Open Tours Board", Path = "/tours" });
                 response.RecommendedLinks = links;
                 response.SuggestedPills = new List<string> { "Tour status transition criteria", "How to advance to Confirmed?", "Rooming list import" };
                 response.Category = "Tours";
-                return Ok(response);
+                return Ok(SanitizeResponse(response));
             }
             else if (q.Contains("active project") || q.Contains("how many project") || (q.Contains("summarize") && q.Contains("project")))
             {
@@ -143,11 +256,25 @@ namespace Uno_API.Controllers
                     $"• **Combined Approx Budget**: `€{totalBudget:N2}`\n\n" +
                     "All individual tour departures roll up their financial performance into these parent projects.";
 
+                response.Confidence = new ConfidenceReportDto
+                {
+                    Score = 1.0,
+                    Level = "High",
+                    GroundingType = "Live SQL Database",
+                    VerificationSummary = "Aggregated directly from SQL Server table [Projects]. 0% hallucination risk.",
+                    Datapoints = new List<GroundedDatapointDto>
+                    {
+                        new GroundedDatapointDto { Field = "Master Projects", Value = $"{projectCount} contracts", Source = "SQL: Projects (Count)", Verified = true, Confidence = 1.0 },
+                        new GroundedDatapointDto { Field = "Active Projects", Value = $"{activeProjects} active", Source = "SQL: Projects (Status = Active)", Verified = true, Confidence = 1.0 },
+                        new GroundedDatapointDto { Field = "Approx Budget", Value = $"€{totalBudget:N2}", Source = "SQL: Projects (ApproxBudget)", Verified = true, Confidence = 1.0 }
+                    }
+                };
+
                 links.Add(new QuickActionLink { Label = "Open Projects Dashboard", Path = "/projects" });
                 response.RecommendedLinks = links;
                 response.SuggestedPills = new List<string> { "Why are Projects needed?", "How to create a project?", "Executive KPI Dashboard" };
                 response.Category = "Projects";
-                return Ok(response);
+                return Ok(SanitizeResponse(response));
             }
             else if (q.Contains("recent change") || q.Contains("what happened") || q.Contains("latest log"))
             {
@@ -161,10 +288,27 @@ namespace Uno_API.Controllers
                 {
                     response.Answer = "👋 No recent audit logs found in the database.";
                 }
+                response.Confidence = new ConfidenceReportDto
+                {
+                    Score = 1.0,
+                    Level = "High",
+                    GroundingType = "Live SQL Database",
+                    VerificationSummary = "Retrieved directly from [AuditLogs] table. Full chronological fidelity.",
+                    Datapoints = recentLogs.Select(l => new GroundedDatapointDto
+                    {
+                        Field = l.Action,
+                        Value = l.Summary,
+                        Entity = l.EntityName,
+                        Source = "SQL: AuditLogs",
+                        Verified = true,
+                        Confidence = 1.0
+                    }).ToList()
+                };
+
                 links.Add(new QuickActionLink { Label = "View Full Audit Logs", Path = "/audit-logs" });
                 response.RecommendedLinks = links;
                 response.SuggestedPills = new List<string> { "How to configure role access?", "How to view user change logs?" };
-                return Ok(response);
+                return Ok(SanitizeResponse(response));
             }
 
             // 2. Intelligent Hybrid Knowledge Base Search (Local RAG + Local LLM)
@@ -174,7 +318,6 @@ namespace Uno_API.Controllers
             if (matchResult != null && matchResult.Score >= 6.0)
             {
                 // Attempt Local LLM inference over retrieved RAG chunks
-                var isLlmAvailable = await _llmService.IsLlmAvailableAsync();
                 if (isLlmAvailable)
                 {
                     try
@@ -186,7 +329,6 @@ namespace Uno_API.Controllers
                         });
                         var ragContext = string.Join("\n\n---\n\n", ragChunks);
 
-                        bool isTurkish = DetectTurkishLanguageInQuery(request.Query);
                         var langInstruction = isTurkish
                             ? "The user query is in Turkish. Formulate your complete answer concisely in natural, professional Turkish. Retain established ERP terms like Pax, Draft, Confirmed."
                             : "The user query is in English. Formulate your complete answer concisely in clear, professional English.";
@@ -194,7 +336,15 @@ namespace Uno_API.Controllers
                         var systemPrompt = "You are the AI Assistant Copilot for UNO ERP, a tour operating enterprise platform.\n" +
                                            "Your role is to explain workflows, SOPs, and system rules based on the provided UNO ERP User Manual context.\n" +
                                            $"{langInstruction}\n" +
-                                           "Use concise markdown formatting with bold headers and bullet points. Maximum 3-4 key paragraphs.";
+                                           "Use concise markdown formatting with bold headers and bullet points. Maximum 3-4 key paragraphs.\n\n" +
+                                           "STRICT SECURITY RULES (NEVER VIOLATE):\n" +
+                                           "- NEVER mention database table names, SQL scripts, SQL filenames, or database connection details.\n" +
+                                           "- NEVER mention internal source code filenames (.cs, .tsx, .csproj), server technologies (SSMS, Entity Framework, Kestrel, dotnet), or deployment tools.\n" +
+                                           "- NEVER mention file system paths, repository locations, or production server hostnames.\n" +
+                                           "- NEVER mention environment names like PRODUCTION, STAGING, or technical method names.\n" +
+                                           "- NEVER reveal how the knowledge base is stored, seeded, or updated internally.\n" +
+                                           "- Focus ONLY on business workflows, operational procedures, and user-facing features.\n" +
+                                           "- If the context contains technical implementation details, ignore them and answer from a business/user perspective only.";
 
                         var userPrompt = $"Relevant User Manual Context:\n\"\"\"\n{ragContext}\n\"\"\"\n\nUser Question: {request.Query}";
 
@@ -209,6 +359,36 @@ namespace Uno_API.Controllers
                             response.Answer = llmAnswer.Trim();
                             response.Mode = $"Local-LLM ({_llmService.GetConfiguredModelName()})";
                             response.Category = matchResult.Item.Category;
+                            var normScore = Math.Min(0.97, Math.Max(0.70, matchResult.Score / 25.0));
+                            response.Confidence = new ConfidenceReportDto
+                            {
+                                Score = Math.Round(normScore, 2),
+                                Level = normScore >= 0.85 ? "High" : "Moderate",
+                                GroundingType = "Authoritative SOP Manual",
+                                VerificationSummary = isTurkish
+                                    ? $"Resmi SOP dökümanları ve iş kurallarıyla eşleştirilmiştir. (Eşleşme skoru: %{normScore * 100:0})"
+                                    : $"Retrieved from authoritative SOP documentation with {normScore * 100:0}% relevance match.",
+                                Datapoints = new List<GroundedDatapointDto>
+                                {
+                                    new GroundedDatapointDto
+                                    {
+                                        Field = "SOP Topic",
+                                        Value = $"{matchResult.Item.Category} > {matchResult.Item.SubTopic ?? "Workflow"}",
+                                        Source = matchResult.Item.SourceFile ?? "UserManuals",
+                                        Verified = true,
+                                        Confidence = Math.Round(normScore, 2)
+                                    },
+                                    new GroundedDatapointDto
+                                    {
+                                        Field = "Procedure Match",
+                                        Value = matchResult.Item.QuestionPattern,
+                                        Source = "SOP Gate Checkpoint Index",
+                                        Verified = true,
+                                        Confidence = Math.Round(normScore, 2)
+                                    }
+                                }
+                            };
+
                             if (!string.IsNullOrEmpty(matchResult.Item.TargetUrl))
                             {
                                 links.Add(new QuickActionLink
@@ -219,7 +399,7 @@ namespace Uno_API.Controllers
                             }
                             response.RecommendedLinks = links;
                             response.SuggestedPills = GetCategoryDefaultPills(matchResult.Item.Category);
-                            return Ok(response);
+                            return Ok(SanitizeResponse(response));
                         }
                     }
                     catch (Exception ex)
@@ -231,6 +411,27 @@ namespace Uno_API.Controllers
                 var item = matchResult.Item;
                 response.Answer = FormatAgenticResponse(item, request.Query);
                 response.Mode = "Local-Hybrid-RAG";
+                var ragScore = Math.Min(0.95, Math.Max(0.65, matchResult.Score / 25.0));
+                response.Confidence = new ConfidenceReportDto
+                {
+                    Score = Math.Round(ragScore, 2),
+                    Level = ragScore >= 0.85 ? "High" : "Moderate",
+                    GroundingType = "Authoritative SOP Manual",
+                    VerificationSummary = isTurkish
+                        ? $"Resmi SOP dökümanları ve iş kurallarıyla eşleştirilmiştir. (Eşleşme skoru: %{ragScore * 100:0})"
+                        : $"Retrieved from authoritative SOP documentation with {ragScore * 100:0}% relevance match.",
+                    Datapoints = new List<GroundedDatapointDto>
+                    {
+                        new GroundedDatapointDto
+                        {
+                            Field = "SOP Section",
+                            Value = $"{item.Category} > {item.SubTopic ?? "Workflow"}",
+                            Source = item.SourceFile ?? "UserManuals",
+                            Verified = true,
+                            Confidence = Math.Round(ragScore, 2)
+                        }
+                    }
+                };
 
                 // Only cite actual external documents (PDF, Word, PowerPoint), never internal .md files
                 if (!string.IsNullOrEmpty(item.SourceFile) &&
@@ -276,10 +477,21 @@ namespace Uno_API.Controllers
 
                 response.RecommendedLinks = links;
                 response.SuggestedPills = pills;
-                return Ok(response);
+                return Ok(SanitizeResponse(response));
             }
 
             // 3. Fallback Helpful Agent Guidance
+            response.Confidence = new ConfidenceReportDto
+            {
+                Score = 0.50,
+                Level = "Low",
+                GroundingType = "General Guidance",
+                VerificationSummary = isTurkish
+                    ? "Veritabanında veya SOP dökümanlarında doğrudan bir kayıt bulunamadı; genel rehberlik sunuluyor."
+                    : "General navigation guidance without direct database or SOP match.",
+                Datapoints = new List<GroundedDatapointDto>()
+            };
+
             response.Answer = $"👋 **I searched the UNO ERP Knowledge Base for \"{request.Query}\"**.\n\n" +
                 "While I couldn't find an exact step-by-step match, here are the primary operational hubs you can explore:\n\n" +
                 "• 🚌 **Tours & Departures**: Manage rooming manifests, status gates, and hotel costing at **[Tours](/tours)**.\n" +
@@ -299,7 +511,7 @@ namespace Uno_API.Controllers
                 "What are the 5 Excel import scenarios?"
             };
 
-            return Ok(response);
+            return Ok(SanitizeResponse(response));
         }
 
         private static string FormatAgenticResponse(AiKnowledgeItem item, string query)
@@ -363,6 +575,125 @@ namespace Uno_API.Controllers
                 "metadata" => new List<string> { "Hotels Master Data", "Role access permissions", "How to add a user?" },
                 _ => new List<string> { "How to advance to Confirmed?", "How to import Excel rooming list?", "Tour status transition criteria" }
             };
+        }
+
+        /// <summary>
+        /// SECURITY: Sanitize all AI bot response text before sending to end users.
+        /// Strips internal technical details: SQL filenames, DB table names, connection strings,
+        /// file system paths, server hostnames, environment references, source code filenames,
+        /// migration scripts, and any other infrastructure information that should never be
+        /// exposed to end users through the chatbot interface.
+        /// </summary>
+        private static string SanitizeForEndUser(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return text;
+
+            // 1. Remove SQL script filenames (e.g. seed_ai_knowledge_v2026_08_21.sql)
+            text = Regex.Replace(text, @"`?[A-Za-z0-9_\-]+\.sql`?", "", RegexOptions.IgnoreCase);
+
+            // 2. Remove database table names (AiKnowledgeItems, TourExcursionSales, TourServices, etc.)
+            var dbTableNames = new[] {
+                "AiKnowledgeItems", "TourExcursionSales", "TourServices", "TourAttachments",
+                "AuditLogs", "ServiceCategories", "ProjectStatuses", "TourStatuses",
+                "Passengers", "ExcursionVendors", "UnoDbContext", "DbContext"
+            };
+            foreach (var table in dbTableNames)
+            {
+                text = Regex.Replace(text, $@"`?{Regex.Escape(table)}`?", "the system", RegexOptions.IgnoreCase);
+            }
+
+            // 3. Remove connection strings and DB server references
+            text = Regex.Replace(text, @"Server=\([^)]*\)\\[^;]+;[^""'\s]*", "[connection removed]", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"(localdb|MSSQLLocalDB|databaseasp\.net|db\d+\.databaseasp\.net)", "", RegexOptions.IgnoreCase);
+
+            // 4. Remove file system paths (Windows and Unix)
+            text = Regex.Replace(text, @"(file:///)?[A-Z]:\\[^\s""'`\]>]+", "", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"/[a-z]:/[^\s""'`\]>]+", "", RegexOptions.IgnoreCase);
+
+            // 5. Remove source code filenames (.cs, .tsx, .ts, .csproj, .json config files)
+            text = Regex.Replace(text, @"`?[A-Za-z0-9_\-]+\.(cs|tsx?|csproj|sln)`?", "", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"`?appsettings(\.[A-Za-z]+)?\.json`?", "", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"`?Program\.cs`?", "", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"`?launchSettings\.json`?", "", RegexOptions.IgnoreCase);
+
+            // 6. Remove technology stack references that are internal implementation details
+            var techTerms = new[] {
+                "SSMS", "SQL Server Management Studio", "Entity Framework", "EntityFrameworkCore",
+                "EnableRetryOnFailure", "UseSqlServer", "EnsureCreated", "AddDbContext",
+                "dotnet run", "dotnet build", "dotnet publish", "npm run build",
+                "MSBuild", "StaticWebAssets", "WebDeploy", "Kestrel",
+                "BeginTransaction", "SaveChangesAsync", "CommitAsync", "RollbackAsync"
+            };
+            foreach (var term in techTerms)
+            {
+                text = text.Replace(term, "", StringComparison.OrdinalIgnoreCase);
+            }
+
+            // 7. Remove environment/deployment references
+            text = Regex.Replace(text, @"\b(PRODUCTION|STAGING|DEVELOPMENT)\s*(veritaban[ıi]|database|environment|server|ortam[ıi]?)\b", "the system", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, @"\bPRODUCTION\b", "the live system", RegexOptions.IgnoreCase);
+
+            // 8. Remove method names like "Method A", "Method B" when describing technical approaches
+            text = Regex.Replace(text, @"""Method [A-Z]""", "the recommended approach", RegexOptions.IgnoreCase);
+
+            // 9. Remove seed script references
+            text = Regex.Replace(text, @"`?seed_[a-z0-9_]+`?", "", RegexOptions.IgnoreCase);
+
+            // 10. Remove version tags with internal naming (v2026.08.21-PROD-RELEASE)
+            text = Regex.Replace(text, @"v\d{4}\.\d{2}\.\d{2}-PROD-RELEASE", "the latest release", RegexOptions.IgnoreCase);
+
+            // 11. Remove repository paths
+            text = Regex.Replace(text, @"`?C:\\Ersen\\[^\s`""']+`?", "", RegexOptions.IgnoreCase);
+
+            // 12. Remove Playwright / test script paths
+            text = Regex.Replace(text, @"tests/e2e/[^\s""'`]+", "", RegexOptions.IgnoreCase);
+
+            // 13. Remove migration class references (20260801101945_AddExcursionVendorFK, etc.)
+            text = Regex.Replace(text, @"\d{14}_[A-Za-z]+", "", RegexOptions.IgnoreCase);
+
+            // 14. Remove any remaining backtick-wrapped technical identifiers that look like code
+            text = Regex.Replace(text, @"`(tour|project|service)\.(ProjectId|TourId|ServiceCategoryId)\s*=\s*[^`]+`", "", RegexOptions.IgnoreCase);
+
+            // 15. Remove production URLs/hostnames that are internal
+            text = Regex.Replace(text, @"https?://uno-dmc\.cz/?", "the application", RegexOptions.IgnoreCase);
+
+            // 16. Clean up artifacts: double spaces, orphaned parentheses, empty backticks
+            text = Regex.Replace(text, @"`\s*`", "");
+            text = Regex.Replace(text, @"\(\s*\)", "");
+            text = Regex.Replace(text, @"\s{2,}", " ");
+            text = Regex.Replace(text, @"^\s*[\-•]\s*$", "", RegexOptions.Multiline); // empty bullet points
+            text = Regex.Replace(text, @"\n{3,}", "\n\n"); // excessive blank lines
+
+            return text.Trim();
+        }
+
+        /// <summary>
+        /// Applies SanitizeForEndUser to all text fields in an AIChatResponse before returning to the client.
+        /// </summary>
+        private static AIChatResponse SanitizeResponse(AIChatResponse response)
+        {
+            response.Answer = SanitizeForEndUser(response.Answer);
+
+            // Never expose internal mode details to end users
+            response.Mode = "Smart Assistant";
+
+            // Never expose source document references that contain internal filenames
+            if (!string.IsNullOrEmpty(response.SourceDocument))
+            {
+                // Only allow user-facing document names (PDF, DOCX, PPTX) — strip paths
+                if (response.SourceDocument.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
+                    response.SourceDocument.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ||
+                    response.SourceDocument.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase))
+                {
+                    response.SourceDocument = Path.GetFileName(response.SourceDocument);
+                }
+                else
+                {
+                    response.SourceDocument = null;
+                }
+            }
+
+            return response;
         }
         [HttpPost("inspect-excel")]
         public async Task<ActionResult<ExcelInspectionResultDto>> InspectExcel(
@@ -520,6 +851,56 @@ namespace Uno_API.Controllers
                 }
             }
 
+            // Check Hotel Bookings / Services for target tour
+            if (!result.IsMetadataFile && !string.IsNullOrEmpty(result.MatchedTourCode))
+            {
+                var tourObj = await _context.Tours
+                    .Include(t => t.Project)
+                    .FirstOrDefaultAsync(t => t.TourCode.ToLower() == result.MatchedTourCode.ToLower());
+
+                if (tourObj != null)
+                {
+                    result.MatchedTourId = tourObj.Id;
+                    result.MatchedProjectId = tourObj.ProjectId;
+
+                    var hotelServices = await _context.TourServices
+                        .Where(s => s.TourId == tourObj.Id && (s.HotelId != null || s.ServiceCategoryId == 1))
+                        .ToListAsync();
+
+                    var guestHotelServices = hotelServices.Where(s =>
+                    {
+                        var desc = (s.Description ?? "").ToLowerInvariant();
+                        var rt = (s.RoomType ?? "").ToLowerInvariant();
+                        if (desc.Contains("tax") || desc.Contains("discount") || rt.Contains("tax") || rt.Contains("discount")) return false;
+                        if (rt.Contains("guide") || rt.Contains("driver") || desc.Contains("guide room") || desc.Contains("driver room")) return false;
+                        if (rt.Contains("single") || rt.Contains("double") || rt.Contains("twin") || rt.Contains("triple") ||
+                            desc.Contains("single") || desc.Contains("double") || desc.Contains("twin") || desc.Contains("triple")) return true;
+                        return s.RoomCount.HasValue && s.RoomCount.Value > 0;
+                    }).ToList();
+
+                    int totalContractedRooms = guestHotelServices.Sum(s => s.RoomCount ?? (s.Quantity > 0 ? (int)s.Quantity : 0));
+                    result.HotelBookingsCount = totalContractedRooms;
+
+                    if (guestHotelServices.Count == 0 || totalContractedRooms == 0)
+                    {
+                        result.HasIncompleteHotelBookings = true;
+                        result.HotelBookingPrompt = $"Tur '{tourObj.TourCode}' için otel rezervasyonları henüz tamamlanmamış (0 Sözleşmeli Oda). Akıllı oda eşleştirmesini yapmadan önce otel rezervasyonlarını tamamlamak ister misiniz?";
+
+                        result.Inconsistencies.Add(new ExcelInconsistencyDto
+                        {
+                            Id = "inc-hotel-incomplete",
+                            Category = "HotelBookingIncomplete",
+                            Severity = "High",
+                            Title = $"Otel Rezervasyonları Henüz Tamamlanmamış (Tur: {tourObj.TourCode})",
+                            Description = $"Tur '{tourObj.TourCode}' için sistemde henüz otel rezervasyonu / hizmet girişi bulunmuyor (0 Sözleşmeli Oda). Akıllı oda eşleştirmesinin otel sözleşmesine göre (Double, Twin, Single, İlave Yatak) yapılabilmesi için, önce otel rezervasyonlarını tamamlamak ister misiniz?",
+                            SuggestedFix = "Otel Rezervasyonlarını Tamamla",
+                            FixAction = "navigate_services",
+                            FixValue = $"/projects/{tourObj.ProjectId}/tours/{tourObj.Id}"
+                        });
+                    }
+                }
+            }
+
             // Set normalized filename syntax: {projectCode}_{tourCode}_rooming.xlsx
             var ext = Path.GetExtension(file.FileName);
             if (string.IsNullOrEmpty(ext)) ext = ".xlsx";
@@ -623,6 +1004,53 @@ namespace Uno_API.Controllers
                             FixValue = kvp.Key
                         });
                     }
+                }
+
+                // Check 4: Both DoB and PaxType Blank
+                int dobCol = -1, paxTypeCol = -1;
+                foreach (var cell in hRow.CellsUsed())
+                {
+                    var h = cell.GetString().Trim().ToLower();
+                    if (h.Contains("doğum") || h.Contains("dogum") || h.Contains("dob") || h.Contains("birth")) dobCol = cell.Address.ColumnNumber;
+                    if (h.Contains("paxtype") || h.Contains("pax type") || h.Contains("yolcu tipi") || h.Contains("tipi")) paxTypeCol = cell.Address.ColumnNumber;
+                }
+
+                int bothBlankCount = 0;
+                foreach (var r in paxRows)
+                {
+                    string fName = r.Cell(nameCol).GetString().Trim();
+                    bool isStaff = fName.Equals("DRIVER", StringComparison.OrdinalIgnoreCase)
+                                || fName.Equals("GUIDE", StringComparison.OrdinalIgnoreCase)
+                                || fName.Equals("REHBER", StringComparison.OrdinalIgnoreCase)
+                                || fName.Equals("KAPTAN", StringComparison.OrdinalIgnoreCase)
+                                || fName.Equals("SOFOR", StringComparison.OrdinalIgnoreCase)
+                                || fName.Equals("SOFÖR", StringComparison.OrdinalIgnoreCase)
+                                || fName.Equals("ŞÖFÖR", StringComparison.OrdinalIgnoreCase);
+                    if (isStaff) continue;
+
+                    string pDob = dobCol > 0 ? r.Cell(dobCol).GetString().Trim() : "";
+                    string pPaxType = paxTypeCol > 0 ? r.Cell(paxTypeCol).GetString().Trim() : "";
+
+                    if (string.IsNullOrEmpty(pDob) && string.IsNullOrEmpty(pPaxType))
+                    {
+                        bothBlankCount++;
+                    }
+                }
+
+                if (bothBlankCount > 0)
+                {
+                    result.CanCommit = false;
+                    result.Inconsistencies.Add(new ExcelInconsistencyDto
+                    {
+                        Id = "inc-dob-paxtype-blank",
+                        Category = "MissingPassengerAgeOrType",
+                        Severity = "High",
+                        Title = "Both DoB and PaxType fields are blank",
+                        Description = PassengerAgeHelper.BothBlankErrorMessage,
+                        SuggestedFix = "Fill at least Date of Birth (DoB) or PaxType for all passengers before importing.",
+                        FixAction = "fix_dob_paxtype",
+                        FixValue = "Required"
+                    });
                 }
             }
             else

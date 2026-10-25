@@ -27,11 +27,23 @@ namespace Uno_API.Services
 
         public string GetRootPath()
         {
-            if (!Directory.Exists(_rootPath))
+            try
             {
-                Directory.CreateDirectory(_rootPath);
+                if (!Directory.Exists(_rootPath))
+                {
+                    Directory.CreateDirectory(_rootPath);
+                }
+                return _rootPath;
             }
-            return _rootPath;
+            catch
+            {
+                var fallback = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Storage");
+                if (!Directory.Exists(fallback))
+                {
+                    Directory.CreateDirectory(fallback);
+                }
+                return fallback;
+            }
         }
 
         public string SanitizeFolderName(string rawName)

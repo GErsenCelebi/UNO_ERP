@@ -69,16 +69,28 @@
 
   <Target Name="BuildUnoCrmTarget" BeforeTargets="BeforeBuild;ComputeFilesToPublish" Condition="('$(BuildUnoCrmOnBuild)' == 'true') and '$(UnoCrmHasBuilt)' != 'true' and Exists('$(UnoCrmProjectDir)\package.json')">
     <Message Text="Building Uno_CRM SPA for Uno_API..." Importance="high" />
-    <Exec WorkingDirectory="$(UnoCrmProjectDir)" Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$env:NEXT_BUILD='true'; npm run build&quot;" IgnoreExitCode="true" />
+    <Exec WorkingDirectory="$(UnoCrmProjectDir)" Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$env:NEXT_BUILD='true'; npm run build&quot;" />
     
     <RemoveDir Directories="wwwroot" />
     <MakeDir Directories="wwwroot" />
+    <MakeDir Directories="wwwroot\KB" />
     <!-- Copy exported Next.js app to wwwroot -->
     <Exec Command="xcopy /Y /E /I &quot;$(UnoCrmProjectDir)\out\*&quot; &quot;wwwroot\&quot;" />
+    <!-- Copy UserManuals markdown files to wwwroot\KB for Production AI Knowledge Base indexing -->
+    <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\KB\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
+    <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\Tours\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
+    <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\Projects\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
+    <Exec Command="xcopy /Y /I &quot;$(MSBuildProjectDirectory)\..\..\UserManuals\Metadata\*.md&quot; &quot;wwwroot\KB\&quot;" IgnoreExitCode="true" />
     
     <PropertyGroup>
       <UnoCrmHasBuilt>true</UnoCrmHasBuilt>
     </PropertyGroup>
+    <ItemGroup>
+      <!-- Force MSBuild to recognize the newly generated files and push them to the WebDeploy payload -->
+      <Content Remove="wwwroot\**" />
+      <Content Remove="wwwroot\**\*" />
+      <Content Include="wwwroot\**" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
   </Target>
 
 </Project>

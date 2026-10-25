@@ -97,23 +97,23 @@ export default function EntityAuditHistorySection({
   };
 
   return (
-    <div className="w-full mt-2 bg-white border border-slate-200 rounded-md shadow-2xs overflow-hidden">
+    <div className="w-full mt-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-md shadow-2xs overflow-hidden">
       {/* Section Header */}
-      <div className="px-2.5 py-1 border-b border-slate-100 bg-slate-50/70 flex flex-wrap items-center justify-between gap-1.5">
+      <div className="px-2.5 py-1 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex flex-wrap items-center justify-between gap-1.5">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
+          <div className="w-5 h-5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-800 shrink-0">
             <History className="w-2.5 h-2.5" />
           </div>
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             <div className="flex items-center gap-1">
-              <h3 className="text-[11px] font-bold text-slate-800 leading-none">
+              <h3 className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-none">
                 {title || 'Audit & Change History'}
               </h3>
-              <span className="px-1 py-0 text-[8px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="px-1 py-0 text-[8px] font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 {logs.length}
               </span>
             </div>
-            <p className="text-[9px] text-slate-400 leading-none">
+            <p className="text-[9px] text-slate-400 dark:text-slate-400 leading-none">
               {subtitle || 'Full audit trail of created, updated, and deleted records'}
             </p>
           </div>
@@ -124,13 +124,13 @@ export default function EntityAuditHistorySection({
             onClick={fetchLogs}
             disabled={loading}
             title="Refresh history"
-            className="p-0.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors border border-transparent hover:border-blue-100 disabled:opacity-50"
+            className="p-0.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded transition-colors border border-transparent hover:border-blue-100 dark:hover:border-slate-700 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-2.5 h-2.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
           </button>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-0.5 px-1.5 py-0 text-[10px] font-semibold text-slate-600 hover:text-slate-800 hover:bg-white rounded border border-slate-200/80 transition-colors shadow-2xs"
+            className="flex items-center gap-0.5 px-1.5 py-0 text-[10px] font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800 rounded border border-slate-200/80 dark:border-slate-700 transition-colors shadow-2xs cursor-pointer"
           >
             {isExpanded ? (
               <>

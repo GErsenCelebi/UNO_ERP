@@ -1,11 +1,13 @@
 "use client"
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent, BedDouble, BedSingle, Sun, Moon, Clock, Bed, CheckCircle2 } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
+import GuideExcursionSalesPortal from '@/components/GuideExcursionSalesPortal';
 import Can from '@/components/Can';
+import ServiceCategoryIcon from '@/components/ServiceCategoryIcon';
 import { getAuthHeaders } from '@/lib/auth';
 import { formatDate, getFlightAwareUrl } from '@/lib/utils';
 import { getApiUrl } from '@/lib/apiConfig';
@@ -142,6 +144,28 @@ export default function TourDetailPage() {
   }
 
   const [activeTab, setActiveTab] = useState('info');
+  const [calendarViewMode, setCalendarViewMode] = useState<'grid' | 'timeline'>('grid');
+  const [calendarFilter, setCalendarFilter] = useState<'all' | 'hotels' | 'flights' | 'excursions'>('all');
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam && ['info', 'services', 'bookings', 'invoice', 'calendar', 'excursions', 'guide-sales', 'excursion-sales'].includes(tabParam)) {
+        setActiveTab(tabParam === 'guide-sales' || tabParam === 'excursion-sales' ? 'excursions' : tabParam);
+      }
+    }
+  }, []);
   const [tour, setTour] = useState<Tour | null>(null);
   const [tourNotes, setTourNotes] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -430,7 +454,7 @@ export default function TourDetailPage() {
     setLoading(true);
     try {
       const [tourRes, svcRes, catRes, hotelRes, driverRes, guideRes, excRes, transRes, statusRes, invoiceRes, projRes, attachRes] = await Promise.all([
-        fetch(`${API}/tours/${tourId}`),
+        fetch(`${API}/tours/${tourId}`).catch(() => null),
         fetch(`${API}/tourservices?tourId=${tourId}`).catch(() => null),
         fetch(`${API}/servicecategories`).catch(() => null),
         fetch(`${API}/hotels`).catch(() => null),
@@ -450,7 +474,7 @@ export default function TourDetailPage() {
         setServices(loadedServices);
       }
 
-      if (tourRes.ok) {
+      if (tourRes?.ok) {
         const t = await tourRes.json();
         setTour(t);
         setTourNotes(t.notes || '');
@@ -1850,9 +1874,9 @@ export default function TourDetailPage() {
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+          <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 uppercase text-xs">
             <tr>
-              <th className="px-6 py-3 w-48">Category</th>
+              <th className="px-6 py-3 w-56">Category</th>
               <th className="px-6 py-3">Description</th>
               <th className="px-6 py-3">Start/End Dates</th>
               <th className="px-6 py-3 text-center">Qty</th>
@@ -1861,7 +1885,7 @@ export default function TourDetailPage() {
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {Object.keys(groups).length === 0 ? (
               <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-400">No services yet.</td></tr>
             ) : (
@@ -1874,31 +1898,35 @@ export default function TourDetailPage() {
                 return (
                   <React.Fragment key={catName}>
                     {isExpandable && (
-                      <tr className="bg-slate-100/50 hover:bg-slate-100 cursor-pointer border-y border-slate-200" onClick={() => toggleGroup(catName)}>
-                        <td className="px-6 py-2 font-bold text-slate-700 flex items-center gap-2">
-                          <span className="text-xs bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-200 text-slate-500 font-mono w-5 h-5 flex items-center justify-center">{isCollapsed ? '+' : '-'}</span>
-                          {catName}
+                      <tr className="bg-slate-100/50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-y border-slate-200 dark:border-slate-700/80" onClick={() => toggleGroup(catName)}>
+                        <td className="px-6 py-2 font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                          <span className="text-xs bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-2xs border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-mono w-5 h-5 flex items-center justify-center">{isCollapsed ? '+' : '-'}</span>
+                          <ServiceCategoryIcon categoryName={catName} size="sm" />
+                          <span>{catName}</span>
                         </td>
-                        <td colSpan={4} className="px-6 py-2 text-slate-500 text-xs italic">{groupSvcs.length} items</td>
-                        <td className="px-6 py-2 text-right font-bold text-slate-800">€{groupTotal.toLocaleString()}</td>
+                        <td colSpan={4} className="px-6 py-2 text-slate-500 dark:text-slate-400 text-xs italic">{groupSvcs.length} items</td>
+                        <td className="px-6 py-2 text-right font-bold text-slate-800 dark:text-slate-100">€{groupTotal.toLocaleString()}</td>
                         <td></td>
                       </tr>
                     )}
                     
                     {(!isExpandable || !isCollapsed) && groupSvcs.map(svc => (
-                      <tr key={svc.id} className={`hover:bg-slate-50 ${isExpandable ? 'bg-white' : ''}`}>
+                      <tr key={svc.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isExpandable ? 'bg-white dark:bg-slate-900/30' : ''}`}>
                         <td className={`px-6 py-3 ${isExpandable ? 'pl-14' : ''}`}>
-                          {!isExpandable && <span className={`px-2 py-0.5 rounded text-xs font-medium ${isExtra ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>{catName}</span>}
+                          <div className="flex items-center gap-2">
+                            <ServiceCategoryIcon categoryName={catName} size="sm" />
+                            {!isExpandable && <span className={`px-2 py-0.5 rounded text-xs font-medium ${isExtra ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400'}`}>{catName}</span>}
+                          </div>
                         </td>
-                        <td className="px-6 py-3 font-medium text-slate-700">{getServiceDescription(svc)}</td>
-                        <td className="px-6 py-3 text-slate-500">{getServiceDetails(svc)}</td>
-                        <td className="px-6 py-3 text-center text-xs font-semibold">
+                        <td className="px-6 py-3 font-medium text-slate-700 dark:text-slate-200">{getServiceDescription(svc)}</td>
+                        <td className="px-6 py-3 text-slate-500 dark:text-slate-400">{getServiceDetails(svc)}</td>
+                        <td className="px-6 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300">
                           {svc.hotelId && svc.roomCount && svc.roomType !== 'City Tax' && svc.roomType !== 'Hotel Tax' 
                             ? `${svc.quantity || 2} Nights (${svc.roomCount} Rooms)` 
                             : (svc.hotelId ? `${svc.quantity || 1} Nights` : svc.quantity)}
                         </td>
-                        <td className="px-6 py-3 text-right">€{Number(svc.unitPrice).toFixed(2)}</td>
-                        <td className="px-6 py-3 font-semibold text-slate-800 text-right">€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1)).toLocaleString()}</td>
+                        <td className="px-6 py-3 text-right text-slate-700 dark:text-slate-300">€{Number(svc.unitPrice).toFixed(2)}</td>
+                        <td className="px-6 py-3 font-semibold text-slate-800 dark:text-slate-100 text-right">€{Number(svc.totalAmount || svc.unitPrice * (svc.quantity || 1)).toLocaleString()}</td>
                         <td className="px-6 py-3 text-right">
                           {svc.id === -999 ? (
                             <button 
@@ -1935,12 +1963,12 @@ export default function TourDetailPage() {
             )}
           </tbody>
           {svcs.length > 0 && subtotalLabel && (
-            <tfoot className="border-t-2 border-slate-200 bg-slate-50/80">
+            <tfoot className="border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60">
               <tr>
-                <td colSpan={5} className="px-6 py-2.5 text-right text-xs uppercase tracking-wider text-slate-600 font-bold">
+                <td colSpan={5} className="px-6 py-2.5 text-right text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold">
                   {subtotalLabel}
                 </td>
-                <td className={`px-6 py-2.5 text-right font-black text-sm ${isExtra ? 'text-emerald-700' : 'text-rose-700'}`}>
+                <td className={`px-6 py-2.5 text-right font-black text-sm ${isExtra ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                   €{totalSub.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td></td>
@@ -1953,18 +1981,18 @@ export default function TourDetailPage() {
   };
 
   const tabBtn = (tab: string, label: string, Icon: any) => (
-    <button onClick={() => setActiveTab(tab)} className={`flex items-center px-5 py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+    <button onClick={() => handleTabChange(tab)} className={`flex items-center px-5 py-3 font-medium text-sm border-b-2 transition-colors cursor-pointer ${activeTab === tab ? 'border-blue-600 text-blue-600 dark:border-cyan-400 dark:text-cyan-400 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}>
       <Icon className="w-4 h-4 mr-2" /> {label}
     </button>
   );
 
-  if (loading) return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>;
-  if (!tour) return <div className="p-8 text-center text-slate-500">Tour not found</div>;
+  if (loading) return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-600 dark:text-cyan-400" /></div>;
+  if (!tour) return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Tour not found</div>;
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 w-full print:block print:h-auto print:bg-white">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 w-full print:block print:h-auto print:bg-white">
       {/* Header */}
-      <header className="print:hidden h-16 bg-white border-b border-slate-200 flex items-center px-6 shrink-0 shadow-sm z-10">
+      <header className="print:hidden h-16 bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-slate-800 flex items-center px-6 shrink-0 shadow-2xs dark:shadow-md z-10">
         <button 
           onClick={() => {
             if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
@@ -1975,14 +2003,14 @@ export default function TourDetailPage() {
               router.push('/tour-calendar');
             }
           }} 
-          className="mr-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+          className="mr-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
           title="Back"
         >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+          <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
         </button>
         <div className="flex-1">
-          <h1 className="font-bold text-lg text-slate-800">{tour.tourCode} — {tour.destination}</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="font-bold text-lg text-slate-800 dark:text-white">{tour.tourCode} — {tour.destination}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {formatDate(tour.arrivalDate)} → {formatDate(tour.endDate)} | {tour.pax} Pax | {tour.tourStatus?.name || ''}
           </p>
         </div>
@@ -1994,53 +2022,53 @@ export default function TourDetailPage() {
           return (
             <div className="flex items-center gap-2 flex-wrap">
               {/* 1. Pax Breakdown */}
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-tight">Pax Breakdown</p>
-                <p className="text-xs font-bold text-slate-800 leading-tight">
+              <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
+                <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Pax Breakdown</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">
                   {tour.adults || 0} A, {tour.children || 0} C, {tour.infants || 0} I
                 </p>
                 <p className="text-[9px] text-slate-400 font-normal leading-tight">({totalPax} Total)</p>
               </div>
 
               {/* 2. Base Fee */}
-              <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[80px]">
-                <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-tight">Base Fee</p>
-                <p className="text-xs font-bold text-emerald-800 leading-tight">
+              <div className="bg-emerald-50/80 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[80px]">
+                <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-tight">Base Fee</p>
+                <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200 leading-tight">
                   €{Number(tour.baseFee || 0).toLocaleString()}
                 </p>
-                <p className="text-[9px] text-emerald-600 font-medium leading-tight">Per adult fee</p>
+                <p className="text-[9px] text-emerald-600 dark:text-emerald-400/80 font-medium leading-tight">Per adult fee</p>
               </div>
 
               {/* 3. Cost / Pax */}
-              <div className="bg-rose-50/80 border border-rose-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
-                <p className="text-[10px] font-semibold text-rose-700 uppercase tracking-tight">Cost / Pax</p>
-                <p className="text-xs font-bold text-rose-800 leading-tight">€{pivot.grandCostPerPax.toFixed(2)}</p>
-                <p className="text-[9px] text-rose-600 font-medium leading-tight">Total: €{pivot.grandTotalCost.toLocaleString()}</p>
+              <div className="bg-rose-50/80 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/60 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
+                <p className="text-[10px] font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-tight">Cost / Pax</p>
+                <p className="text-xs font-bold text-rose-800 dark:text-rose-200 leading-tight">€{pivot.grandCostPerPax.toFixed(2)}</p>
+                <p className="text-[9px] text-rose-600 dark:text-rose-400/80 font-medium leading-tight">Total: €{pivot.grandTotalCost.toLocaleString()}</p>
               </div>
 
               {/* 4. Revenue / Pax */}
-              <div className="bg-sky-50/80 border border-sky-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
-                <p className="text-[10px] font-semibold text-sky-700 uppercase tracking-tight">Revenue / Pax</p>
-                <p className="text-xs font-bold text-sky-800 leading-tight">€{pivot.grandRevenuePerPax.toFixed(2)}</p>
-                <p className="text-[9px] text-sky-600 font-medium leading-tight">Total: €{pivot.grandTotalRevenue.toLocaleString()}</p>
+              <div className="bg-sky-50/80 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800/60 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[90px]">
+                <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-400 uppercase tracking-tight">Revenue / Pax</p>
+                <p className="text-xs font-bold text-sky-800 dark:text-sky-200 leading-tight">€{pivot.grandRevenuePerPax.toFixed(2)}</p>
+                <p className="text-[9px] text-sky-600 dark:text-sky-400/80 font-medium leading-tight">Total: €{pivot.grandTotalRevenue.toLocaleString()}</p>
               </div>
 
               {/* 5. Guide Commission */}
-              <div className="bg-purple-50/80 border border-purple-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[85px]">
-                <p className="text-[10px] font-semibold text-purple-700 uppercase tracking-tight">Guide Comm.</p>
-                <p className="text-xs font-bold text-purple-800 leading-tight">
+              <div className="bg-purple-50/80 dark:bg-purple-950/60 border border-purple-200/80 dark:border-purple-800/60 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[85px]">
+                <p className="text-[10px] font-semibold text-purple-700 dark:text-purple-400 uppercase tracking-tight">Guide Comm.</p>
+                <p className="text-xs font-bold text-purple-800 dark:text-purple-200 leading-tight">
                   {tour.guideCommission !== undefined ? tour.guideCommission : 10}%
                 </p>
-                <p className="text-[9px] text-purple-600 font-medium leading-tight">(€{guideCommissionAmount.toLocaleString()})</p>
+                <p className="text-[9px] text-purple-600 dark:text-purple-400/80 font-medium leading-tight">(€{guideCommissionAmount.toLocaleString()})</p>
               </div>
 
               {/* 6. Net Profit / Pax */}
-              <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[95px]">
-                <p className="text-[10px] font-semibold text-indigo-700 uppercase tracking-tight">Net Profit / Pax</p>
-                <p className={`text-xs font-bold leading-tight ${pivot.grandNetMargin >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+              <div className="bg-indigo-50/80 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60 rounded-xl px-2.5 py-1 shadow-2xs text-center min-w-[95px]">
+                <p className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-tight">Net Profit / Pax</p>
+                <p className={`text-xs font-bold leading-tight ${pivot.grandNetMargin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                   €{(pivot.grandNetMargin / totalPax).toFixed(2)}
                 </p>
-                <p className="text-[9px] text-indigo-600 font-bold leading-tight">{pivot.grandMarginPct.toFixed(1)}% Margin</p>
+                <p className="text-[9px] text-indigo-600 dark:text-indigo-400/80 font-bold leading-tight">{pivot.grandMarginPct.toFixed(1)}% Margin</p>
               </div>
             </div>
           );
@@ -2048,10 +2076,12 @@ export default function TourDetailPage() {
       </header>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 bg-white px-6 print:hidden">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F172A] px-6 print:hidden">
         {tabBtn('info', 'Tour Info', MapPin)}
+        {tabBtn('calendar', 'Calendar', CalendarDays)}
         {tabBtn('services', 'Services', Package)}
         {tabBtn('bookings', 'Bookings', Users)}
+        {tabBtn('excursions', 'Guide Excursion Sales', Compass)}
         {tabBtn('invoice', 'Invoice', FileText)}
       </div>
 
@@ -2819,19 +2849,20 @@ export default function TourDetailPage() {
           <div id="tour-services-section" className="p-6 space-y-6 max-w-6xl mx-auto">
             
             {/* Services Revenue */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-6">
+              <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-[#0F172A] gap-3">
                 <div>
-                  <h2 className="text-base md:text-lg font-bold text-slate-800">Services Revenue</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Sales and billable items</p>
+                  <h2 className="text-base md:text-lg font-bold text-slate-800 dark:text-white">Services Revenue</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Sales and billable items</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
                   {serviceCategories.filter(c => c.isRevenue).map(cat => (
-                    <button key={cat.id} onClick={() => openServiceModal(cat.name, true)} className="flex items-center px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-slate-600 rounded-lg text-xs font-medium transition-colors gap-1">
-                      <Plus className="w-3 h-3" /> {cat.name}
+                    <button key={cat.id} onClick={() => openServiceModal(cat.name, true)} className="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors gap-1.5 cursor-pointer">
+                      <ServiceCategoryIcon categoryName={cat.name} size="sm" />
+                      <span>+ {cat.name}</span>
                     </button>
                   ))}
-                  <button onClick={() => openServiceModal('Other', true)} className="flex items-center px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-slate-600 rounded-lg text-xs font-medium transition-colors gap-1">
+                  <button onClick={() => openServiceModal('Other', true)} className="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors gap-1 cursor-pointer">
                     <Plus className="w-3 h-3" /> Other
                   </button>
                 </div>
@@ -2839,10 +2870,10 @@ export default function TourDetailPage() {
               <div className="p-6 space-y-8">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                    <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center text-sm uppercase tracking-wider">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>Base Services
                     </h3>
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                    <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
                       Base Services SubTotal:
                       <span className="text-sm font-extrabold">€{revenueBuckets.base.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </span>
@@ -2851,10 +2882,10 @@ export default function TourDetailPage() {
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                    <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center text-sm uppercase tracking-wider">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>Operational Services
                     </h3>
-                    <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/60 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
                       Operational Services SubTotal:
                       <span className="text-sm font-extrabold">€{revenueBuckets.operational.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </span>
@@ -2864,10 +2895,10 @@ export default function TourDetailPage() {
                 {revenueBuckets.other.length > 0 && (
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <h3 className="font-bold text-slate-700 flex items-center text-sm uppercase tracking-wider">
+                      <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center text-sm uppercase tracking-wider">
                         <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span>Other Services
                       </h3>
-                      <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                      <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 rounded-xl text-xs font-bold shadow-2xs flex items-center gap-1.5">
                         Other Services SubTotal:
                         <span className="text-sm font-extrabold">€{revenueBuckets.other.reduce((sum, s) => sum + (s.totalAmount || s.unitPrice * (s.quantity || 1) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </span>
@@ -2879,16 +2910,17 @@ export default function TourDetailPage() {
             </div>
 
             {/* Services Cost */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-              <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap justify-between items-center bg-slate-50 gap-3">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-6">
+              <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-[#0F172A] gap-3">
                 <div>
-                  <h2 className="text-base md:text-lg font-bold text-slate-800">Services Cost</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Expenses and supplier costs</p>
+                  <h2 className="text-base md:text-lg font-bold text-slate-800 dark:text-white">Services Cost</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Expenses and supplier costs</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
                   {serviceCategories.filter(c => c.isCost).map(cat => (
-                    <button key={cat.id} onClick={() => openServiceModal(cat.name, false)} className="flex items-center px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-600 rounded-lg text-xs font-medium transition-colors gap-1">
-                      <Plus className="w-3 h-3" /> {cat.name}
+                    <button key={cat.id} onClick={() => openServiceModal(cat.name, false)} className="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors gap-1.5 cursor-pointer">
+                      <ServiceCategoryIcon categoryName={cat.name} size="sm" />
+                      <span>+ {cat.name}</span>
                     </button>
                   ))}
                   <button onClick={() => openServiceModal('Other', false)} className="flex items-center px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-600 rounded-lg text-xs font-medium transition-colors gap-1">
@@ -3249,6 +3281,115 @@ export default function TourDetailPage() {
             return fullStr.includes(q);
           });
 
+          // Strictly filter out Guide and Driver from room calculations
+          const isStaffPassenger = (p: any): boolean => {
+            const fn = (p.firstName || '').trim().toUpperCase();
+            const ln = (p.lastName || '').trim().toUpperCase();
+            const rt = (p.roomType || '').trim().toUpperCase();
+            const pt = (p.paxType || '').trim().toUpperCase();
+
+            return (
+              fn.includes('GUIDE') || fn.includes('DRIVER') || fn.includes('REHBER') || fn.includes('KAPTAN') || fn.includes('SOFOR') || fn.includes('SOFÖR') || fn.includes('ŞÖFÖR') ||
+              ln.includes('GUIDE') || ln.includes('DRIVER') || ln.includes('REHBER') ||
+              rt.includes('GUIDE') || rt.includes('DRIVER') ||
+              pt.includes('GUIDE') || pt.includes('DRIVER') || pt.includes('STAFF')
+            );
+          };
+
+          const guestPassengers = allPassengers.filter((p: any) => !isStaffPassenger(p));
+          const staffPassengers = allPassengers.filter((p: any) => isStaffPassenger(p));
+
+          const normalizeRoomType = (raw: string | undefined): 'Double' | 'Twin' | 'Single' | 'Triple' | 'Other' => {
+            if (!raw) return 'Double';
+            const s = raw.toLowerCase().trim();
+            if (s.includes('single') || s.includes('sgl')) return 'Single';
+            if (s.includes('twin') || s.includes('twn')) return 'Twin';
+            if (s.includes('triple') || s.includes('trp')) return 'Triple';
+            if (s.includes('double') || s.includes('dbl')) return 'Double';
+            return 'Other';
+          };
+
+          // Group by assigned RoomNumber if present
+          const roomsMap = new Map<number, any[]>();
+          const unassignedPax: any[] = [];
+
+          guestPassengers.forEach((p: any) => {
+            const rNum = p.roomNumber ?? p.RoomNumber;
+            if (rNum && Number(rNum) > 0) {
+              const num = Number(rNum);
+              if (!roomsMap.has(num)) roomsMap.set(num, []);
+              roomsMap.get(num)!.push(p);
+            } else {
+              unassignedPax.push(p);
+            }
+          });
+
+          let doubleRooms = 0;
+          let twinRooms = 0;
+          let singleRooms = 0;
+          let tripleRooms = 0;
+          let otherRooms = 0;
+          let extraBedPax = 0;
+          let infantPax = 0;
+
+          if (roomsMap.size > 0) {
+            roomsMap.forEach((paxList) => {
+              const roomTypeStr = paxList[0]?.roomType || 'Double';
+              const cat = normalizeRoomType(roomTypeStr);
+              if (cat === 'Single') singleRooms++;
+              else if (cat === 'Twin') twinRooms++;
+              else if (cat === 'Triple') tripleRooms++;
+              else if (cat === 'Other') otherRooms++;
+              else doubleRooms++;
+
+              paxList.forEach((p: any) => {
+                const pType = getPassengerPaxType(p, tour?.arrivalDate);
+                if (pType === 'Children') extraBedPax++;
+                if (pType === 'Infant') infantPax++;
+              });
+            });
+
+            if (unassignedPax.length > 0) {
+              const uDbl = unassignedPax.filter((p: any) => normalizeRoomType(p.roomType) === 'Double').length;
+              const uTwn = unassignedPax.filter((p: any) => normalizeRoomType(p.roomType) === 'Twin').length;
+              const uSgl = unassignedPax.filter((p: any) => normalizeRoomType(p.roomType) === 'Single').length;
+              const uTrp = unassignedPax.filter((p: any) => normalizeRoomType(p.roomType) === 'Triple').length;
+              const uOth = unassignedPax.filter((p: any) => normalizeRoomType(p.roomType) === 'Other').length;
+              doubleRooms += Math.ceil(uDbl / 2);
+              twinRooms += Math.ceil(uTwn / 2);
+              singleRooms += uSgl;
+              tripleRooms += Math.ceil(uTrp / 3);
+              otherRooms += uOth;
+
+              unassignedPax.forEach((p: any) => {
+                const pType = getPassengerPaxType(p, tour?.arrivalDate);
+                if (pType === 'Children') extraBedPax++;
+                if (pType === 'Infant') infantPax++;
+              });
+            }
+          } else {
+            const dblCount = guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Double').length;
+            const twnCount = guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Twin').length;
+            const sglCount = guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Single').length;
+            const trpCount = guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Triple').length;
+            const othCount = guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Other').length;
+
+            doubleRooms = Math.ceil(dblCount / 2);
+            twinRooms = Math.ceil(twnCount / 2);
+            singleRooms = sglCount;
+            tripleRooms = Math.ceil(trpCount / 3);
+            otherRooms = othCount;
+
+            guestPassengers.forEach((p: any) => {
+              const pType = getPassengerPaxType(p, tour?.arrivalDate);
+              if (pType === 'Children') extraBedPax++;
+              if (pType === 'Infant') infantPax++;
+            });
+          }
+
+          const totalGuestRooms = doubleRooms + twinRooms + singleRooms + tripleRooms + otherRooms;
+          const totalGuestPax = guestPassengers.length;
+
           return (
             <div className="p-6 max-w-6xl mx-auto">
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -3368,7 +3509,129 @@ export default function TourDetailPage() {
                       ))
                     )}
                   </tbody>
+                  <tfoot className="bg-slate-50 border-t border-slate-200 text-xs font-bold text-slate-700">
+                    <tr>
+                      <td colSpan={2} className="px-4 py-3 text-slate-800 font-extrabold">
+                        Total ({totalGuestRooms} Rooms)
+                      </td>
+                      <td colSpan={9} className="px-4 py-3 text-slate-500 text-right font-medium">
+                        Total Guest Pax (Excl. Guide/Driver):
+                      </td>
+                      <td className="px-4 py-3 text-blue-700 font-extrabold">
+                        {[
+                          doubleRooms > 0 ? `${doubleRooms} DBL` : null,
+                          twinRooms > 0 ? `${twinRooms} TWN` : null,
+                          singleRooms > 0 ? `${singleRooms} SGL` : null,
+                          tripleRooms > 0 ? `${tripleRooms} TRP` : null,
+                        ].filter(Boolean).join(' • ') || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center text-blue-700 font-extrabold text-sm">
+                        {totalGuestPax}
+                      </td>
+                      <td className="px-4 py-3"></td>
+                    </tr>
+                  </tfoot>
                 </table>
+              </div>
+
+              {/* Total Room Types Summary Card at the end of Booking Tab */}
+              <div className="p-5 bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/30 border-t border-slate-200">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 bg-blue-600 text-white rounded-lg shadow-xs">
+                        <BedDouble className="w-4 h-4" />
+                      </span>
+                      <h3 className="font-extrabold text-sm text-slate-800 tracking-tight">
+                        Total Room Types & Capacity Summary
+                      </h3>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">
+                        Guest Only
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Summary of passenger room allocations. Strictly excludes Guide and Driver rooms.
+                      {staffPassengers.length > 0 && (
+                        <span className="ml-1 text-slate-400 italic">
+                          ({staffPassengers.length} Guide/Driver staff excluded)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="px-3.5 py-1.5 bg-white border border-blue-200 rounded-xl shadow-xs text-center">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Total Rooms</p>
+                      <p className="text-base font-black text-blue-700">{totalGuestRooms} <span className="text-xs font-semibold text-slate-500">Rooms</span></p>
+                    </div>
+                    <div className="px-3.5 py-1.5 bg-white border border-indigo-200 rounded-xl shadow-xs text-center">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Total Guests</p>
+                      <p className="text-base font-black text-indigo-700">{totalGuestPax} <span className="text-xs font-semibold text-slate-500">Pax</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                  {/* Double Rooms */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                    <div className="flex items-center justify-between text-slate-500 mb-1">
+                      <span className="text-[11px] font-bold text-slate-700">Double</span>
+                      <BedDouble className="w-3.5 h-3.5 text-blue-500" />
+                    </div>
+                    <p className="text-lg font-extrabold text-slate-900">{doubleRooms} <span className="text-[10px] font-semibold text-slate-400">Rooms</span></p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Double').length} Pax</p>
+                  </div>
+
+                  {/* Twin Rooms */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                    <div className="flex items-center justify-between text-slate-500 mb-1">
+                      <span className="text-[11px] font-bold text-slate-700">Twin</span>
+                      <BedDouble className="w-3.5 h-3.5 text-indigo-500" />
+                    </div>
+                    <p className="text-lg font-extrabold text-slate-900">{twinRooms} <span className="text-[10px] font-semibold text-slate-400">Rooms</span></p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Twin').length} Pax</p>
+                  </div>
+
+                  {/* Single Rooms */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                    <div className="flex items-center justify-between text-slate-500 mb-1">
+                      <span className="text-[11px] font-bold text-slate-700">Single</span>
+                      <BedSingle className="w-3.5 h-3.5 text-emerald-500" />
+                    </div>
+                    <p className="text-lg font-extrabold text-slate-900">{singleRooms} <span className="text-[10px] font-semibold text-slate-400">Rooms</span></p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Single').length} Pax</p>
+                  </div>
+
+                  {/* Triple Rooms */}
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs">
+                    <div className="flex items-center justify-between text-slate-500 mb-1">
+                      <span className="text-[11px] font-bold text-slate-700">Triple</span>
+                      <Users className="w-3.5 h-3.5 text-purple-500" />
+                    </div>
+                    <p className="text-lg font-extrabold text-slate-900">{tripleRooms} <span className="text-[10px] font-semibold text-slate-400">Rooms</span></p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{guestPassengers.filter((p: any) => normalizeRoomType(p.roomType) === 'Triple').length} Pax</p>
+                  </div>
+
+                  {/* Extra Beds (Children) */}
+                  <div className="p-3 bg-white border border-amber-200/80 rounded-xl shadow-xs bg-amber-50/20">
+                    <div className="flex items-center justify-between text-amber-700 mb-1">
+                      <span className="text-[11px] font-bold">Extra Bed</span>
+                      <span className="text-xs">🧒</span>
+                    </div>
+                    <p className="text-lg font-extrabold text-amber-900">{extraBedPax} <span className="text-[10px] font-semibold text-amber-700/70">Beds</span></p>
+                    <p className="text-[10px] text-amber-700/80 mt-0.5">{extraBedPax} Child Pax</p>
+                  </div>
+
+                  {/* Infant Cots */}
+                  <div className="p-3 bg-white border border-rose-200/80 rounded-xl shadow-xs bg-rose-50/20">
+                    <div className="flex items-center justify-between text-rose-700 mb-1">
+                      <span className="text-[11px] font-bold">Baby Cot</span>
+                      <span className="text-xs">👶</span>
+                    </div>
+                    <p className="text-lg font-extrabold text-rose-900">{infantPax} <span className="text-[10px] font-semibold text-rose-700/70">Cots</span></p>
+                    <p className="text-[10px] text-rose-700/80 mt-0.5">{infantPax} Infant Pax</p>
+                  </div>
+                </div>
               </div>
 
               {/* Bookings & Passenger Audit History Section */}
@@ -3382,6 +3645,884 @@ export default function TourDetailPage() {
           </div>
         );
       })()}
+
+        {/* ──── CALENDAR TAB ──── */}
+        {activeTab === 'calendar' && (() => {
+          // 1. Calculate Operating Days Strictly Between arrivalDate and endDate
+          const arrivalDateObj = tour.arrivalDate ? new Date(tour.arrivalDate) : null;
+          const endDateObj = tour.endDate ? new Date(tour.endDate) : null;
+          const validDates = arrivalDateObj && endDateObj && !isNaN(arrivalDateObj.getTime()) && !isNaN(endDateObj.getTime());
+
+          if (!validDates) {
+            return (
+              <div className="p-8 max-w-2xl mx-auto text-center space-y-4">
+                <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-amber-200">
+                  <CalendarDays className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">Tour Operating Dates Required</h3>
+                <p className="text-sm text-slate-500">
+                  To view the tour itinerary calendar, please specify valid Arrival Date and End Date in the Tour Information section.
+                </p>
+                <button
+                  onClick={() => { setActiveTab('info'); setIsEditing(true); }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" /> Edit Tour Dates
+                </button>
+              </div>
+            );
+          }
+
+          // Build days array: Day 1 ... Day N (Strictly limited to the dates the tour operates)
+          const startNorm = new Date(arrivalDateObj.getFullYear(), arrivalDateObj.getMonth(), arrivalDateObj.getDate());
+          const endNorm = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
+          if (endNorm < startNorm) endNorm.setTime(startNorm.getTime());
+
+          const operatingDaysList: {
+            dayIndex: number;
+            date: Date;
+            dateStr: string;
+            dayOfWeek: string;
+            formattedDate: string;
+            fullFormattedDate: string;
+            isArrivalDay: boolean;
+            isDepartureDay: boolean;
+            isToday: boolean;
+          }[] = [];
+
+          const curr = new Date(startNorm);
+          let idx = 1;
+          const todayStr = new Date().toISOString().substring(0, 10);
+
+          while (curr <= endNorm) {
+            const y = curr.getFullYear();
+            const m = String(curr.getMonth() + 1).padStart(2, '0');
+            const d = String(curr.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+
+            operatingDaysList.push({
+              dayIndex: idx,
+              date: new Date(curr),
+              dateStr,
+              dayOfWeek: curr.toLocaleDateString('en-US', { weekday: 'short' }),
+              formattedDate: curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              fullFormattedDate: curr.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+              isArrivalDay: idx === 1,
+              isDepartureDay: curr.getTime() === endNorm.getTime(),
+              isToday: dateStr === todayStr,
+            });
+
+            curr.setDate(curr.getDate() + 1);
+            idx++;
+          }
+
+          const totalDays = operatingDaysList.length;
+          const totalNights = Math.max(1, totalDays - 1);
+
+          // 2. Pre-filter services for calendar lookup
+          const hotelSvcs = services.filter(s => s.hotelId || s.serviceCategoryId === 1 || (s.serviceCategory?.name || '').toLowerCase().includes('hotel'));
+          
+          const excursionSvcs = services.filter(s => 
+            s.excursionId != null || 
+            s.serviceCategoryId === 2 || 
+            s.serviceCategoryId === 6 ||
+            (s.serviceCategory?.name || '').toLowerCase().includes('excursion') || 
+            (s.description || '').toLowerCase().includes('day pack') ||
+            (s.description || '').toLowerCase().includes('excursion') ||
+            (s.description || '').toLowerCase().includes('walking tour') ||
+            (s.description || '').toLowerCase().includes('city tour')
+          );
+
+          const flightSvcs = services.filter(s => 
+            Boolean(s.flightNo) || 
+            (s.serviceCategory?.name || '').toLowerCase().includes('flight')
+          );
+
+          const transportSvcs = services.filter(s => 
+            Boolean(s.driverId || s.transportCompanyId) || 
+            s.serviceCategoryId === 3 || 
+            s.serviceCategoryId === 5 ||
+            (s.serviceCategory?.name || '').toLowerCase().includes('transport') ||
+            (s.serviceCategory?.name || '').toLowerCase().includes('coach')
+          );
+
+          const formatHour = (dateInput?: string | null) => {
+            if (!dateInput) return '';
+            try {
+              const d = new Date(dateInput);
+              if (isNaN(d.getTime())) return '';
+              return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            } catch {
+              return '';
+            }
+          };
+
+          const arrivalFlightHour = formatHour(tour.arrivalDate);
+          const departureFlightHour = formatHour(tour.endDate);
+
+          // Process each day's data
+          const daysWithData = operatingDaysList.map(day => {
+            // Flights for this day
+            const dayFlights: {
+              type: 'arrival' | 'departure' | 'flight';
+              flightNo: string;
+              hour: string;
+              airport: string;
+              flightAwareUrl: string;
+              radar24Code?: string;
+            }[] = [];
+
+            if (day.isArrivalDay && tour.arrivalFlight) {
+              const match = tour.arrivalFlight.match(/([A-Za-z0-9]{2,3})\s*([0-9]{1,4})/);
+              dayFlights.push({
+                type: 'arrival',
+                flightNo: tour.arrivalFlight,
+                hour: arrivalFlightHour,
+                airport: tour.arrivalAirport || 'Arrival Airport',
+                flightAwareUrl: getFlightAwareUrl(tour.arrivalFlight),
+                radar24Code: match ? `${match[1]}${match[2]}`.toLowerCase() : undefined
+              });
+            }
+
+            if (day.isDepartureDay && tour.departureFlight) {
+              const match = tour.departureFlight.match(/([A-Za-z0-9]{2,3})\s*([0-9]{1,4})/);
+              dayFlights.push({
+                type: 'departure',
+                flightNo: tour.departureFlight,
+                hour: departureFlightHour,
+                airport: tour.departureAirport || 'Departure Airport',
+                flightAwareUrl: getFlightAwareUrl(tour.departureFlight),
+                radar24Code: match ? `${match[1]}${match[2]}`.toLowerCase() : undefined
+              });
+            }
+
+            flightSvcs.forEach(fs => {
+              const fsDate = (fs.serviceDate || fs.startDate || '').substring(0, 10);
+              if (fsDate === day.dateStr && fs.flightNo && fs.flightNo !== tour.arrivalFlight && fs.flightNo !== tour.departureFlight) {
+                const fClean = fs.flightNo.trim().toUpperCase();
+                if (!dayFlights.some(f => (f.flightNo || '').trim().toUpperCase() === fClean)) {
+                  const match = fs.flightNo.match(/([A-Za-z0-9]{2,3})\s*([0-9]{1,4})/);
+                  dayFlights.push({
+                    type: 'flight',
+                    flightNo: fs.flightNo,
+                    hour: formatHour(fs.serviceDate),
+                    airport: `${fs.fromAirport || ''} → ${fs.toAirport || ''}`.trim() || 'Flight Service',
+                    flightAwareUrl: getFlightAwareUrl(fs.flightNo),
+                    radar24Code: match ? `${match[1]}${match[2]}`.toLowerCase() : undefined
+                  });
+                }
+              }
+            });
+
+            // Hotels covering this day
+            const hotelMatchesMap: Record<string, {
+              hotelId?: number | null;
+              hotelName: string;
+              city: string;
+              status: 'Check-in' | 'Check-out' | 'Overnight Stay' | 'Check-in & Out';
+              rooms: string[];
+              nights: number;
+              totalCost: number;
+            }> = {};
+
+            hotelSvcs.forEach(hs => {
+              if (isHotelDiscountService(hs) || isHotelTaxService(hs)) return;
+
+              const hStart = (hs.startDate || hs.serviceStartDate || hs.serviceDate || tour.arrivalDate || '').substring(0, 10);
+              const hEnd = (hs.endDate || hs.serviceEndDate || tour.endDate || '').substring(0, 10);
+
+              if (day.dateStr >= hStart && day.dateStr <= hEnd) {
+                const hotelObj = hotels.find((h: any) => h.id === hs.hotelId);
+                const hotelName = hotelObj?.name || (hs.description ? hs.description.split('(')[0].trim() : 'Hotel Stay');
+                const city = hotelObj?.location || hotelObj?.city || tour.destination || '';
+                const key = `${hotelName}_${city}`;
+
+                let status: 'Check-in' | 'Check-out' | 'Overnight Stay' | 'Check-in & Out' = 'Overnight Stay';
+                if (day.dateStr === hStart && day.dateStr === hEnd) status = 'Check-in & Out';
+                else if (day.dateStr === hStart) status = 'Check-in';
+                else if (day.dateStr === hEnd) status = 'Check-out';
+
+                const sNights = (hStart && hEnd) ? Math.max(1, Math.round((new Date(hEnd).getTime() - new Date(hStart).getTime()) / (1000 * 60 * 60 * 24))) : 1;
+
+                if (!hotelMatchesMap[key]) {
+                  hotelMatchesMap[key] = {
+                    hotelId: hs.hotelId,
+                    hotelName,
+                    city,
+                    status,
+                    rooms: [],
+                    nights: sNights,
+                    totalCost: 0
+                  };
+                }
+
+                if (hs.roomType && hs.roomCount) {
+                  const roomDesc = `${hs.roomCount}x ${hs.roomType}`;
+                  if (!hotelMatchesMap[key].rooms.includes(roomDesc)) {
+                    hotelMatchesMap[key].rooms.push(roomDesc);
+                  }
+                } else if (hs.description) {
+                  const descPart = hs.description.includes('(') ? hs.description.substring(hs.description.indexOf('(') + 1).replace(')', '').trim() : hs.description;
+                  if (descPart && !hotelMatchesMap[key].rooms.includes(descPart)) {
+                    hotelMatchesMap[key].rooms.push(descPart);
+                  }
+                }
+                hotelMatchesMap[key].totalCost += (hs.totalAmount || (hs.unitPrice * (hs.quantity || 1)) || 0);
+              }
+            });
+
+            const dayHotels = Object.values(hotelMatchesMap);
+
+            // Excursions on this day (deduplicated by excursionId or name)
+            const dayExcursionsMap: Record<string, {
+              id: number;
+              name: string;
+              city: string;
+              timeOfDay: 'Day' | 'Night';
+              hour?: string;
+              guideName?: string;
+              pax?: number;
+              price?: number;
+              total?: number;
+            }> = {};
+
+            excursionSvcs.forEach(es => {
+              const esDate = (es.serviceDate || es.startDate || '').substring(0, 10);
+              if (esDate === day.dateStr || (!es.serviceDate && !es.startDate && day.isArrivalDay)) {
+                const excObj = excursions.find((e: any) => e.id === es.excursionId);
+                const name = excObj?.name || es.description || 'Tour Excursion';
+                const cleanName = name.trim().toLowerCase();
+                const excursionKey = es.excursionId ? `id_${es.excursionId}` : `name_${cleanName}`;
+
+                const checkStr = (name + ' ' + (es.description || '')).toLowerCase();
+                let isNight = /night|dinner|evening|sunset|cruising|gece|illuminated|dinner cruise/i.test(checkStr);
+
+                let hour = '';
+                if (es.serviceDate && es.serviceDate.includes('T') && !es.serviceDate.endsWith('T00:00:00')) {
+                  const d = new Date(es.serviceDate);
+                  if (!isNaN(d.getTime())) {
+                    hour = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    if (d.getHours() >= 18) isNight = true;
+                  }
+                }
+
+                // Guide resolution
+                const guideObj = guides.find((g: any) => g.id === es.guideId);
+                const tourAssignedGuide = services.find(s => s.guideId && s.guideId > 0);
+                const guideName = guideObj?.name || (tourAssignedGuide?.guideId ? guides.find((g: any) => g.id === tourAssignedGuide.guideId)?.name : null) || undefined;
+                const city = excObj?.location || es.location || (dayHotels[0]?.city) || tour.destination || '';
+
+                if (!dayExcursionsMap[excursionKey]) {
+                  dayExcursionsMap[excursionKey] = {
+                    id: es.id,
+                    name,
+                    city,
+                    timeOfDay: isNight ? 'Night' : 'Day',
+                    hour: hour || undefined,
+                    guideName,
+                    pax: es.quantity || tour.pax,
+                    price: es.unitPrice || 0,
+                    total: es.totalAmount || (es.quantity || 1) * (es.unitPrice || 0)
+                  };
+                } else {
+                  // Merge / deduplicate entry (prefer revenue pricing if present)
+                  const existing = dayExcursionsMap[excursionKey];
+                  if (es.isRevenue) {
+                    existing.price = es.unitPrice || existing.price;
+                    existing.total = es.totalAmount || existing.total;
+                    if (es.quantity) existing.pax = es.quantity;
+                  }
+                  if (!existing.hour && hour) existing.hour = hour;
+                  if (!existing.guideName && guideName) existing.guideName = guideName;
+                  if (isNight) existing.timeOfDay = 'Night';
+                  if (!existing.city && city) existing.city = city;
+                }
+              }
+            });
+
+            const dayExcursions = Object.values(dayExcursionsMap);
+
+            // Transfers / Transport on this day (deduplicated)
+            const dayTransfersMap: Record<string, {
+              id: number;
+              description: string;
+              company?: string;
+              driver?: string;
+            }> = {};
+
+            transportSvcs.forEach(ts => {
+              const tsDate = (ts.serviceDate || ts.startDate || '').substring(0, 10);
+              if (tsDate === day.dateStr) {
+                const dObj = drivers.find((d: any) => d.id === ts.driverId);
+                const cObj = transportCompanies.find((c: any) => c.id === ts.transportCompanyId);
+                const desc = ts.description || 'Transportation / Coach';
+                const key = `${desc.trim().toLowerCase()}_${cObj?.name || ''}_${dObj?.name || ''}`;
+                if (!dayTransfersMap[key]) {
+                  dayTransfersMap[key] = {
+                    id: ts.id,
+                    description: desc,
+                    company: cObj?.name,
+                    driver: dObj?.name
+                  };
+                }
+              }
+            });
+
+            const dayTransfers = Object.values(dayTransfersMap);
+
+            // City resolution for this day
+            const checkOutHotel = dayHotels.find(h => h.status === 'Check-out');
+            const checkInHotel = dayHotels.find(h => h.status === 'Check-in');
+            let resolvedCity = '';
+            let isTransitionDay = false;
+
+            if (checkOutHotel && checkInHotel && checkOutHotel.city && checkInHotel.city && checkOutHotel.city !== checkInHotel.city) {
+              resolvedCity = `${checkOutHotel.city} → ${checkInHotel.city}`;
+              isTransitionDay = true;
+            } else if (dayHotels.length > 0 && dayHotels[0].city) {
+              resolvedCity = dayHotels[0].city;
+            } else if (dayExcursions.length > 0 && dayExcursions[0].city) {
+              resolvedCity = dayExcursions[0].city;
+            } else {
+              resolvedCity = tour.destination || 'Destination City';
+            }
+
+            return {
+              ...day,
+              city: resolvedCity,
+              isTransitionDay,
+              flights: dayFlights,
+              hotels: dayHotels,
+              excursions: dayExcursions,
+              transfers: dayTransfers,
+              totalItems: dayFlights.length + dayHotels.length + dayExcursions.length + dayTransfers.length
+            };
+          });
+
+          const distinctHotelsCount = Array.from(new Set(daysWithData.flatMap(d => d.hotels.map(h => h.hotelName)))).length;
+          const totalExcursionsCount = daysWithData.reduce((acc, d) => acc + d.excursions.length, 0);
+
+          const filteredDays = daysWithData.filter(d => {
+            if (selectedCalendarDay !== null && d.dayIndex !== selectedCalendarDay) return false;
+            if (calendarFilter === 'hotels') return d.hotels.length > 0;
+            if (calendarFilter === 'flights') return d.flights.length > 0;
+            if (calendarFilter === 'excursions') return d.excursions.length > 0;
+            return true;
+          });
+
+          return (
+            <div className="p-3 sm:p-4 max-w-[1680px] w-full mx-auto space-y-3">
+              
+              {/* ──── TOP HEADER SLIM STRIP ──── */}
+              <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs px-3.5 py-2 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4 text-blue-600" />
+                      <span>Tour Calendar & Operating Itinerary</span>
+                    </h2>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      Day 1 to Day {totalDays} ({totalDays} Days / {totalNights} Nights)
+                    </span>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      {formatDate(tour.arrivalDate)} → {formatDate(tour.endDate)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ──── SINGLE-LINE CONTROLS (FILTER + DAY JUMP + VIEW MODE) ──── */}
+                <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2.5 text-xs overflow-x-auto scrollbar-thin">
+                  {/* Left: Filter Chips */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter:</span>
+                    {(['all', 'hotels', 'flights', 'excursions'] as const).map(filterKey => (
+                      <button
+                        key={filterKey}
+                        onClick={() => setCalendarFilter(filterKey)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold capitalize transition-all shrink-0 ${
+                          calendarFilter === filterKey
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {filterKey === 'all' ? `All Items (${daysWithData.length} Days)` : filterKey}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+
+                  {/* Middle: Day Jump Bar */}
+                  <div className="flex items-center gap-1 shrink overflow-x-auto scrollbar-none">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Day Jump:</span>
+                    <button
+                      onClick={() => setSelectedCalendarDay(null)}
+                      className={`px-2 py-0.5 rounded-md font-semibold text-[11px] shrink-0 transition-all ${
+                        selectedCalendarDay === null ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All Days ({totalDays})
+                    </button>
+                    {daysWithData.map(d => (
+                      <button
+                        key={d.dayIndex}
+                        onClick={() => setSelectedCalendarDay(selectedCalendarDay === d.dayIndex ? null : d.dayIndex)}
+                        className={`px-1.5 py-0.5 rounded-md text-[11px] font-medium shrink-0 flex items-center gap-1 transition-all ${
+                          selectedCalendarDay === d.dayIndex
+                            ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                            : d.isToday
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80'
+                        }`}
+                      >
+                        <span className="font-bold">Day {d.dayIndex}</span>
+                        <span className="text-[9px] opacity-75">({d.formattedDate})</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+
+                  {/* Right: View Mode Toggle */}
+                  <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-md border border-slate-200/80 shrink-0">
+                    <button
+                      onClick={() => setCalendarViewMode('grid')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                        calendarViewMode === 'grid' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Day Grid View
+                    </button>
+                    <button
+                      onClick={() => setCalendarViewMode('timeline')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                        calendarViewMode === 'timeline' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Timeline Itinerary
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ──── DAY-BY-DAY CALENDAR VIEW (GRID OR TIMELINE) ──── */}
+              {filteredDays.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+                  <CalendarDays className="w-10 h-10 mx-auto mb-2 opacity-40 text-slate-400" />
+                  <p className="font-medium">No days match the active filter</p>
+                  <button onClick={() => { setCalendarFilter('all'); setSelectedCalendarDay(null); }} className="mt-3 text-xs text-blue-600 font-bold hover:underline">
+                    Reset Filter
+                  </button>
+                </div>
+              ) : calendarViewMode === 'grid' ? (
+                /* GRID VIEW */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
+                  {filteredDays.map(day => (
+                    <div
+                      key={day.dayIndex}
+                      className={`bg-white rounded-2xl border transition-all shadow-xs hover:shadow-md flex flex-col overflow-hidden ${
+                        day.isToday
+                          ? 'border-blue-400 ring-2 ring-blue-100'
+                          : day.isArrivalDay
+                          ? 'border-emerald-300'
+                          : day.isDepartureDay
+                          ? 'border-rose-300'
+                          : 'border-slate-200'
+                      }`}
+                    >
+                      {/* Day Card Header */}
+                      <div className="p-3 bg-gradient-to-r from-slate-50 to-indigo-50/30 border-b border-slate-100 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black shrink-0 ${
+                            day.isArrivalDay
+                              ? 'bg-emerald-600 text-white'
+                              : day.isDepartureDay
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-indigo-600 text-white'
+                          }`}>
+                            Day {day.dayIndex}
+                          </span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-800 block truncate">
+                              {day.dayOfWeek}, {day.formattedDate}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Relative Day Badges */}
+                        <div className="shrink-0 flex items-center gap-1">
+                          {day.isArrivalDay && (
+                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-md flex items-center gap-0.5">
+                              <PlaneLanding className="w-2.5 h-2.5" /> Arrival
+                            </span>
+                          )}
+                          {day.isDepartureDay && (
+                            <span className="px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold rounded-md flex items-center gap-0.5">
+                              <PlaneTakeoff className="w-2.5 h-2.5" /> Departure
+                            </span>
+                          )}
+                          {day.isToday && (
+                            <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase rounded-md shadow-2xs animate-pulse">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Prominent City Banner for this Day */}
+                      <div className="px-3 py-1.5 bg-violet-50/90 border-b border-violet-100 flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <MapPin className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                          <span className="text-xs font-bold text-violet-950 truncate" title={`Day ${day.dayIndex} City: ${day.city}`}>
+                            {day.city}
+                          </span>
+                        </div>
+                        {day.isTransitionDay && (
+                          <span className="text-[9px] font-bold bg-violet-200 text-violet-800 px-1.5 py-0.2 rounded shrink-0">
+                            Transit Day
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Day Card Content Items */}
+                      <div className="p-3 space-y-2.5 text-xs flex-1">
+                        
+                        {/* 1. FLIGHTS */}
+                        {day.flights.map((flight, fIdx) => (
+                          <div
+                            key={fIdx}
+                            className={`p-2.5 rounded-xl border space-y-1.5 shadow-2xs ${
+                              flight.type === 'arrival'
+                                ? 'bg-indigo-50/70 border-indigo-200/90 text-indigo-950'
+                                : flight.type === 'departure'
+                                ? 'bg-sky-50/70 border-sky-200/90 text-sky-950'
+                                : 'bg-slate-50 border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5 font-bold">
+                                {flight.type === 'arrival' ? (
+                                  <PlaneLanding className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                ) : (
+                                  <PlaneTakeoff className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                )}
+                                <span className="uppercase text-[11px] tracking-tight">
+                                  {flight.type === 'arrival' ? 'Arrival Flight' : flight.type === 'departure' ? 'Departure Flight' : 'Flight'}
+                                </span>
+                              </div>
+                              {flight.hour && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-white border border-indigo-200/80 font-mono font-bold text-[10px] text-indigo-700 flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 text-indigo-500" /> {flight.hour}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 pt-0.5">
+                              <div>
+                                <span className="font-extrabold text-sm text-slate-900 block">{flight.flightNo}</span>
+                                <span className="text-[11px] text-slate-600 font-medium flex items-center gap-1">
+                                  <MapPin className="w-2.5 h-2.5 text-slate-400" /> {flight.airport}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <a
+                                  href={flight.flightAwareUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`Check ${flight.flightNo} on FlightAware`}
+                                  className="px-1.5 py-0.5 bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-300 rounded text-[9.5px] font-bold inline-flex items-center gap-0.5 transition-colors shadow-2xs"
+                                >
+                                  <span>Live</span>
+                                  <ExternalLink className="w-2 h-2" />
+                                </a>
+                                {flight.radar24Code && (
+                                  <a
+                                    href={`https://www.flightradar24.com/data/flights/${flight.radar24Code}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={`Check ${flight.flightNo} on FlightRadar24`}
+                                    className="px-1 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9px] font-bold inline-flex items-center transition-colors shadow-2xs"
+                                  >
+                                    Radar
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* 2. HOTEL RESERVATIONS */}
+                        {day.hotels.map((hotel, hIdx) => (
+                          <div key={hIdx} className="p-2.5 rounded-xl border border-violet-200/80 bg-white space-y-1.5 shadow-2xs">
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5 font-bold text-slate-900 min-w-0">
+                                <div className="w-5 h-5 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                                  <Building2 className="w-3 h-3" />
+                                </div>
+                                <span className="text-xs truncate font-bold text-slate-800" title={hotel.hotelName}>
+                                  {hotel.hotelName}
+                                </span>
+                              </div>
+                              <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold shrink-0 ${
+                                hotel.status === 'Check-in'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : hotel.status === 'Check-out'
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                  : 'bg-violet-100 text-violet-800 border border-violet-200'
+                              }`}>
+                                {hotel.status}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                              <span className="flex items-center gap-1 font-medium text-slate-600">
+                                <MapPin className="w-2.5 h-2.5 text-slate-400" /> {hotel.city}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {hotel.nights} {hotel.nights === 1 ? 'Night' : 'Nights'}
+                              </span>
+                            </div>
+
+                            {/* Room Breakdown */}
+                            {hotel.rooms.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-100">
+                                {hotel.rooms.map((rm, rmIdx) => (
+                                  <span key={rmIdx} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    {rm}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* 3. EXCURSIONS (Marked as Day or Night with Hour) */}
+                        {day.excursions.map((exc, eIdx) => (
+                          <div
+                            key={eIdx}
+                            className={`p-2.5 rounded-xl border space-y-1.5 shadow-2xs ${
+                              exc.timeOfDay === 'Night'
+                                ? 'bg-slate-900 border-slate-800 text-white'
+                                : 'bg-amber-50/80 border-amber-200/90 text-amber-950'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide ${
+                                exc.timeOfDay === 'Night'
+                                  ? 'bg-indigo-950 text-indigo-200 border border-indigo-700/60'
+                                  : 'bg-amber-100 text-amber-900 border border-amber-300'
+                              }`}>
+                                {exc.timeOfDay === 'Night' ? (
+                                  <>
+                                    <Moon className="w-2.5 h-2.5 text-indigo-300" />
+                                    <span>Night Tour</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sun className="w-2.5 h-2.5 text-amber-600" />
+                                    <span>Day Tour</span>
+                                  </>
+                                )}
+                              </span>
+
+                              {exc.hour && (
+                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                  exc.timeOfDay === 'Night'
+                                    ? 'bg-slate-800 text-indigo-200 border border-slate-700'
+                                    : 'bg-white text-amber-800 border border-amber-200'
+                                } flex items-center gap-0.5`}>
+                                  <Clock className="w-2.5 h-2.5" /> {exc.hour}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className={`font-bold text-xs leading-snug line-clamp-2 ${
+                              exc.timeOfDay === 'Night' ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {exc.name}
+                            </p>
+
+                            <div className="flex items-center justify-between gap-1 text-[10.5px] pt-0.5">
+                              <span className={`flex items-center gap-1 truncate ${
+                                exc.timeOfDay === 'Night' ? 'text-slate-300' : 'text-slate-600'
+                              }`}>
+                                <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                                <span className="truncate">{exc.city}</span>
+                              </span>
+                              {exc.guideName && (
+                                <span className={`flex items-center gap-1 px-1.5 py-0.2 rounded font-medium text-[9.5px] shrink-0 ${
+                                  exc.timeOfDay === 'Night' ? 'bg-slate-800 text-indigo-200' : 'bg-white text-slate-700 border border-amber-200'
+                                }`}>
+                                  <User className="w-2.5 h-2.5" />
+                                  <span className="truncate max-w-[80px]">{exc.guideName}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* 4. TRANSFERS */}
+                        {day.transfers.map((tr, tIdx) => (
+                          <div key={tIdx} className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-200 text-emerald-950 flex items-center justify-between gap-2 shadow-2xs">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span className="text-[11px] font-bold truncate">{tr.description}</span>
+                            </div>
+                            {tr.driver && (
+                              <span className="text-[9.5px] font-medium text-emerald-700 bg-white px-1.5 py-0.2 rounded border border-emerald-200 shrink-0">
+                                {tr.driver}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Free Day state if no services */}
+                        {day.totalItems === 0 && (
+                          <div className="py-6 px-3 text-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200 text-slate-400 space-y-1">
+                            <p className="text-xs font-semibold text-slate-600">Leisure Day in {day.city}</p>
+                            <p className="text-[10px] text-slate-400">No scheduled services or flights</p>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* TIMELINE VIEW */
+                <div className="space-y-4">
+                  {filteredDays.map(day => (
+                    <div key={day.dayIndex} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:shadow-md transition-shadow">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2.5 py-1 rounded-xl text-xs font-black ${
+                            day.isArrivalDay
+                              ? 'bg-emerald-600 text-white'
+                              : day.isDepartureDay
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-indigo-600 text-white'
+                          }`}>
+                            Day {day.dayIndex}
+                          </span>
+                          <span className="text-sm font-bold text-slate-900">
+                            {day.fullFormattedDate}
+                          </span>
+                          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-violet-50 text-violet-900 border border-violet-200 font-bold text-xs">
+                            <MapPin className="w-3.5 h-3.5 text-violet-600" />
+                            <span>{day.city}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {day.isArrivalDay && (
+                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-lg flex items-center gap-1">
+                              <PlaneLanding className="w-3 h-3" /> Arrival Day
+                            </span>
+                          )}
+                          {day.isDepartureDay && (
+                            <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg flex items-center gap-1">
+                              <PlaneTakeoff className="w-3 h-3" /> Departure Day
+                            </span>
+                          )}
+                          {day.isToday && (
+                            <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-black uppercase rounded-lg shadow-2xs animate-pulse">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Items Grid for this day in Timeline */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-3">
+                        {/* Flights */}
+                        {day.flights.map((flight, fIdx) => (
+                          <div key={fIdx} className="p-3 bg-indigo-50/70 border border-indigo-200/90 rounded-xl space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                                {flight.type === 'arrival' ? <PlaneLanding className="w-3.5 h-3.5 text-indigo-600" /> : <PlaneTakeoff className="w-3.5 h-3.5 text-sky-600" />}
+                                {flight.type === 'arrival' ? 'Arrival Flight' : 'Departure Flight'}
+                              </span>
+                              {flight.hour && (
+                                <span className="px-1.5 py-0.5 bg-white border border-indigo-200 rounded font-mono font-bold text-[10px] text-indigo-700">
+                                  {flight.hour}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-extrabold text-sm text-slate-900">{flight.flightNo}</p>
+                            <p className="text-xs text-slate-600 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400" /> {flight.airport}
+                            </p>
+                          </div>
+                        ))}
+
+                        {/* Hotels */}
+                        {day.hotels.map((hotel, hIdx) => (
+                          <div key={hIdx} className="p-3 bg-violet-50/50 border border-violet-200 rounded-xl space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-violet-900 flex items-center gap-1.5">
+                                <Building2 className="w-3.5 h-3.5 text-violet-600" /> {hotel.hotelName}
+                              </span>
+                              <span className="px-1.5 py-0.5 bg-violet-100 text-violet-800 rounded text-[10px] font-bold">
+                                {hotel.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400" /> {hotel.city} ({hotel.nights} Nights)
+                            </p>
+                            {hotel.rooms.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {hotel.rooms.map((r, ri) => (
+                                  <span key={ri} className="bg-white border border-violet-200 text-violet-900 px-1.5 py-0.2 rounded text-[10px] font-medium">
+                                    {r}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Excursions */}
+                        {day.excursions.map((exc, eIdx) => (
+                          <div key={eIdx} className={`p-3 rounded-xl border space-y-1 ${
+                            exc.timeOfDay === 'Night' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-amber-50/80 border-amber-200 text-amber-950'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold flex items-center gap-1.5">
+                                {exc.timeOfDay === 'Night' ? <Moon className="w-3.5 h-3.5 text-indigo-300" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
+                                {exc.timeOfDay === 'Night' ? 'Night Tour' : 'Day Tour'}
+                              </span>
+                              {exc.hour && (
+                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                  exc.timeOfDay === 'Night' ? 'bg-slate-800 text-indigo-200' : 'bg-white text-amber-800'
+                                }`}>
+                                  {exc.hour}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-bold text-xs">{exc.name}</p>
+                            <p className={`text-xs flex items-center gap-1 ${exc.timeOfDay === 'Night' ? 'text-slate-300' : 'text-slate-600'}`}>
+                              <MapPin className="w-3 h-3 opacity-60" /> {exc.city} {exc.guideName ? `• Guide: ${exc.guideName}` : ''}
+                            </p>
+                          </div>
+                        ))}
+
+                        {/* Transfers */}
+                        {day.transfers.map((tr, tIdx) => (
+                          <div key={tIdx} className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                            <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                              <Truck className="w-3.5 h-3.5 text-emerald-600" /> {tr.description}
+                            </span>
+                            {tr.driver && <p className="text-xs text-emerald-700">Driver: {tr.driver}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ──── ADD / EDIT PASSENGER MODAL ──── */}
@@ -4777,6 +5918,19 @@ export default function TourDetailPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ──── GUIDE EXCURSION SALES TAB ──── */}
+      {activeTab === 'excursions' && (
+        <div className="p-4 sm:p-6 max-w-[1680px] w-full mx-auto space-y-6">
+          <GuideExcursionSalesPortal 
+            tourId={tourId} 
+            projectId={projectId || tour?.projectId} 
+            tour={tour} 
+            isStandaloneMobile={false} 
+            onSettled={fetchAll}
+          />
         </div>
       )}
 

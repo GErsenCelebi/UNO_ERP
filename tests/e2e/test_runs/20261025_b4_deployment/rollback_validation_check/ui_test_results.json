@@ -1,0 +1,183 @@
+{
+  "target": "https://uno-dmc.cz",
+  "executed_at": "2026-10-25T19:32:02.903428",
+  "metrics": {
+    "total": 29,
+    "passed": 27,
+    "failed": 2,
+    "failures": [
+      {
+        "test": "Tour Detail Tab - Calendar",
+        "error": "Tab 'Calendar' not found"
+      },
+      {
+        "test": "Tour Detail Tab - Guide Excursion Sales",
+        "error": "Tab 'Guide Excursion Sales' not found"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "filename": "00a_dashboard_overview.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\00a_dashboard_overview.png",
+      "description": "Dashboard Overview Screen",
+      "captured_at": "2026-10-25 19:31:08"
+    },
+    {
+      "filename": "00b_executive_kpi_cockpit.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\00b_executive_kpi_cockpit.png",
+      "description": "Executive KPI Cockpit (Target vs Actual)",
+      "captured_at": "2026-10-25 19:31:13"
+    },
+    {
+      "filename": "01_projects_board.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\01_projects_board.png",
+      "description": "Projects Kanban Board with Status Columns",
+      "captured_at": "2026-10-25 19:31:15"
+    },
+    {
+      "filename": "01a_project_overview.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\01a_project_overview.png",
+      "description": "Project Overview Screen",
+      "captured_at": "2026-10-25 19:31:17"
+    },
+    {
+      "filename": "01b_project_tours_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\01b_project_tours_tab.png",
+      "description": "Project Tours Kanban Tab",
+      "captured_at": "2026-10-25 19:31:19"
+    },
+    {
+      "filename": "01c_project_dashboard_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\01c_project_dashboard_tab.png",
+      "description": "Project Dashboard Tab",
+      "captured_at": "2026-10-25 19:31:20"
+    },
+    {
+      "filename": "01d_project_finance_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\01d_project_finance_tab.png",
+      "description": "Project Finance Tab",
+      "captured_at": "2026-10-25 19:31:22"
+    },
+    {
+      "filename": "02_tours_board_lanes.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\02_tours_board_lanes.png",
+      "description": "Tours Board with Multiple Status Lanes",
+      "captured_at": "2026-10-25 19:31:24"
+    },
+    {
+      "filename": "02a_tour_info_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\02a_tour_info_tab.png",
+      "description": "Tour Info Tab",
+      "captured_at": "2026-10-25 19:31:28"
+    },
+    {
+      "filename": "02c_tour_services_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\02c_tour_services_tab.png",
+      "description": "Tour Services Tab",
+      "captured_at": "2026-10-25 19:31:30"
+    },
+    {
+      "filename": "02d_tour_bookings_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\02d_tour_bookings_tab.png",
+      "description": "Tour Bookings Tab",
+      "captured_at": "2026-10-25 19:31:31"
+    },
+    {
+      "filename": "02f_tour_invoice_tab.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\02f_tour_invoice_tab.png",
+      "description": "Tour Invoice Tab",
+      "captured_at": "2026-10-25 19:31:33"
+    },
+    {
+      "filename": "03_tour_calendar.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\03_tour_calendar.png",
+      "description": "Tour Calendar View",
+      "captured_at": "2026-10-25 19:31:35"
+    },
+    {
+      "filename": "03a_calendar_tour_info.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\03a_calendar_tour_info.png",
+      "description": "Tour Info Reached From Calendar Event",
+      "captured_at": "2026-10-25 19:31:37"
+    },
+    {
+      "filename": "04a_master_project_statuses.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04a_master_project_statuses.png",
+      "description": "Project Statuses Table & Search",
+      "captured_at": "2026-10-25 19:31:42"
+    },
+    {
+      "filename": "04b_master_clients.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04b_master_clients.png",
+      "description": "Clients Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:43"
+    },
+    {
+      "filename": "04c_master_excel_import.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04c_master_excel_import.png",
+      "description": "Excel Import Dropzones & SOP",
+      "captured_at": "2026-10-25 19:31:44"
+    },
+    {
+      "filename": "04d_master_hotels.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04d_master_hotels.png",
+      "description": "Hotels Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:47"
+    },
+    {
+      "filename": "04e_master_guides.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04e_master_guides.png",
+      "description": "Guides Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:48"
+    },
+    {
+      "filename": "04f_master_transports.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04f_master_transports.png",
+      "description": "Transport Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:50"
+    },
+    {
+      "filename": "04g_master_drivers.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04g_master_drivers.png",
+      "description": "Drivers Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:52"
+    },
+    {
+      "filename": "04h_master_vendors.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04h_master_vendors.png",
+      "description": "Vendors Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:53"
+    },
+    {
+      "filename": "04i_master_excursions.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04i_master_excursions.png",
+      "description": "Excursions Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:55"
+    },
+    {
+      "filename": "04j_master_tour_statuses.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04j_master_tour_statuses.png",
+      "description": "Tour Statuses Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:57"
+    },
+    {
+      "filename": "04k_master_service_categories.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\04k_master_service_categories.png",
+      "description": "Service Categories Master Data Table & Search",
+      "captured_at": "2026-10-25 19:31:59"
+    },
+    {
+      "filename": "05_ai_knowledge_sops.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\05_ai_knowledge_sops.png",
+      "description": "AI Knowledge & SOPs with Live Search",
+      "captured_at": "2026-10-25 19:32:00"
+    },
+    {
+      "filename": "06_reports_kpis.png",
+      "path": "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests\\e2e\\test_runs\\20261025_b4_deployment\\rollback_validation_check\\06_reports_kpis.png",
+      "description": "Reports & KPIs Cockpit View",
+      "captured_at": "2026-10-25 19:32:02"
+    }
+  ]
+}

@@ -97,92 +97,92 @@ interface TourTheme {
 const TOUR_PALETTE: TourTheme[] = [
   {
     name: 'blue',
-    bg: 'bg-blue-100',
-    border: 'border-blue-300',
+    bg: 'bg-blue-100 dark:bg-blue-950/70',
+    border: 'border-blue-300 dark:border-blue-800',
     leftBorder: 'border-l-blue-600',
-    titleColor: 'text-blue-950',
-    subtextColor: 'text-blue-800',
+    titleColor: 'text-blue-950 dark:text-blue-200',
+    subtextColor: 'text-blue-800 dark:text-blue-300',
     accent: '#2563eb'
   },
   {
     name: 'amber',
-    bg: 'bg-amber-100',
-    border: 'border-amber-300',
+    bg: 'bg-amber-100 dark:bg-amber-950/70',
+    border: 'border-amber-300 dark:border-amber-800',
     leftBorder: 'border-l-amber-600',
-    titleColor: 'text-amber-950',
-    subtextColor: 'text-amber-800',
+    titleColor: 'text-amber-950 dark:text-amber-200',
+    subtextColor: 'text-amber-800 dark:text-amber-300',
     accent: '#d97706'
   },
   {
     name: 'emerald',
-    bg: 'bg-emerald-100',
-    border: 'border-emerald-300',
+    bg: 'bg-emerald-100 dark:bg-emerald-950/70',
+    border: 'border-emerald-300 dark:border-emerald-800',
     leftBorder: 'border-l-emerald-600',
-    titleColor: 'text-emerald-950',
-    subtextColor: 'text-emerald-800',
+    titleColor: 'text-emerald-950 dark:text-emerald-200',
+    subtextColor: 'text-emerald-800 dark:text-emerald-300',
     accent: '#059669'
   },
   {
     name: 'rose',
-    bg: 'bg-rose-100',
-    border: 'border-rose-300',
+    bg: 'bg-rose-100 dark:bg-rose-950/70',
+    border: 'border-rose-300 dark:border-rose-800',
     leftBorder: 'border-l-rose-600',
-    titleColor: 'text-rose-950',
-    subtextColor: 'text-rose-800',
+    titleColor: 'text-rose-950 dark:text-rose-200',
+    subtextColor: 'text-rose-800 dark:text-rose-300',
     accent: '#e11d48'
   },
   {
     name: 'purple',
-    bg: 'bg-purple-100',
-    border: 'border-purple-300',
+    bg: 'bg-purple-100 dark:bg-purple-950/70',
+    border: 'border-purple-300 dark:border-purple-800',
     leftBorder: 'border-l-purple-600',
-    titleColor: 'text-purple-950',
-    subtextColor: 'text-purple-800',
+    titleColor: 'text-purple-950 dark:text-purple-200',
+    subtextColor: 'text-purple-800 dark:text-purple-300',
     accent: '#7c3aed'
   },
   {
     name: 'orange',
-    bg: 'bg-orange-100',
-    border: 'border-orange-300',
+    bg: 'bg-orange-100 dark:bg-orange-950/70',
+    border: 'border-orange-300 dark:border-orange-800',
     leftBorder: 'border-l-orange-600',
-    titleColor: 'text-orange-950',
-    subtextColor: 'text-orange-800',
+    titleColor: 'text-orange-950 dark:text-orange-200',
+    subtextColor: 'text-orange-800 dark:text-orange-300',
     accent: '#ea580c'
   },
   {
     name: 'teal',
-    bg: 'bg-teal-100',
-    border: 'border-teal-300',
+    bg: 'bg-teal-100 dark:bg-teal-950/70',
+    border: 'border-teal-300 dark:border-teal-800',
     leftBorder: 'border-l-teal-600',
-    titleColor: 'text-teal-950',
-    subtextColor: 'text-teal-800',
+    titleColor: 'text-teal-950 dark:text-teal-200',
+    subtextColor: 'text-teal-800 dark:text-teal-300',
     accent: '#0d9488'
   },
   {
     name: 'pink',
-    bg: 'bg-pink-100',
-    border: 'border-pink-300',
+    bg: 'bg-pink-100 dark:bg-pink-950/70',
+    border: 'border-pink-300 dark:border-pink-800',
     leftBorder: 'border-l-pink-600',
-    titleColor: 'text-pink-950',
-    subtextColor: 'text-pink-800',
+    titleColor: 'text-pink-950 dark:text-pink-200',
+    subtextColor: 'text-pink-800 dark:text-pink-300',
     accent: '#db2777'
   },
   {
     name: 'lime',
-    bg: 'bg-lime-100',
-    border: 'border-lime-400',
+    bg: 'bg-lime-100 dark:bg-lime-950/70',
+    border: 'border-lime-400 dark:border-lime-800',
     leftBorder: 'border-l-lime-600',
-    titleColor: 'text-lime-950',
-    subtextColor: 'text-lime-800',
+    titleColor: 'text-lime-950 dark:text-lime-200',
+    subtextColor: 'text-lime-800 dark:text-lime-300',
     accent: '#65a30d'
   },
   {
     name: 'indigo',
-    bg: 'bg-indigo-100',
-    border: 'border-indigo-300',
+    bg: 'bg-indigo-100 dark:bg-indigo-950/70',
+    border: 'border-indigo-300 dark:border-indigo-800',
     leftBorder: 'border-l-indigo-600',
-    titleColor: 'text-indigo-950',
-    subtextColor: 'text-indigo-800',
+    titleColor: 'text-indigo-950 dark:text-indigo-200',
+    subtextColor: 'text-indigo-800 dark:text-indigo-300',
     accent: '#4f46e5'
   }
 ];
@@ -205,13 +205,13 @@ const getTourColor = (tourCode?: string, tourId?: number) => {
 };
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; gradient: string; dot: string; text: string }> = {
-  'Draft':             { bg: 'bg-slate-50',   border: 'border-slate-200',  gradient: 'from-slate-500 to-slate-700',    dot: 'bg-slate-400',   text: 'text-slate-700' },
-  'Services Proposal': { bg: 'bg-amber-50',   border: 'border-amber-200',  gradient: 'from-amber-500 to-orange-600',   dot: 'bg-amber-400',   text: 'text-amber-700' },
-  'Proposal':          { bg: 'bg-amber-50',   border: 'border-amber-200',  gradient: 'from-amber-500 to-orange-600',   dot: 'bg-amber-400',   text: 'text-amber-700' },
-  'Confirmed':         { bg: 'bg-indigo-50',  border: 'border-indigo-200', gradient: 'from-indigo-500 to-blue-600',    dot: 'bg-indigo-400',  text: 'text-indigo-700' },
-  'In Progress':       { bg: 'bg-violet-50',  border: 'border-violet-200', gradient: 'from-violet-500 to-purple-600',  dot: 'bg-violet-400',  text: 'text-violet-700' },
-  'Completed':         { bg: 'bg-emerald-50', border: 'border-emerald-200',gradient: 'from-emerald-500 to-green-600',  dot: 'bg-emerald-400', text: 'text-emerald-700' },
-  'Cancelled':         { bg: 'bg-rose-50',    border: 'border-rose-200',   gradient: 'from-rose-500 to-red-600',       dot: 'bg-rose-400',    text: 'text-rose-700' },
+  'Draft':             { bg: 'bg-slate-50 dark:bg-slate-800/80',   border: 'border-slate-200 dark:border-slate-700',  gradient: 'from-slate-500 to-slate-700',    dot: 'bg-slate-400',   text: 'text-slate-700 dark:text-slate-200' },
+  'Services Proposal': { bg: 'bg-amber-50 dark:bg-amber-950/60',   border: 'border-amber-200 dark:border-amber-800',  gradient: 'from-amber-500 to-orange-600',   dot: 'bg-amber-400',   text: 'text-amber-700 dark:text-amber-300' },
+  'Proposal':          { bg: 'bg-amber-50 dark:bg-amber-950/60',   border: 'border-amber-200 dark:border-amber-800',  gradient: 'from-amber-500 to-orange-600',   dot: 'bg-amber-400',   text: 'text-amber-700 dark:text-amber-300' },
+  'Confirmed':         { bg: 'bg-indigo-50 dark:bg-indigo-950/60',  border: 'border-indigo-200 dark:border-indigo-800', gradient: 'from-indigo-500 to-blue-600',    dot: 'bg-indigo-400',  text: 'text-indigo-700 dark:text-indigo-300' },
+  'In Progress':       { bg: 'bg-violet-50 dark:bg-violet-950/60',  border: 'border-violet-200 dark:border-violet-800', gradient: 'from-violet-500 to-purple-600',  dot: 'bg-violet-400',  text: 'text-violet-700 dark:text-violet-300' },
+  'Completed':         { bg: 'bg-emerald-50 dark:bg-emerald-950/60', border: 'border-emerald-200 dark:border-emerald-800',gradient: 'from-emerald-500 to-green-600',  dot: 'bg-emerald-400', text: 'text-emerald-700 dark:text-emerald-300' },
+  'Cancelled':         { bg: 'bg-rose-50 dark:bg-rose-950/60',    border: 'border-rose-200 dark:border-rose-800',   gradient: 'from-rose-500 to-red-600',       dot: 'bg-rose-400',    text: 'text-rose-700 dark:text-rose-300' },
 };
 
 const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, icon: Icon }: any) => {
@@ -242,24 +242,24 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-slate-100 rounded-full text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors focus:ring-1 focus:ring-blue-500 min-w-[120px] justify-between"
+        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-slate-100 dark:bg-slate-900 rounded-full text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors focus:ring-1 focus:ring-blue-500 min-w-[120px] justify-between"
       >
         <div className="flex items-center gap-1.5">
-          {Icon && <Icon className="w-3.5 h-3.5 text-slate-500" />}
+          {Icon && <Icon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />}
           {displayValue}
         </div>
         <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto py-1">
-          {options.length === 0 ? <div className="px-3 py-2 text-xs text-slate-500">No options</div> : null}
+        <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto py-1">
+          {options.length === 0 ? <div className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">No options</div> : null}
           {options.map((opt: any) => (
             <div
               key={opt.value}
               onClick={() => toggleOption(opt.value)}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
             >
-              <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${selectedValues.includes(opt.value) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+              <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${selectedValues.includes(opt.value) ? 'bg-blue-600 border-blue-600' : 'border-slate-300 dark:border-slate-600'}`}>
                 {selectedValues.includes(opt.value) && <Check className="w-2.5 h-2.5 text-white" />}
               </div>
               <span className="truncate">{opt.label}</span>
@@ -414,7 +414,10 @@ export default function TourCalendarPage() {
         className={`relative group px-1.5 py-1 text-[10px] rounded border border-l-[4px] ${theme.bg} ${theme.border} ${theme.leftBorder} ${hasMissing ? 'ring-1 ring-red-400' : ''} cursor-pointer truncate shadow-2xs font-medium hover:shadow-md hover:z-10 hover:-translate-y-px transition-all my-0.5`}
         onMouseEnter={() => setHoveredItem({ event, date })}
         onMouseLeave={() => setHoveredItem(null)}
-        onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)}
+        onClick={() => {
+          console.log('[TourCalendar] Tour clicked:', event.tourId, 'projectId:', event.projectId);
+          router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}?tab=calendar`);
+        }}
       >
         <div className="flex items-center justify-between gap-1 overflow-hidden">
           <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -465,9 +468,9 @@ export default function TourCalendarPage() {
     for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
 
     return (
-      <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden h-full min-h-[600px] shadow-sm">
+      <div className="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden h-full min-h-[600px] shadow-sm">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-          <div key={day} className="bg-slate-100 py-2 text-center font-semibold text-xs text-slate-600 uppercase tracking-wider">
+          <div key={day} className="bg-slate-100 dark:bg-slate-900 py-2 text-center font-semibold text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider">
             {day}
           </div>
         ))}
@@ -475,11 +478,11 @@ export default function TourCalendarPage() {
           const isToday = date && date.toDateString() === new Date().toDateString();
           const dayEvents = date ? getEventsForRange(date, date) : [];
           return (
-            <div key={index} className={`bg-white min-h-[100px] p-1 flex flex-col transition-colors ${date ? 'hover:bg-slate-50/50' : 'bg-slate-50/30'}`}>
+            <div key={index} className={`bg-white dark:bg-[#1E293B] min-h-[100px] p-1 flex flex-col transition-colors ${date ? 'hover:bg-slate-50/50 dark:hover:bg-slate-800/60' : 'bg-slate-50/30 dark:bg-slate-900/40'}`}>
               {date && (
                 <>
                   <div className={`text-right p-1 ${isToday ? 'mb-1' : ''}`}>
-                    <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full ${isToday ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500'}`}>
+                    <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full ${isToday ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
                       {date.getDate()}
                     </span>
                   </div>
@@ -507,13 +510,13 @@ export default function TourCalendarPage() {
           const mEvents = getEventsForRange(mStart, mEnd);
           
           return (
-            <div key={i} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow transition-shadow flex flex-col min-h-[200px]">
-              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-2 text-sm flex justify-between">
+            <div key={i} className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-sm hover:shadow transition-shadow flex flex-col min-h-[200px]">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2 text-sm flex justify-between">
                 {monthDate.toLocaleDateString('en-US', { month: 'long' })}
-                <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{mEvents.length}</span>
+                <span className="text-xs bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">{mEvents.length}</span>
               </h3>
               <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-                {mEvents.length === 0 && <p className="text-xs text-slate-400 italic">No tours</p>}
+                {mEvents.length === 0 && <p className="text-xs text-slate-400 dark:text-slate-500 italic">No tours</p>}
                 {mEvents.map(event => renderEventCard(event, null))}
               </div>
             </div>
@@ -534,14 +537,14 @@ export default function TourCalendarPage() {
     });
 
     return (
-      <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden h-full min-h-[600px] shadow-sm">
+      <div className="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden h-full min-h-[600px] shadow-sm">
         {weekDays.map(date => {
           const isToday = date.toDateString() === new Date().toDateString();
           const dayEvents = getEventsForRange(date, date);
           
           return (
-            <div key={date.toISOString()} className="bg-white flex flex-col transition-colors hover:bg-slate-50/50">
-              <div className={`bg-slate-100 py-2 text-center font-semibold text-xs text-slate-600 uppercase tracking-wider ${isToday ? 'bg-blue-50 text-blue-700' : ''}`}>
+            <div key={date.toISOString()} className="bg-white dark:bg-[#1E293B] flex flex-col transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+              <div className={`bg-slate-100 dark:bg-slate-900 py-2 text-center font-semibold text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider ${isToday ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300' : ''}`}>
                 {date.toLocaleDateString('en-US', { weekday: 'short' })}
                 <div className={`mt-1 text-sm ${isToday ? 'font-bold' : ''}`}>{date.getDate()}</div>
               </div>
@@ -558,16 +561,16 @@ export default function TourCalendarPage() {
   const renderDayView = () => {
     const dayEvents = getEventsForRange(currentDate, currentDate);
     return (
-      <div className="bg-white border border-slate-200 rounded-lg h-full min-h-[600px] shadow-sm flex flex-col">
-        <div className="bg-slate-100 p-4 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="font-bold text-lg text-slate-800">
+      <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-lg h-full min-h-[600px] shadow-sm flex flex-col">
+        <div className="bg-slate-100 dark:bg-slate-900/80 p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+          <h2 className="font-bold text-lg text-slate-800 dark:text-white">
             {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </h2>
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">{dayEvents.length} Tours</span>
+          <span className="bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-semibold">{dayEvents.length} Tours</span>
         </div>
         <div className="flex-1 p-6 overflow-y-auto">
           {dayEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500">
               <CalendarIcon className="w-12 h-12 mb-2 opacity-50" />
               <p>No tours scheduled for this date</p>
             </div>
@@ -579,29 +582,29 @@ export default function TourCalendarPage() {
                 const isInProgress = event.statusName === 'In Progress';
                 const dayCity = isInProgress ? getCityForEventAndDate(event, currentDate) : null;
                 return (
-                  <div key={event.tourId} onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}`)} className={`bg-white border ${theme.border} border-l-4 ${theme.leftBorder} rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow`}>
+                  <div key={event.tourId} onClick={() => router.push(`/projects/${event.projectId || 0}/tours/${event.tourId}?tab=calendar`)} className={`bg-white dark:bg-slate-900 border ${theme.border} border-l-4 ${theme.leftBorder} rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition-shadow`}>
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className={`font-bold text-lg ${theme.titleColor}`}>{event.tourCode}</h3>
                           {isInProgress && dayCity && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-100 text-violet-800 border border-violet-300">
-                              <MapPin className="w-3.5 h-3.5 text-violet-600" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-100 dark:bg-violet-950/60 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-700">
+                              <MapPin className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
                               {dayCity}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                           <MapPin className="w-3.5 h-3.5"/> {event.destination}
                           {event.cities && event.cities.length > 0 && (
-                            <span className="text-xs text-slate-400 font-normal">({event.cities.join(' → ')})</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">({event.cities.join(' → ')})</span>
                           )}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         {event.missingMainServices && event.missingMainServices.length > 0 && (
-                          <span className="bg-red-100 border border-red-300 text-red-700 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
-                            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                          <span className="bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                             Missing: {event.missingMainServices.join(', ')}
                           </span>
                         )}
@@ -609,18 +612,18 @@ export default function TourCalendarPage() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm text-slate-600 mb-4 bg-slate-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-300 mb-4 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg">
                       <div className="flex items-center gap-1.5"><CalendarIcon className="w-4 h-4 text-blue-500" /> {formatDate(event.arrivalDate)} - {formatDate(event.endDate)}</div>
-                      <div className="w-px h-4 bg-slate-300"></div>
+                      <div className="w-px h-4 bg-slate-300 dark:bg-slate-700"></div>
                       <div className="flex items-center gap-1.5"><Users className="w-4 h-4 text-indigo-500" /> {event.pax} Pax</div>
                     </div>
 
                     {event.guideAssignments && event.guideAssignments.length > 0 && (
-                      <div className="border-t border-slate-100 pt-3">
+                      <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
                         <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Guides ({event.guideAssignments.length})</p>
                         <div className="flex flex-wrap gap-2">
                           {event.guideAssignments.map((ga: any, i: number) => (
-                            <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                            <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full text-xs font-medium">
                               <User className="w-3.5 h-3.5" />
                               {ga.guideName}
                             </span>
@@ -639,19 +642,19 @@ export default function TourCalendarPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden text-sm w-full">
-      <header className="bg-white border-b border-slate-200 shrink-0 z-20 shadow-sm">
-        <div className="h-14 flex items-center justify-between px-6 border-b border-slate-100">
+    <div className="flex flex-col h-screen bg-slate-50 dark:bg-[#0B0F19] overflow-hidden text-sm w-full">
+      <header className="bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-slate-800 shrink-0 z-20 shadow-sm">
+        <div className="h-14 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-blue-600" />
+            <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Tour Calendar
             </h1>
-            <div className="flex bg-slate-100 p-1 rounded-lg ml-2">
+            <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-lg ml-2">
               {(['year', 'month', 'week', 'day'] as const).map((v) => (
                 <button 
                   key={v}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors capitalize ${viewMode === v ? 'bg-white shadow-sm text-blue-700' : 'text-slate-600 hover:bg-slate-200'}`}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors capitalize ${viewMode === v ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
                   onClick={() => setViewMode(v)}
                 >
                   {v}
@@ -661,24 +664,24 @@ export default function TourCalendarPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={goToToday} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-md shadow-sm transition-colors text-sm">
+            <button onClick={goToToday} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium rounded-md shadow-sm transition-colors text-sm">
               Today
             </button>
-            <div className="flex items-center bg-slate-100 rounded-md p-0.5 shadow-sm min-w-[200px] justify-between">
-              <button onClick={prevPeriod} className="p-1 hover:bg-white rounded text-slate-600 transition-colors">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-md p-0.5 shadow-sm min-w-[200px] justify-between">
+              <button onClick={prevPeriod} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-center font-semibold text-slate-800 text-xs px-2">
+              <span className="text-center font-semibold text-slate-800 dark:text-slate-200 text-xs px-2">
                 {formatHeaderTitle()}
               </span>
-              <button onClick={nextPeriod} className="p-1 hover:bg-white rounded text-slate-600 transition-colors">
+              <button onClick={nextPeriod} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-400 transition-colors">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="h-12 flex items-center px-6 gap-4 bg-slate-50/50">
+        <div className="h-12 flex items-center px-6 gap-4 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="relative w-64 shrink-0">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -686,11 +689,11 @@ export default function TourCalendarPage() {
               placeholder="Search tours..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-full focus:ring-1 focus:ring-blue-500 text-xs transition-all outline-none"
+              className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full focus:ring-1 focus:ring-blue-500 text-xs transition-all outline-none text-slate-800 dark:text-slate-100"
             />
           </div>
           
-          <div className="h-4 w-px bg-slate-200 mx-1"></div>
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
           <MultiSelectDropdown 
             options={projects.map(p => ({ label: `${p.projectCode} ${p.client?.name ? `(${p.client.name})` : ''}`, value: p.id }))}
@@ -714,20 +717,20 @@ export default function TourCalendarPage() {
             icon={User}
           />
 
-          <div className="ml-auto flex items-center gap-3 text-[10px] text-slate-500">
+          <div className="ml-auto flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
              <div className="flex items-center gap-1.5 text-red-600 font-bold"><span className="px-1 py-0.2 bg-red-600 text-white rounded text-[8px] font-black uppercase">MISSING</span> Missing Services</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-indigo-50 border border-indigo-200 rounded block"></span> Confirmed</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-violet-50 border border-violet-200 rounded block"></span> In Progress</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-50 border border-emerald-200 rounded block"></span> Completed</div>
-             <div className="flex items-center gap-1.5 text-yellow-600 font-medium"><AlertTriangle className="w-3 h-3" /> Guide Conflict</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded block"></span> Confirmed</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-violet-50 dark:bg-violet-950/60 border border-violet-200 dark:border-violet-800 rounded block"></span> In Progress</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded block"></span> Completed</div>
+             <div className="flex items-center gap-1.5 text-yellow-600 dark:text-yellow-500 font-medium"><AlertTriangle className="w-3 h-3" /> Guide Conflict</div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-4 relative bg-slate-50">
+      <div className="flex-1 overflow-auto p-4 relative bg-slate-50 dark:bg-[#0B0F19]">
         {loading && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-50/50 backdrop-blur-sm">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
           </div>
         )}
 
@@ -745,15 +748,15 @@ export default function TourCalendarPage() {
 
           return (
             <div 
-              className="fixed z-50 bg-white rounded-lg shadow-2xl border border-slate-200 p-4 w-80 pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-10px] ml-[100px]"
+              className="fixed z-50 bg-white dark:bg-[#1E293B] rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 p-4 w-80 pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-10px] ml-[100px]"
               style={{ left: '50%', top: '50%' }}
             >
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-slate-200 rotate-45"></div>
+              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white dark:bg-[#1E293B] border-b border-r border-slate-200 dark:border-slate-700 rotate-45"></div>
               
               <div className="flex items-start justify-between mb-3 relative z-10">
                 <div>
                   <h4 className={`font-bold ${theme.titleColor}`}>{hoveredEvent.tourCode}</h4>
-                  <p className="text-xs font-medium text-slate-500">{hoveredEvent.statusName}</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{hoveredEvent.statusName}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   {hoveredEvent.missingMainServices && hoveredEvent.missingMainServices.length > 0 && (
@@ -762,7 +765,7 @@ export default function TourCalendarPage() {
                     </div>
                   )}
                   {hoveredEvent.hasGuideConflict && (
-                    <div className="bg-red-50 text-red-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-red-100">
+                    <div className="bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-red-100 dark:border-red-900">
                       <AlertTriangle className="w-3 h-3" /> Conflict
                     </div>
                   )}
@@ -771,9 +774,9 @@ export default function TourCalendarPage() {
               
               <div className="space-y-2 text-xs relative z-10">
                 {hoveredEvent.missingMainServices && hoveredEvent.missingMainServices.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 text-red-800 p-2.5 rounded-md space-y-1 shadow-2xs">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-red-900">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                  <div className="bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-2.5 rounded-md space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-red-900 dark:text-red-100">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 shrink-0" />
                       <span>Missing Main Services ({hoveredEvent.missingMainServices.length})</span>
                     </div>
                     <div className="flex flex-wrap gap-1 pt-1">
@@ -783,14 +786,14 @@ export default function TourCalendarPage() {
                         </span>
                       ))}
                     </div>
-                    <p className="text-[10px] text-red-600 font-medium pt-0.5">
+                    <p className="text-[10px] text-red-600 dark:text-red-300 font-medium pt-0.5">
                       Blocked from Confirmed & In Progress until resolved.
                     </p>
                   </div>
                 )}
                 {/* Specific calendar day & 1 city for this day */}
                 {hoveredDate && (
-                  <div className="flex items-center justify-between text-slate-500 font-medium pb-1.5 border-b border-slate-100">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 font-medium pb-1.5 border-b border-slate-100 dark:border-slate-700">
                     <span className="flex items-center gap-1.5 text-[11px]">
                       <CalendarIcon className="w-3.5 h-3.5 text-blue-500" />
                       {hoveredDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -800,39 +803,39 @@ export default function TourCalendarPage() {
 
                 {/* 1 City and Hotel for that specific day */}
                 {dayCity && (
-                  <div className="flex items-center justify-between p-2 bg-violet-50 text-violet-900 rounded-md border border-violet-200">
+                  <div className="flex items-center justify-between p-2 bg-violet-50 dark:bg-violet-950/60 text-violet-900 dark:text-violet-200 rounded-md border border-violet-200 dark:border-violet-800">
                     <div className="flex items-center gap-1.5 font-bold text-xs">
-                      <MapPin className="w-4 h-4 text-violet-600 shrink-0" />
+                      <MapPin className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
                       <span>City: {dayCity}</span>
                     </div>
                     {activeStay?.hotelName && (
-                      <span className="text-[10.5px] text-violet-700 font-semibold truncate max-w-[130px]" title={activeStay.hotelName}>
+                      <span className="text-[10.5px] text-violet-700 dark:text-violet-300 font-semibold truncate max-w-[130px]" title={activeStay.hotelName}>
                         {activeStay.hotelName}
                       </span>
                     )}
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <MapPin className="w-3.5 h-3.5 text-slate-400" />
                   <span className="truncate">{hoveredEvent.destination || 'No destination'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
                   <span>
                     {formatDate(hoveredEvent.arrivalDate)} - {formatDate(hoveredEvent.endDate)}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <Users className="w-3.5 h-3.5 text-slate-400" />
                   <span>{hoveredEvent.pax} Pax</span>
                 </div>
 
                 {hoveredEvent.guideAssignments && hoveredEvent.guideAssignments.length > 0 && (
-                  <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
-                    <div className="text-xs font-semibold text-slate-500 mb-1">Assigned Guides:</div>
+                  <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-700 space-y-1">
+                    <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Assigned Guides:</div>
                     {hoveredEvent.guideAssignments.map((ga: any, i: number) => (
-                      <div key={i} className="flex flex-col gap-0.5 text-slate-700 font-medium">
+                      <div key={i} className="flex flex-col gap-0.5 text-slate-700 dark:text-slate-200 font-medium">
                         <div className="flex items-center gap-2">
                           <User className="w-3.5 h-3.5 text-blue-500" />
                           <span>{ga.guideName}</span>
