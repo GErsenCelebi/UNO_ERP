@@ -31,3 +31,6 @@ obj/
 temp_*
 scratch/
 *.log
+
+# Secrets & Service Accounts
+*unoerp-storage*.json

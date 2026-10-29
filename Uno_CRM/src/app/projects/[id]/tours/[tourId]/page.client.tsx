@@ -1,14 +1,14 @@
 "use client"
-import React, { useEffect, useState, useMemo } from 'react';
+import React, {  useEffect, useState, useMemo , useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent, BedDouble, BedSingle, Sun, Moon, Clock, Bed, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent, BedDouble, BedSingle, Sun, Moon, Clock, Bed, CheckCircle2 } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
 import GuideExcursionSalesPortal from '@/components/GuideExcursionSalesPortal';
 import Can from '@/components/Can';
 import ServiceCategoryIcon from '@/components/ServiceCategoryIcon';
-import { getAuthHeaders } from '@/lib/auth';
+import { getAuthHeaders, getCurrentUser } from '@/lib/auth';
 import { formatDate, getFlightAwareUrl } from '@/lib/utils';
 import { getApiUrl } from '@/lib/apiConfig';
 
@@ -169,6 +169,7 @@ export default function TourDetailPage() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [tourNotes, setTourNotes] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Edit tour
   const [editData, setEditData] = useState<any>(null);
@@ -206,6 +207,23 @@ export default function TourDetailPage() {
   const [serviceType, setServiceType] = useState('Hotel');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const toggleGroup = (catName: string) => setCollapsedGroups(prev => ({ ...prev, [catName]: !prev[catName] }));
+
+  // Services action dropdown menus (single-line enforcement)
+  const [costDropdownOpen, setCostDropdownOpen] = useState(false);
+  const [revenueDropdownOpen, setRevenueDropdownOpen] = useState(false);
+  const costDropdownRef = useRef<HTMLDivElement>(null);
+  const revenueDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Categorization helpers for single-line action bars
+  const costCats = useMemo(() => serviceCategories.filter(c => c.isCost), [serviceCategories]);
+  const primaryCostNames = useMemo(() => ['Hotel', 'Flight', 'Transport', 'Guide'], []);
+  const primaryCostCats = useMemo(() => costCats.filter(c => primaryCostNames.includes(c.name)), [costCats, primaryCostNames]);
+  const secondaryCostCats = useMemo(() => costCats.filter(c => !primaryCostNames.includes(c.name)), [costCats, primaryCostNames]);
+
+  const revCats = useMemo(() => serviceCategories.filter(c => c.isRevenue), [serviceCategories]);
+  const primaryRevNames = useMemo(() => ['Excursion', 'Invoiced Fee', 'City Tax'], []);
+  const primaryRevCats = useMemo(() => revCats.filter(c => primaryRevNames.includes(c.name)), [revCats, primaryRevNames]);
+  const secondaryRevCats = useMemo(() => revCats.filter(c => !primaryRevNames.includes(c.name)), [revCats, primaryRevNames]);
 
   // Pivot breakdown state
   const [isBreakdownTableExpanded, setIsBreakdownTableExpanded] = useState(false);
@@ -404,6 +422,29 @@ export default function TourDetailPage() {
     if (tourId) fetchAll();
   }, [tourId]);
 
+  const [syncingDrive, setSyncingDrive] = useState(false);
+  const [driveSyncMsg, setDriveSyncMsg] = useState<string | null>(null);
+
+  const handleSyncDrive = async () => {
+    setSyncingDrive(true);
+    setDriveSyncMsg(null);
+    try {
+      const res = await fetch(`${API}/tours/${tourId}/attachments/sync-drive`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setDriveSyncMsg(data.message || 'Google Drive synchronization complete.');
+        await fetchAttachments();
+        setTimeout(() => setDriveSyncMsg(null), 5000);
+      } else {
+        setDriveSyncMsg('Synchronization request failed.');
+      }
+    } catch (err: any) {
+      setDriveSyncMsg(err?.message || 'Synchronization failed.');
+    } finally {
+      setSyncingDrive(false);
+    }
+  };
+
   const fetchAttachments = async () => {
     try {
       const res = await fetch(`${API}/tours/${tourId}/attachments`);
@@ -453,20 +494,27 @@ export default function TourDetailPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
+      const authHeaders = getAuthHeaders();
       const [tourRes, svcRes, catRes, hotelRes, driverRes, guideRes, excRes, transRes, statusRes, invoiceRes, projRes, attachRes] = await Promise.all([
-        fetch(`${API}/tours/${tourId}`).catch(() => null),
-        fetch(`${API}/tourservices?tourId=${tourId}`).catch(() => null),
-        fetch(`${API}/servicecategories`).catch(() => null),
-        fetch(`${API}/hotels`).catch(() => null),
-        fetch(`${API}/drivers`).catch(() => null),
-        fetch(`${API}/guides`).catch(() => null),
-        fetch(`${API}/excursions`).catch(() => null),
-        fetch(`${API}/transportcompanies`).catch(() => null),
-        fetch(`${API}/tourstatuses`).catch(() => null),
-        fetch(`${API}/invoices?tourId=${tourId}`).catch(() => null),
-        fetch(`${API}/projects`).catch(() => null),
-        fetch(`${API}/tours/${tourId}/attachments`).catch(() => null),
+        fetch(`${API}/tours/${tourId}`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/tourservices?tourId=${tourId}`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/servicecategories`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/hotels`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/drivers`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/guides`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/excursions`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/transportcompanies`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/tourstatuses`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/invoices?tourId=${tourId}`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/projects`, { headers: authHeaders }).catch(() => null),
+        fetch(`${API}/tours/${tourId}/attachments`, { headers: authHeaders }).catch(() => null),
       ]);
+
+      if (tourRes && tourRes.status === 403) {
+        setAccessDenied(true);
+        setLoading(false);
+        return;
+      }
 
       let loadedServices: any[] = [];
       if (svcRes?.ok) {
@@ -523,6 +571,20 @@ export default function TourDetailPage() {
       setIsGeneratingHotels(false);
     }
   };
+
+  // Close service dropdown menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (costDropdownRef.current && !costDropdownRef.current.contains(event.target as Node)) {
+        setCostDropdownOpen(false);
+      }
+      if (revenueDropdownRef.current && !revenueDropdownRef.current.contains(event.target as Node)) {
+        setRevenueDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [notesSavedSuccess, setNotesSavedSuccess] = useState(false);
   const handleSaveNotes = async () => {
@@ -1987,6 +2049,25 @@ export default function TourDetailPage() {
   );
 
   if (loading) return <div className="flex justify-center items-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-600 dark:text-cyan-400" /></div>;
+  if (accessDenied) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4">
+        <div className="p-4 bg-rose-500/10 text-rose-500 rounded-2xl">
+          <AlertTriangle className="w-12 h-12" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Access Denied</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
+          You are only authorized to view tours to which you are assigned as a Guide.
+        </p>
+        <button
+          onClick={() => router.push('/tours')}
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors"
+        >
+          Back to My Tours
+        </button>
+      </div>
+    );
+  }
   if (!tour) return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Tour not found</div>;
 
   return (
@@ -1995,6 +2076,11 @@ export default function TourDetailPage() {
       <header className="print:hidden h-16 bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-slate-800 flex items-center px-6 shrink-0 shadow-2xs dark:shadow-md z-10">
         <button 
           onClick={() => {
+            const currentUser = getCurrentUser();
+            if (currentUser?.role === 'Guide') {
+              router.push('/tours');
+              return;
+            }
             if (typeof window !== 'undefined' && document.referrer && document.referrer.includes(window.location.host)) {
               router.back();
             } else if (tour?.projectId && tour.projectId > 0) {
@@ -2850,21 +2936,74 @@ export default function TourDetailPage() {
             
             {/* Services Revenue */}
             <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-6">
-              <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-[#0F172A] gap-3">
-                <div>
-                  <h2 className="text-base md:text-lg font-bold text-slate-800 dark:text-white">Services Revenue</h2>
+              <div className="px-5 py-2.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-[#0F172A] gap-3">
+                <div className="shrink-0">
+                  <h2 className="text-base font-bold text-slate-800 dark:text-white">Services Revenue</h2>
                   <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Sales and billable items</p>
                 </div>
-                <div className="flex flex-wrap gap-2 justify-end">
-                  {serviceCategories.filter(c => c.isRevenue).map(cat => (
-                    <button key={cat.id} onClick={() => openServiceModal(cat.name, true)} className="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors gap-1.5 cursor-pointer">
+                <div className="flex items-center gap-1.5 flex-nowrap justify-end shrink-0">
+                  {primaryRevCats.map(cat => (
+                    <button 
+                      key={cat.id} 
+                      type="button"
+                      onClick={() => openServiceModal(cat.name, true)} 
+                      className="flex items-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-all gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
                       <ServiceCategoryIcon categoryName={cat.name} size="sm" />
                       <span>+ {cat.name}</span>
                     </button>
                   ))}
-                  <button onClick={() => openServiceModal('Other', true)} className="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors gap-1 cursor-pointer">
-                    <Plus className="w-3 h-3" /> Other
-                  </button>
+
+                  {/* Revenue More Dropdown */}
+                  <div ref={revenueDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setRevenueDropdownOpen(!revenueDropdownOpen)}
+                      className={`flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border gap-1 cursor-pointer shadow-2xs whitespace-nowrap ${
+                        revenueDropdownOpen 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-200 dark:ring-emerald-900/40' 
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <Plus className="w-3 h-3 text-emerald-500" />
+                      <span>More ({secondaryRevCats.length + 1})</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${revenueDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {revenueDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Additional Revenue
+                        </div>
+                        {secondaryRevCats.map(cat => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              openServiceModal(cat.name, true);
+                              setRevenueDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <ServiceCategoryIcon categoryName={cat.name} size="sm" />
+                            <span className="font-medium">+ {cat.name}</span>
+                          </button>
+                        ))}
+                        <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openServiceModal('Other', true);
+                            setRevenueDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="font-medium">+ Other Revenue</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="p-6 space-y-8">
@@ -2911,28 +3050,83 @@ export default function TourDetailPage() {
 
             {/* Services Cost */}
             <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-6">
-              <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-[#0F172A] gap-3">
-                <div>
-                  <h2 className="text-base md:text-lg font-bold text-slate-800 dark:text-white">Services Cost</h2>
+              <div className="px-5 py-2.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-[#0F172A] gap-3">
+                <div className="shrink-0">
+                  <h2 className="text-base font-bold text-slate-800 dark:text-white">Services Cost</h2>
                   <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Expenses and supplier costs</p>
                 </div>
-                <div className="flex flex-wrap gap-2 justify-end">
-                  {serviceCategories.filter(c => c.isCost).map(cat => (
-                    <button key={cat.id} onClick={() => openServiceModal(cat.name, false)} className="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors gap-1.5 cursor-pointer">
+                <div className="flex items-center gap-1.5 flex-nowrap justify-end shrink-0">
+                  {primaryCostCats.map(cat => (
+                    <button 
+                      key={cat.id} 
+                      type="button"
+                      onClick={() => openServiceModal(cat.name, false)} 
+                      className="flex items-center px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-all gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
                       <ServiceCategoryIcon categoryName={cat.name} size="sm" />
                       <span>+ {cat.name}</span>
                     </button>
                   ))}
-                  <button onClick={() => openServiceModal('Other', false)} className="flex items-center px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-600 rounded-lg text-xs font-medium transition-colors gap-1">
-                    <Plus className="w-3 h-3" /> Other
-                  </button>
+
+                  {/* Cost More Dropdown */}
+                  <div ref={costDropdownRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setCostDropdownOpen(!costDropdownOpen)}
+                      className={`flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border gap-1 cursor-pointer shadow-2xs whitespace-nowrap ${
+                        costDropdownOpen 
+                          ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 ring-2 ring-rose-200 dark:ring-rose-900/40' 
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <Plus className="w-3 h-3 text-rose-500" />
+                      <span>More ({secondaryCostCats.length + 1})</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${costDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {costDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Additional Expenses
+                        </div>
+                        {secondaryCostCats.map(cat => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              openServiceModal(cat.name, false);
+                              setCostDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <ServiceCategoryIcon categoryName={cat.name} size="sm" />
+                            <span className="font-medium">+ {cat.name}</span>
+                          </button>
+                        ))}
+                        <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openServiceModal('Other', false);
+                            setCostDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="font-medium">+ Other Expense</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {services.filter(s => s.serviceCategoryId === 1).length === 0 && (tour?.passengers?.length || 0) > 0 && (
                     <button 
+                      type="button"
                       onClick={handleAutoGenerateHotels} 
                       disabled={isGeneratingHotels}
-                      className="flex items-center px-3 py-1.5 bg-indigo-50 border border-indigo-200 shadow-sm hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition-colors gap-1.5 cursor-pointer"
+                      className="flex items-center px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 shadow-2xs hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold transition-colors gap-1.5 cursor-pointer whitespace-nowrap"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                       {isGeneratingHotels ? 'Generating...' : 'Auto-Generate Hotels'}
                     </button>
                   )}
@@ -6005,11 +6199,28 @@ export default function TourDetailPage() {
                     </h3>
                     <p className="text-xs text-slate-500">External supplier invoices, excursion receipts, and documents attached to this tour</p>
                   </div>
-                  <button onClick={() => setIsAttachModalOpen(true)} className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors gap-1">
-                    <Upload className="w-3.5 h-3.5" /> Upload File
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={handleSyncDrive} 
+                      disabled={syncingDrive}
+                      className="flex items-center px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 rounded-lg text-xs font-semibold transition-colors gap-1 border border-emerald-200"
+                      title="Resynchronize wwroot storage and Google Drive"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
+                      {syncingDrive ? 'Syncing...' : 'Sync Google Drive'}
+                    </button>
+                    <button onClick={() => setIsAttachModalOpen(true)} className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors gap-1">
+                      <Upload className="w-3.5 h-3.5" /> Upload File
+                    </button>
+                  </div>
                 </div>
 
+                {driveSyncMsg && (
+                  <div className="mb-3 px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center justify-between">
+                    <span>{driveSyncMsg}</span>
+                    <button onClick={() => setDriveSyncMsg(null)} className="text-emerald-600 hover:text-emerald-800 font-bold ml-2">×</button>
+                  </div>
+                )}
                 {attachments.length === 0 ? (
                   <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center">
                     <Paperclip className="w-8 h-8 text-slate-300 mx-auto mb-2" />

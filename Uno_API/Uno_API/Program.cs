@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Rewrite;
 using System.Text.Json.Serialization;
 using Uno_API.Data;
 using Uno_API.Services;
+using Uno_API.Services.ItineraryCopilot;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,11 +32,18 @@ builder.Services.AddDbContext<UnoDbContext>(options =>
             errorNumbersToAdd: null)));
 
 builder.Services.AddScoped<IStorageService, StorageService>();
+builder.Services.AddSingleton<IGoogleDriveStorageService, GoogleDriveStorageService>();
 builder.Services.AddHostedService<StorageMigrationService>();
 builder.Services.AddHostedService<KnowledgeBaseWatcherService>();
 builder.Services.AddScoped<IKnowledgeRetrievalService, LocalKnowledgeRetrievalService>();
 builder.Services.AddScoped<ITourProjectLookupService, TourProjectLookupService>();
 builder.Services.AddHttpClient<ILocalLlmService, OllamaLlmService>();
+
+// Itinerary Copilot Agent & Tool Pipeline (Sub-4-Second SLA, RateHawk B2B, Deterministic Engine)
+builder.Services.AddHttpClient<IRateHawkHotelService, RateHawkHotelService>();
+builder.Services.AddSingleton<DeterministicPackageBuilder>();
+builder.Services.AddScoped<IItineraryToolDispatcher, ItineraryToolDispatcher>();
+builder.Services.AddScoped<IItineraryCopilotAgentService, ItineraryCopilotAgentService>();
 
 // Configure CORS for Next.js UI
 builder.Services.AddCors(options =>
@@ -173,7 +181,44 @@ if (initializeDatabaseOnStartup)
                   CONSTRAINT [PK_TourExcursionSales] PRIMARY KEY ([Id])
               );
               IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_TourExcursionSales_TourId')
-                  CREATE INDEX [IX_TourExcursionSales_TourId] ON [TourExcursionSales] ([TourId]);"
+                  CREATE INDEX [IX_TourExcursionSales_TourId] ON [TourExcursionSales] ([TourId]);",
+            @"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ProjectItineraries')
+              BEGIN
+                  CREATE TABLE [ProjectItineraries] (
+                      [Id] int IDENTITY(1,1) NOT NULL,
+                      [ProjectId] int NOT NULL,
+                      [Title] nvarchar(255) NOT NULL,
+                      [ItineraryCode] nvarchar(50) NOT NULL DEFAULT '',
+                      [Destination] nvarchar(255) NOT NULL DEFAULT '',
+                      [DurationDays] int NOT NULL DEFAULT 1,
+                      [DurationNights] int NOT NULL DEFAULT 0,
+                      [Season] nvarchar(100) NOT NULL DEFAULT 'All Year',
+                      [TargetPax] int NOT NULL DEFAULT 35,
+                      [EstimatedCostPerPax] decimal(18,2) NOT NULL DEFAULT 0,
+                      [EstimatedSellPricePerPax] decimal(18,2) NOT NULL DEFAULT 0,
+                      [TargetMarginPct] decimal(18,2) NOT NULL DEFAULT 20,
+                      [Status] nvarchar(50) NOT NULL DEFAULT 'Draft',
+                      [IsPrimary] bit NOT NULL DEFAULT 0,
+                      [Description] nvarchar(max) NULL,
+                      [DaysJson] nvarchar(max) NULL,
+                      [CreatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(),
+                      [UpdatedAt] datetime2 NOT NULL DEFAULT GETUTCDATE(),
+                      CONSTRAINT [PK_ProjectItineraries] PRIMARY KEY ([Id]),
+                      CONSTRAINT [FK_ProjectItineraries_Projects] FOREIGN KEY ([ProjectId]) REFERENCES [Projects]([Id]) ON DELETE CASCADE
+                  );
+                  CREATE INDEX [IX_ProjectItineraries_ProjectId] ON [ProjectItineraries] ([ProjectId]);
+              END",
+              @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'GuideId')
+                  ALTER TABLE [Users] ADD [GuideId] INT NULL;",
+              @"IF NOT EXISTS (SELECT 1 FROM [Guides] WHERE [Name] = 'Ersen' OR [Name] = 'Guide Ersen' OR [Name] = 'GuideErsen')
+                  INSERT INTO [Guides] ([Name], [Language], [PhoneNumber], [DailyRate]) VALUES ('Ersen', 'Turkish, English', '+90 532 123 4567', 150.00);",
+              @"DECLARE @ErsenGId INT = (SELECT TOP 1 [Id] FROM [Guides] WHERE [Name] = 'Ersen' OR [Name] = 'Guide Ersen' OR [Name] = 'GuideErsen' ORDER BY [Id] DESC);
+                IF @ErsenGId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [TourServices] WHERE [GuideId] = @ErsenGId)
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM [Tours] WHERE [Id] = 5051)
+                        INSERT INTO [TourServices] ([TourId], [ServiceCategoryId], [GuideId], [Description], [Quantity], [UnitPrice], [TotalAmount], [IsRevenue])
+                        VALUES (5051, 4, @ErsenGId, 'Guide - Ersen', 7, 150.00, 1050.00, 0);
+                END;"
         };
 
         if (app.Environment.IsDevelopment())
@@ -279,6 +324,101 @@ if (initializeDatabaseOnStartup)
         catch (Exception ex)
         {
             Console.WriteLine("AiKnowledgeItems baseline sync warning: " + ex.Message);
+        }
+
+        // Provision Guide Accounts: GuideErsen and all guides as "Guide" & first name, password Guide123
+        try
+        {
+            var guides = db.Guides.ToList();
+            var existingUsers = db.Users.ToList();
+
+            // 1. Ensure testGuide GuideErsen account exists
+            var ersenGuide = guides.FirstOrDefault(g => g.Name.IndexOf("Ersen", StringComparison.OrdinalIgnoreCase) >= 0);
+            var ersenUser = existingUsers.FirstOrDefault(u => 
+                u.Email.Equals("guideersen@uno-dmc.cz", StringComparison.OrdinalIgnoreCase) || 
+                u.Email.Equals("guideersen", StringComparison.OrdinalIgnoreCase));
+            
+            if (ersenUser == null)
+            {
+                var newErsen = new Uno_API.Models.User
+                {
+                    Email = "guideersen@uno-dmc.cz",
+                    Password = "Guide123",
+                    Name = "Guide Ersen",
+                    Role = "Guide",
+                    GuideId = ersenGuide?.Id,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                db.Users.Add(newErsen);
+                existingUsers.Add(newErsen);
+            }
+            else
+            {
+                ersenUser.Password = "Guide123";
+                ersenUser.Role = "Guide";
+                if (ersenGuide != null) ersenUser.GuideId = ersenGuide.Id;
+                ersenUser.IsActive = true;
+            }
+
+            // 2. Loop through all guides in database
+            foreach (var guide in guides)
+            {
+                string raw = guide.Name?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+
+                string firstName = raw;
+                if (raw.StartsWith("Guide ", StringComparison.OrdinalIgnoreCase))
+                {
+                    firstName = raw.Substring(6).Trim();
+                }
+                else
+                {
+                    var tokens = raw.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (tokens.Length > 0) firstName = tokens[0];
+                }
+
+                var cleanFirst = new string(firstName.Where(char.IsLetterOrDigit).ToArray());
+                if (string.IsNullOrEmpty(cleanFirst)) continue;
+
+                string username = "Guide" + cleanFirst;
+                string email = username.ToLower() + "@uno-dmc.cz";
+
+                var userMatch = existingUsers.FirstOrDefault(u => 
+                    u.Email.Equals(email, StringComparison.OrdinalIgnoreCase) ||
+                    u.Email.Equals(username, StringComparison.OrdinalIgnoreCase) ||
+                    (u.GuideId.HasValue && u.GuideId.Value == guide.Id));
+
+                if (userMatch == null)
+                {
+                    var newGuideUser = new Uno_API.Models.User
+                    {
+                        Email = email,
+                        Password = "Guide123",
+                        Name = $"Guide {cleanFirst}",
+                        Role = "Guide",
+                        GuideId = guide.Id,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    db.Users.Add(newGuideUser);
+                    existingUsers.Add(newGuideUser);
+                }
+                else
+                {
+                    userMatch.Role = "Guide";
+                    userMatch.Password = "Guide123";
+                    userMatch.GuideId = guide.Id;
+                    userMatch.IsActive = true;
+                }
+            }
+
+            db.SaveChanges();
+            Console.WriteLine($"Successfully provisioned Guide accounts for {guides.Count} guides with role 'Guide' and password 'Guide123'.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Guide user provisioning error: " + ex.Message);
         }
     }
     using var scope = app.Services.CreateScope();

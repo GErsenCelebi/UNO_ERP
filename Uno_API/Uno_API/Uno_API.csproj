@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.77.0.4301" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -50,6 +51,10 @@
     <None Remove="*.py" />
     <None Remove="scratch_*.csv" />
     <None Remove="*.bak" />
+    <None Update="unoerp-storage-9c49eccb2ea7.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup Condition="'$(ExcludeWwwrootFromPublish)' == 'true'">
