@@ -40,6 +40,35 @@ namespace Uno_API.Controllers
                     query = query.Where(t => t.ProjectId == projectId.Value);
                 }
 
+                // Guide Role Access Restriction: Guides only see tours they are assigned to
+                var userRole = Request.Headers["X-User-Role"].FirstOrDefault();
+                if (string.Equals(userRole, "Guide", StringComparison.OrdinalIgnoreCase))
+                {
+                    int? currentGuideId = null;
+                    if (int.TryParse(Request.Headers["X-User-Guide-Id"].FirstOrDefault(), out var parsedGId))
+                    {
+                        currentGuideId = parsedGId;
+                    }
+                    else
+                    {
+                        var userEmail = Request.Headers["X-User-Email"].FirstOrDefault()?.Trim().ToLower();
+                        if (!string.IsNullOrEmpty(userEmail))
+                        {
+                            var dbUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == userEmail || u.Email.Split('@')[0].ToLower() == userEmail);
+                            if (dbUser != null) currentGuideId = dbUser.GuideId;
+                        }
+                    }
+
+                    if (currentGuideId.HasValue)
+                    {
+                        query = query.Where(t => t.TourServices.Any(ts => ts.GuideId == currentGuideId.Value));
+                    }
+                    else
+                    {
+                        query = query.Where(t => false);
+                    }
+                }
+
                 var tours = await query.ToListAsync();
 
                 var result = tours.Select(t => new
@@ -106,6 +135,32 @@ namespace Uno_API.Controllers
                 return NotFound();
             }
 
+            // Guide Access Verification: Guides may only view tours they are assigned to
+            var tourReqRole = Request.Headers["X-User-Role"].FirstOrDefault();
+            if (string.Equals(tourReqRole, "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                int? guideId = null;
+                if (int.TryParse(Request.Headers["X-User-Guide-Id"].FirstOrDefault(), out var parsedGId))
+                {
+                    guideId = parsedGId;
+                }
+                else
+                {
+                    var userEmail = Request.Headers["X-User-Email"].FirstOrDefault()?.Trim().ToLower();
+                    if (!string.IsNullOrEmpty(userEmail))
+                    {
+                        var dbUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == userEmail || u.Email.Split('@')[0].ToLower() == userEmail);
+                        if (dbUser != null) guideId = dbUser.GuideId;
+                    }
+                }
+
+                bool isAssigned = guideId.HasValue && tour.TourServices != null && tour.TourServices.Any(ts => ts.GuideId == guideId.Value);
+                if (!isAssigned)
+                {
+                    return StatusCode(403, new { error = "Access denied. Guides are only permitted to view tours to which they are assigned." });
+                }
+            }
+
             // Auto-heal: If tour.Pax == 0 but passengers exist in database, synchronize pax count automatically
             if (tour.Pax == 0 && tour.Passengers != null && tour.Passengers.Any())
             {
@@ -147,6 +202,10 @@ namespace Uno_API.Controllers
         [HttpPost]
         public async Task<ActionResult<Tour>> PostTour(Tour tour)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to create tours." });
+            }
             // Validate ProjectId exists
             if (!await _context.Projects.AnyAsync(p => p.Id == tour.ProjectId))
             {
@@ -213,7 +272,12 @@ namespace Uno_API.Controllers
             // Ensure tour storage folder is created automatically
             var parentProject = await _context.Projects.FirstOrDefaultAsync(p => p.Id == tour.ProjectId);
             string projCode = parentProject?.ProjectCode ?? "General-Projects";
-            _storageService?.EnsureTourFolders(projCode, tour.TourCode);
+            // Ensure tour storage folder is created automatically on local server and Google Drive immediately
+            string tourCode = !string.IsNullOrWhiteSpace(tour.TourCode) ? tour.TourCode : $"Tour_{tour.Id}";
+            if (_storageService != null)
+            {
+                await _storageService.EnsureTourFoldersAsync(projCode, tourCode);
+            }
 
             return CreatedAtAction(nameof(GetTour), new { id = tour.Id }, tour);
         }
@@ -222,6 +286,10 @@ namespace Uno_API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTour(int id, Tour tour)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to modify tours." });
+            }
             if (id != tour.Id)
             {
                 return BadRequest("Tour ID mismatch");
@@ -387,6 +455,10 @@ namespace Uno_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTour(int id)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to delete tours." });
+            }
             var userRole = Request.Headers["X-User-Role"].FirstOrDefault() ?? "";
             if (!string.IsNullOrEmpty(userRole) && !string.Equals(userRole, "Administrator", StringComparison.OrdinalIgnoreCase))
             {

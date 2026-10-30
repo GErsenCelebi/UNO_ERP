@@ -37,6 +37,10 @@ namespace Uno_API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetProjects()
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not authorized to view the projects directory." });
+            }
             try
             {
                 var projects = await _context.Projects
@@ -75,6 +79,26 @@ namespace Uno_API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Project>> GetProject(int id)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                int? guideId = null;
+                if (int.TryParse(Request.Headers["X-User-Guide-Id"].FirstOrDefault(), out var parsedGId)) guideId = parsedGId;
+                else
+                {
+                    var userEmail = Request.Headers["X-User-Email"].FirstOrDefault()?.Trim().ToLower();
+                    if (!string.IsNullOrEmpty(userEmail))
+                    {
+                        var dbUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == userEmail || u.Email.Split('@')[0].ToLower() == userEmail);
+                        if (dbUser != null) guideId = dbUser.GuideId;
+                    }
+                }
+
+                bool hasAssignedTour = guideId.HasValue && await _context.Tours.AnyAsync(t => t.ProjectId == id && t.TourServices.Any(ts => ts.GuideId == guideId.Value));
+                if (!hasAssignedTour)
+                {
+                    return StatusCode(403, new { error = "Guides are only permitted to view projects containing their assigned tours." });
+                }
+            }
             var project = await _context.Projects
                 .Include(p => p.Client)
                 .Include(p => p.ProjectStatus)
@@ -94,6 +118,10 @@ namespace Uno_API.Controllers
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to modify projects." });
+            }
             // Ensure client exists
             if (!await _context.Clients.AnyAsync(c => c.Id == project.ClientId))
             {
@@ -110,10 +138,10 @@ namespace Uno_API.Controllers
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
-            // Ensure project storage folder is created automatically
-            if (!string.IsNullOrWhiteSpace(project.ProjectCode))
+            // Ensure project storage folder is created automatically on local server and Google Drive
+            if (!string.IsNullOrWhiteSpace(project.ProjectCode) && _storageService != null)
             {
-                _storageService?.EnsureProjectFolder(project.ProjectCode);
+                await _storageService.EnsureProjectFolderAsync(project.ProjectCode);
             }
 
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
@@ -123,6 +151,10 @@ namespace Uno_API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProject(int id, Project project)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to modify projects." });
+            }
             if (id != project.Id)
             {
                 return BadRequest();
@@ -133,9 +165,9 @@ namespace Uno_API.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                if (!string.IsNullOrWhiteSpace(project.ProjectCode))
+                if (!string.IsNullOrWhiteSpace(project.ProjectCode) && _storageService != null)
                 {
-                    _storageService?.EnsureProjectFolder(project.ProjectCode);
+                    await _storageService.EnsureProjectFolderAsync(project.ProjectCode);
                 }
             }
             catch (DbUpdateConcurrencyException)
@@ -157,6 +189,10 @@ namespace Uno_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to delete projects." });
+            }
             var userRole = Request.Headers["X-User-Role"].FirstOrDefault() ?? "";
             if (!string.IsNullOrEmpty(userRole) && !string.Equals(userRole, "Administrator", StringComparison.OrdinalIgnoreCase))
             {

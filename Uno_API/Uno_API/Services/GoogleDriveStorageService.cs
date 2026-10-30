@@ -92,6 +92,12 @@ namespace Uno_API.Services
             return created.Id;
         }
 
+        public async Task<string> EnsureProjectFolderAsync(string projectCode)
+        {
+            if (_driveService == null || string.IsNullOrWhiteSpace(projectCode)) return string.Empty;
+            return await FindOrCreateFolderAsync(projectCode, RootStorageFolderId);
+        }
+
         public async Task<(string projectFolderId, string tourFolderId, string importFolderId, string invoiceFolderId)> EnsureTourFoldersAsync(string projectCode, string tourCode)
         {
             if (_driveService == null) return (string.Empty, string.Empty, string.Empty, string.Empty);

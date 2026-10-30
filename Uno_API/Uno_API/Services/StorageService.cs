@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -10,9 +11,13 @@ namespace Uno_API.Services
     public class StorageService : IStorageService
     {
         private readonly string _rootPath;
+        private readonly IGoogleDriveStorageService? _driveStorage;
+        private readonly ILogger<StorageService>? _logger;
 
-        public StorageService(IConfiguration configuration)
+        public StorageService(IConfiguration configuration, IGoogleDriveStorageService? driveStorage = null, ILogger<StorageService>? logger = null)
         {
+            _driveStorage = driveStorage;
+            _logger = logger;
             var configuredPath = configuration["StorageSettings:RootPath"];
             if (!string.IsNullOrWhiteSpace(configuredPath))
             {
@@ -73,6 +78,38 @@ namespace Uno_API.Services
                 Directory.CreateDirectory(projectDir);
             }
 
+            if (_driveStorage != null && _driveStorage.IsConfigured && !string.IsNullOrWhiteSpace(projectCode))
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _driveStorage.EnsureProjectFolderAsync(projectCode);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Background Google Drive project folder creation failed for {ProjectCode}: {Message}", projectCode, ex.Message);
+                    }
+                });
+            }
+
+            return projectDir;
+        }
+
+        public async Task<string> EnsureProjectFolderAsync(string projectCode)
+        {
+            var projectDir = EnsureProjectFolder(projectCode);
+            if (_driveStorage != null && _driveStorage.IsConfigured && !string.IsNullOrWhiteSpace(projectCode))
+            {
+                try
+                {
+                    await _driveStorage.EnsureProjectFolderAsync(projectCode);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Google Drive project folder creation failed for {ProjectCode}: {Message}", projectCode, ex.Message);
+                }
+            }
             return projectDir;
         }
 
@@ -89,7 +126,40 @@ namespace Uno_API.Services
             if (!Directory.Exists(importDir)) Directory.CreateDirectory(importDir);
             if (!Directory.Exists(invoiceDir)) Directory.CreateDirectory(invoiceDir);
 
+            // Asynchronously trigger Google Drive folder creation for any legacy sync callers
+            if (_driveStorage != null && _driveStorage.IsConfigured && !string.IsNullOrWhiteSpace(tourCode))
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _driveStorage.EnsureTourFoldersAsync(projectCode, tourCode);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Background Google Drive folder creation failed for {ProjectCode}/{TourCode}: {Message}", projectCode, tourCode, ex.Message);
+                    }
+                });
+            }
+
             return (tourDir, importDir, invoiceDir);
+        }
+
+        public async Task<(string tourPath, string importPath, string invoicePath)> EnsureTourFoldersAsync(string projectCode, string tourCode)
+        {
+            var local = EnsureTourFolders(projectCode, tourCode);
+            if (_driveStorage != null && _driveStorage.IsConfigured && !string.IsNullOrWhiteSpace(tourCode))
+            {
+                try
+                {
+                    await _driveStorage.EnsureTourFoldersAsync(projectCode, tourCode);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Google Drive folder creation failed for {ProjectCode}/{TourCode}: {Message}", projectCode, tourCode, ex.Message);
+                }
+            }
+            return local;
         }
 
         public async Task<string> SaveImportFileAsync(string projectCode, string tourCode, IFormFile file)

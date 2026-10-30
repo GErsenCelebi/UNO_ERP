@@ -306,6 +306,10 @@ namespace Uno_API.Controllers
                 };
                 _context.Tours.Add(tour);
                 await _context.SaveChangesAsync();
+                if (_storageService != null && !string.IsNullOrWhiteSpace(tour.TourCode))
+                {
+                    await _storageService.EnsureTourFoldersAsync(project.ProjectCode, tour.TourCode);
+                }
             }
             else
             {

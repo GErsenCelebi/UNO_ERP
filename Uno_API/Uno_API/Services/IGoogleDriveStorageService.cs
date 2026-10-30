@@ -7,6 +7,7 @@ namespace Uno_API.Services
     public interface IGoogleDriveStorageService
     {
         bool IsConfigured { get; }
+        Task<string> EnsureProjectFolderAsync(string projectCode);
         Task<(string projectFolderId, string tourFolderId, string importFolderId, string invoiceFolderId)> EnsureTourFoldersAsync(string projectCode, string tourCode);
         Task<string> UploadFileAsync(string parentFolderId, string fileName, string contentType, Stream fileStream);
         Task<bool> DownloadFileAsync(string fileId, Stream outputStream);
