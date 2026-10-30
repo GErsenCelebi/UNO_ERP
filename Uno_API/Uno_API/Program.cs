@@ -33,7 +33,7 @@ builder.Services.AddDbContext<UnoDbContext>(options =>
 
 builder.Services.AddScoped<IStorageService, StorageService>();
 builder.Services.AddSingleton<IGoogleDriveStorageService, GoogleDriveStorageService>();
-builder.Services.AddHostedService<StorageMigrationService>();
+// builder.Services.AddHostedService<StorageMigrationService>(); // Disabled: Prevents local dev projects from syncing to Prod Google Drive
 builder.Services.AddHostedService<KnowledgeBaseWatcherService>();
 builder.Services.AddScoped<IKnowledgeRetrievalService, LocalKnowledgeRetrievalService>();
 builder.Services.AddScoped<ITourProjectLookupService, TourProjectLookupService>();
