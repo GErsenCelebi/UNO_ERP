@@ -2,6 +2,7 @@ export interface UserSession {
   email: string;
   name: string;
   role: string;
+  guideId?: number | null;
   loginTime: string;
 }
 
@@ -29,11 +30,22 @@ export const ALLOWED_USERS = [
     password: 'FenerliDeniz@1907',
     name: 'Deniz Evren',
     role: 'Manager'
+  },
+  {
+    email: 'guideersen@uno-dmc.cz',
+    password: 'Guide123',
+    name: 'Guide Ersen',
+    role: 'Guide',
+    guideId: 6022
   }
 ];
 
 // RBAC Permissions System Helpers
-export type UserRole = 'Administrator' | 'TourAdmin' | 'Manager';
+export type UserRole = 'Administrator' | 'TourAdmin' | 'Manager' | 'Guide';
+
+export function isGuide(role?: string): boolean {
+  return role === 'Guide';
+}
 
 export function canEditProjects(role?: string): boolean {
   if (!role) return false;
@@ -74,11 +86,15 @@ export function getAuthHeaders(): Record<string, string> {
   const user = getCurrentUser();
   if (!user) return {};
   const safeName = user.name ? encodeURIComponent(user.name) : '';
-  return {
+  const headers: Record<string, string> = {
     'X-User-Role': user.role || '',
     'X-User-Name': safeName,
     'X-User-Email': user.email || ''
   };
+  if (user.guideId) {
+    headers['X-User-Guide-Id'] = user.guideId.toString();
+  }
+  return headers;
 }
 
 const AUTH_KEY = 'uno_erp_user_session';
@@ -99,6 +115,7 @@ export async function authenticateUserAsync(emailInput: string, passwordInput: s
           email: data.user.email,
           name: data.user.name,
           role: data.user.role,
+          guideId: data.user.guideId || null,
           loginTime: data.user.loginTime || new Date().toISOString()
         };
         if (typeof window !== 'undefined') {
@@ -135,6 +152,7 @@ export function authenticateUser(emailInput: string, passwordInput: string): { s
     email: found.email,
     name: found.name,
     role: found.role,
+    guideId: (found as any).guideId || null,
     loginTime: new Date().toISOString()
   };
 

@@ -1,16 +1,34 @@
 "use client";
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import AIChatDrawer from '@/components/AIChatDrawer';
 import { useTheme } from '@/context/ThemeContext';
+import { getCurrentUser } from '@/lib/auth';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isDark } = useTheme();
   const isLoginPage = pathname === '/login';
   const isGuideMobilePage = pathname?.startsWith('/guide');
+
+  // Enforce Guide access boundary: Guides are allowed to access only Tours (list and assigned tour details)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isLoginPage) {
+      const user = getCurrentUser();
+      if (user?.role === 'Guide') {
+        const isTourDetail = pathname ? pathname.includes('/tours/') : false;
+        const isToursList = pathname === '/tours' || pathname === '/tours/';
+        const isGuideRoute = pathname ? pathname.startsWith('/guide') : false;
+
+        if (!isToursList && !isTourDetail && !isGuideRoute) {
+          router.replace('/tours');
+        }
+      }
+    }
+  }, [pathname, isLoginPage, router]);
 
   if (isLoginPage || isGuideMobilePage) {
     return <div className="w-full min-h-screen bg-slate-950">{children}</div>;

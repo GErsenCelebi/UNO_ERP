@@ -24,7 +24,7 @@ interface EvaluationData {
   checkpoints: Checkpoint[];
 }
 
-export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tourId: number; onStatusUpdated?: () => void }) {
+export default function TourCheckpointWidget({ tourId, onStatusUpdated, refreshTrigger }: { tourId: number; onStatusUpdated?: () => void; refreshTrigger?: any }) {
   const [data, setData] = useState<EvaluationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
@@ -47,7 +47,7 @@ export default function TourCheckpointWidget({ tourId, onStatusUpdated }: { tour
 
   useEffect(() => {
     fetchCheckpoints();
-  }, [tourId]);
+  }, [tourId, refreshTrigger]);
 
   const handleAutoAdvance = async (e: React.MouseEvent) => {
     e.stopPropagation();

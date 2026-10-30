@@ -1,12 +1,13 @@
 "use client"
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check, History, AlertTriangle } from 'lucide-react';
+import { Search, Map, Filter, Loader2, CalendarDays, Users, MapPin, ChevronDown, ChevronUp, ChevronsUp, ChevronsDown, Maximize2, Minimize2, ArrowRight, FolderOpen, Briefcase, X, Plus, User, Check, History, AlertTriangle } from 'lucide-react';
 import AuditHistoryTab from '@/components/AuditHistoryTab';
 import Can from '@/components/Can';
 import SLAWarningBanner from '@/components/SLAWarningBanner';
 import { formatDate } from '@/lib/utils';
 import { getApiUrl } from '@/lib/apiConfig';
+import { getAuthHeaders, getCurrentUser, UserSession } from '@/lib/auth';
 
 const API = getApiUrl();
 
@@ -118,7 +119,12 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, placeholder, i
 
 export default function ToursPage() {
   const router = useRouter();
+  const [user, setUser] = useState<UserSession | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
   const [statuses, setStatuses] = useState<TourStatus[]>(DEFAULT_STATUSES);
   const [projects, setProjects] = useState<Project[]>([]);
   const [guides, setGuides] = useState<{ id: number, name: string }[]>([]);
@@ -143,6 +149,58 @@ export default function ToursPage() {
   const moveRef = useRef<HTMLDivElement>(null);
   const [draggedTourId, setDraggedTourId] = useState<number | null>(null);
   const [dragOverStatusId, setDragOverStatusId] = useState<number | null>(null);
+
+  // Global collapse state & per-tour overrides
+  const [isCollapsedAll, setIsCollapsedAll] = useState<boolean>(true);
+  const [collapsedOverrides, setCollapsedOverrides] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('uno_tours_cards_collapsed') : null;
+      if (saved !== null) {
+        setIsCollapsedAll(saved === 'true');
+      } else {
+        setIsCollapsedAll(true);
+      }
+    } catch {}
+  }, []);
+
+  const isTourCollapsed = (tourId: number) => {
+    if (collapsedOverrides[tourId] !== undefined) {
+      return collapsedOverrides[tourId];
+    }
+    return isCollapsedAll;
+  };
+
+  const toggleTourCollapse = (tourId: number) => {
+    setCollapsedOverrides(prev => {
+      const current = isTourCollapsed(tourId);
+      return { ...prev, [tourId]: !current };
+    });
+  };
+
+  const handleToggleCollapseAll = () => {
+    const next = !isCollapsedAll;
+    setIsCollapsedAll(next);
+    setCollapsedOverrides({});
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('uno_tours_cards_collapsed', String(next));
+      }
+    } catch {}
+  };
+
+  const handleToggleLaneCollapse = (statusId: number, laneTours: Tour[]) => {
+    const allCollapsed = laneTours.length > 0 && laneTours.every(t => isTourCollapsed(t.id));
+    const newTarget = !allCollapsed;
+    setCollapsedOverrides(prev => {
+      const updated = { ...prev };
+      laneTours.forEach(t => {
+        updated[t.id] = newTarget;
+      });
+      return updated;
+    });
+  };
 
   const handleCreateTour = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,10 +233,10 @@ export default function ToursPage() {
     setFetchError(null);
     try {
       const [toursRes, statusesRes, projectsRes, guidesRes] = await Promise.all([
-        fetch(`${API}/tours`, { cache: 'no-store' }),
-        fetch(`${API}/tourstatuses`, { cache: 'no-store' }),
-        fetch(`${API}/projects`, { cache: 'no-store' }),
-        fetch(`${API}/guides`, { cache: 'no-store' }),
+        fetch(`${API}/tours`, { cache: 'no-store', headers: getAuthHeaders() }),
+        fetch(`${API}/tourstatuses`, { cache: 'no-store', headers: getAuthHeaders() }),
+        fetch(`${API}/projects`, { cache: 'no-store', headers: getAuthHeaders() }),
+        fetch(`${API}/guides`, { cache: 'no-store', headers: getAuthHeaders() }),
       ]);
       if (toursRes.ok) setTours(await toursRes.json());
       if (statusesRes.ok) {
@@ -324,6 +382,11 @@ export default function ToursPage() {
   };
 
   const filtered = tours.filter(t => {
+    // If logged in as Guide, only display tours assigned to this guide
+    if (user?.role === 'Guide' && user.guideId) {
+      const isAssigned = t.tourServices && t.tourServices.some((ts: any) => ts.guideId === user.guideId);
+      if (!isAssigned) return false;
+    }
     if (selectedProjectIds.length > 0 && !selectedProjectIds.includes(t.projectId)) return false;
     if (selectedStatusIds.length > 0 && !selectedStatusIds.includes(t.tourStatusId)) return false;
     
@@ -364,9 +427,36 @@ export default function ToursPage() {
                 <div className="p-0.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded shadow-sm">
                   <Map className="w-3 h-3 text-white" />
                 </div>
-                Tours Board
+                {user?.role === 'Guide' ? 'My Assigned Tours' : 'Tours Board'}
               </h1>
             </div>
+          </div>
+
+          {/* Header Controls: Collapse / Extend Cards Toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              data-testid="toggle-collapse-all"
+              onClick={handleToggleCollapseAll}
+              title={isCollapsedAll ? 'Extend all tour cards (SS1 view)' : 'Collapse all tour cards (SS2 view)'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all shadow-2xs ${
+                isCollapsedAll
+                  ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-cyan-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              {isCollapsedAll ? (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400" />
+                  <span>Extend All</span>
+                </>
+              ) : (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <span>Collapse All</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -464,9 +554,26 @@ export default function ToursPage() {
                     <div className={`bg-gradient-to-r ${color.gradient} rounded-t-xl px-3 py-2 shadow-sm`}>
                       <div className="flex items-center justify-between">
                         <h3 className="text-white font-semibold text-xs tracking-wide truncate">{status.name}</h3>
-                        <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm flex-shrink-0">
-                          {columnTours.length}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm flex-shrink-0">
+                            {columnTours.length}
+                          </span>
+                          {columnTours.length > 0 && (
+                            <button
+                              type="button"
+                              data-testid={`toggle-lane-${status.id}`}
+                              onClick={() => handleToggleLaneCollapse(status.id, columnTours)}
+                              title={columnTours.every(t => isTourCollapsed(t.id)) ? `Extend ${status.name} lane` : `Collapse ${status.name} lane`}
+                              className="text-white/80 hover:text-white p-0.5 rounded hover:bg-white/20 transition-colors"
+                            >
+                              {columnTours.every(t => isTourCollapsed(t.id)) ? (
+                                <ChevronsDown className="w-3.5 h-3.5" />
+                              ) : (
+                                <ChevronsUp className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -480,94 +587,123 @@ export default function ToursPage() {
                           <p className="text-xs text-slate-400 font-medium">No tours</p>
                         </div>
                       ) : (
-                        columnTours.map(tour => (
+                        columnTours.map(tour => {
+                          const isCollapsed = isTourCollapsed(tour.id);
+                          return (
                           <div
                             key={tour.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, tour)}
+                            draggable={user?.role !== 'Guide'}
+                            onDragStart={(e) => user?.role !== 'Guide' && handleDragStart(e, tour)}
                             onDragEnd={handleDragEnd}
+                            data-testid={`tour-card-${tour.id}`}
+                            data-collapsed={isCollapsed ? 'true' : 'false'}
                             className={`group bg-white/80 dark:bg-[#1E293B] backdrop-blur-sm rounded-xl border border-white/60 dark:border-slate-800 shadow-sm hover:shadow-md hover:bg-white dark:hover:bg-slate-800/90 transition-all duration-200 cursor-grab active:cursor-grabbing overflow-hidden ${draggedTourId === tour.id ? 'opacity-50 scale-95' : ''}`}
                           >
                             <div
                               onClick={() => router.push(`/projects/${tour.projectId}/tours/${tour.id}`)}
-                              className="p-2.5"
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                toggleTourCollapse(tour.id);
+                              }}
+                              className={isCollapsed ? "p-2 cursor-pointer select-none" : "p-2.5 cursor-pointer"}
                             >
-                              <div className="flex items-start justify-between mb-2">
+                              <div className={`flex items-start justify-between ${isCollapsed ? 'mb-0' : 'mb-2'}`}>
                                 <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded">
                                   {tour.tourCode}
                                 </span>
-                                <span className="text-[9px] font-medium text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/80 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                  <Briefcase className="w-2.5 h-2.5" />
-                                  {getProjectCode(tour)}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                                <h4 className="font-semibold text-xs text-slate-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors truncate">
-                                  {tour.destination || 'No destination'}
-                                </h4>
-                              </div>
-
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <Users className="w-3 h-3 text-slate-400" />
-                                  <span>{tour.pax || 0} pax</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <CalendarDays className="w-3 h-3 text-slate-400" />
-                                  <span>
-                                    {formatDate(tour.startDate || tour.arrivalDate)} → {formatDate(tour.endDate)}
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] font-medium text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/80 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <Briefcase className="w-2.5 h-2.5" />
+                                    {getProjectCode(tour)}
                                   </span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <Briefcase className="w-3 h-3 text-slate-400" />
-                                  <span className="truncate">{getProjectName(tour)}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <User className="w-3 h-3 text-slate-400" />
-                                  <span className="truncate">{getGuideNames(tour) || 'No Guide Assigned'}</span>
+                                  <button
+                                    type="button"
+                                    data-testid={`toggle-card-${tour.id}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleTourCollapse(tour.id);
+                                    }}
+                                    title={isCollapsed ? 'Extend card (SS1)' : 'Collapse card (SS2)'}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                  >
+                                    {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                                  </button>
                                 </div>
                               </div>
+
+                              {!isCollapsed && (
+                                <>
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                    <h4 className="font-semibold text-xs text-slate-800 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors truncate">
+                                      {tour.destination || 'No destination'}
+                                    </h4>
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                      <Users className="w-3 h-3 text-slate-400" />
+                                      <span>{tour.pax || 0} pax</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                      <CalendarDays className="w-3 h-3 text-slate-400" />
+                                      <span>
+                                        {formatDate(tour.startDate || tour.arrivalDate)} → {formatDate(tour.endDate)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                      <Briefcase className="w-3 h-3 text-slate-400" />
+                                      <span className="truncate">{getProjectName(tour)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                      <User className="w-3 h-3 text-slate-400" />
+                                      <span className="truncate">{getGuideNames(tour) || 'No Guide Assigned'}</span>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </div>
 
                             {/* Move action */}
-                            <div className="relative border-t border-slate-100 dark:border-slate-800 px-2.5 py-1.5" ref={moveDropdownOpen === tour.id ? moveRef : undefined}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setMoveDropdownOpen(moveDropdownOpen === tour.id ? null : tour.id);
-                                }}
-                                className="flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full"
-                              >
-                                <ArrowRight className="w-2.5 h-2.5" />
-                                Move to…
-                                <ChevronDown className="w-3 h-3 ml-auto" />
-                              </button>
+                            {!isCollapsed && (
+                              <div className="relative border-t border-slate-100 dark:border-slate-800 px-2.5 py-1.5" ref={moveDropdownOpen === tour.id ? moveRef : undefined}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMoveDropdownOpen(moveDropdownOpen === tour.id ? null : tour.id);
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full"
+                                >
+                                  <ArrowRight className="w-2.5 h-2.5" />
+                                  Move to…
+                                  <ChevronDown className="w-3 h-3 ml-auto" />
+                                </button>
 
-                              {moveDropdownOpen === tour.id && (
-                                <div className="absolute left-0 right-0 bottom-full mb-1 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-200 dark:border-slate-800 z-30 py-1 mx-2">
-                                  {statuses.filter(s => s.id !== tour.tourStatusId).map(s => {
-                                    const sc = getStatusColor(s.name);
-                                    return (
-                                      <button
-                                        key={s.id}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleMoveToStatus(tour, s.id);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
-                                      >
-                                        <span className={`w-2 h-2 rounded-full ${sc.dot}`} />
-                                        {s.name}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
+                                {moveDropdownOpen === tour.id && (
+                                  <div className="absolute left-0 right-0 bottom-full mb-1 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-200 dark:border-slate-800 z-30 py-1 mx-2">
+                                    {statuses.filter(s => s.id !== tour.tourStatusId).map(s => {
+                                      const sc = getStatusColor(s.name);
+                                      return (
+                                        <button
+                                          key={s.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMoveToStatus(tour, s.id);
+                                          }}
+                                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                                        >
+                                          <span className={`w-2 h-2 rounded-full ${sc.dot}`} />
+                                          {s.name}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>

@@ -1,10 +1,11 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Edit, Trash2, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink, TrendingUp, Scale } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Trash2, Briefcase, LayoutDashboard, Users, LineChart, Plus, X, MapPin, CalendarDays, Users as UsersIcon, DollarSign, Save, PlaneLanding, PlaneTakeoff, History, ExternalLink, TrendingUp, Scale, Compass, Maximize2, Minimize2, ChevronDown, ChevronUp } from 'lucide-react';
 import Can from '@/components/Can';
 import { getAuthHeaders } from '@/lib/auth';
 import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
+import ProjectItinerariesTab from '@/components/projects/ProjectItinerariesTab';
 import { formatDate, getFlightAwareUrl } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -47,7 +48,7 @@ interface Project {
 }
 
 /* ──── Tour Card (Sortable) ──── */
-function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; projectId: number }) {
+function SortableTourCard({ id, tour, projectId, isCollapsed, onToggleCollapse }: { id: string; tour: Tour; projectId: number; isCollapsed?: boolean; onToggleCollapse?: (id: number) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, data: tour });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
@@ -56,65 +57,95 @@ function SortableTourCard({ id, tour, projectId }: { id: string; tour: Tour; pro
       style={style}
       {...attributes}
       {...listeners}
+      data-testid={`tour-card-${tour.id}`}
+      data-collapsed={isCollapsed ? 'true' : 'false'}
       onClick={() => window.location.href = `/projects/${projectId}/tours/${tour.id}`}
-      className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm cursor-pointer mb-3 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all group"
+      onDoubleClick={(e) => {
+        if (onToggleCollapse) {
+          e.stopPropagation();
+          onToggleCollapse(tour.id);
+        }
+      }}
+      className={`bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm cursor-pointer mb-3 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all group ${
+        isCollapsed ? 'p-2' : 'p-4'
+      }`}
     >
-      <div className="flex justify-between items-start mb-2">
+      <div className={`flex justify-between items-center ${isCollapsed ? 'mb-0' : 'mb-2'}`}>
         <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded-md">{tour.tourCode}</span>
-        <div className="flex items-center text-slate-500 dark:text-slate-400 text-xs font-medium">
-          <UsersIcon className="w-3 h-3 mr-1" /> {tour.pax} Pax
-        </div>
-      </div>
-      <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1 flex items-center">
-        <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-400" /> {tour.destination}
-      </h4>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-        {formatDate(tour.arrivalDate)} — {formatDate(tour.endDate)}
-      </p>
-      <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3">
-        <div className="flex items-center text-xs text-slate-600 dark:text-slate-300">
-          <PlaneLanding className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
-          {tour.arrivalFlight && tour.arrivalFlight !== 'TBD' ? (
-            <a
-              href={getFlightAwareUrl(tour.arrivalFlight)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title={`Track ${tour.arrivalFlight} live on FlightAware`}
-              className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate cursor-pointer"
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center text-slate-500 dark:text-slate-400 text-xs font-medium">
+            <UsersIcon className="w-3 h-3 mr-1" /> {tour.pax} Pax
+          </div>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              data-testid={`toggle-card-${tour.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapse(tour.id);
+              }}
+              title={isCollapsed ? "Extend card" : "Collapse card"}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400"
             >
-              <span>{tour.arrivalFlight}</span>
-              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-            </a>
-          ) : (
-            <span className="truncate text-slate-400">{tour.arrivalFlight || 'TBD'}</span>
-          )}
-        </div>
-        <div className="flex items-center text-xs text-slate-600 dark:text-slate-300">
-          <PlaneTakeoff className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
-          {tour.departureFlight && tour.departureFlight !== 'TBD' ? (
-            <a
-              href={getFlightAwareUrl(tour.departureFlight)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title={`Track ${tour.departureFlight} live on FlightAware`}
-              className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate cursor-pointer"
-            >
-              <span>{tour.departureFlight}</span>
-              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-            </a>
-          ) : (
-            <span className="truncate text-slate-400">{tour.departureFlight || 'TBD'}</span>
+              {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+            </button>
           )}
         </div>
       </div>
+      {!isCollapsed && (
+        <>
+          <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1 flex items-center">
+            <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-400" /> {tour.destination}
+          </h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {formatDate(tour.arrivalDate)} — {formatDate(tour.endDate)}
+          </p>
+          <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3">
+            <div className="flex items-center text-xs text-slate-600 dark:text-slate-300">
+              <PlaneLanding className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
+              {tour.arrivalFlight && tour.arrivalFlight !== 'TBD' ? (
+                <a
+                  href={getFlightAwareUrl(tour.arrivalFlight)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Track ${tour.arrivalFlight} live on FlightAware`}
+                  className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate cursor-pointer"
+                >
+                  <span>{tour.arrivalFlight}</span>
+                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                </a>
+              ) : (
+                <span className="truncate text-slate-400">{tour.arrivalFlight || 'TBD'}</span>
+              )}
+            </div>
+            <div className="flex items-center text-xs text-slate-600 dark:text-slate-300">
+              <PlaneTakeoff className="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" />
+              {tour.departureFlight && tour.departureFlight !== 'TBD' ? (
+                <a
+                  href={getFlightAwareUrl(tour.departureFlight)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Track ${tour.departureFlight} live on FlightAware`}
+                  className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline truncate cursor-pointer"
+                >
+                  <span>{tour.departureFlight}</span>
+                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                </a>
+              ) : (
+                <span className="truncate text-slate-400">{tour.departureFlight || 'TBD'}</span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 /* ──── Droppable Column for Kanban ──── */
-function DroppableColumn({ status, tours, projectId }: { status: TourStatus; tours: Tour[]; projectId: number }) {
+function DroppableColumn({ status, tours, projectId, isTourCollapsed, onToggleTourCollapse }: { status: TourStatus; tours: Tour[]; projectId: number; isTourCollapsed: (id: number) => boolean; onToggleTourCollapse: (id: number) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${status.id}` });
   return (
     <div className={`kanban-column flex flex-col rounded-2xl w-80 shrink-0 border overflow-hidden h-full transition-colors ${isOver ? 'border-blue-400 bg-blue-50/60 dark:bg-blue-950/40' : 'bg-slate-100/50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'}`}>
@@ -124,7 +155,7 @@ function DroppableColumn({ status, tours, projectId }: { status: TourStatus; tou
       </div>
       <div ref={setNodeRef} className="flex-1 overflow-y-auto p-3 min-h-[80px]">
         <SortableContext id={`col-${status.id}`} items={tours.map(t => t.id.toString())} strategy={verticalListSortingStrategy}>
-          {tours.map(t => <SortableTourCard key={t.id} id={t.id.toString()} tour={t} projectId={projectId} />)}
+          {tours.map(t => <SortableTourCard key={t.id} id={t.id.toString()} tour={t} projectId={projectId} isCollapsed={isTourCollapsed(t.id)} onToggleCollapse={onToggleTourCollapse} />)}
         </SortableContext>
       </div>
     </div>
@@ -146,6 +177,30 @@ export default function ProjectDetailPage() {
   }
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [isToursCollapsedAll, setIsToursCollapsedAll] = useState(true);
+  const [tourCollapseOverrides, setTourCollapseOverrides] = useState<Record<number, boolean>>({});
+
+  const isTourCardCollapsed = (tourId: number) => {
+    if (tourCollapseOverrides[tourId] !== undefined) return tourCollapseOverrides[tourId];
+    return isToursCollapsedAll;
+  };
+
+  const toggleTourCardCollapse = (tourId: number) => {
+    setTourCollapseOverrides(prev => {
+      const cur = isTourCardCollapsed(tourId);
+      return { ...prev, [tourId]: !cur };
+    });
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const tab = sp.get('tab');
+      if (tab && ['overview', 'itinerary', 'tours', 'dashboard', 'finance'].includes(tab)) {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
   const [project, setProject] = useState<Project | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [guides, setGuides] = useState<any[]>([]);
@@ -429,6 +484,7 @@ export default function ProjectDetailPage() {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F172A] px-6">
         {tabBtn('overview', 'Overview', Briefcase)}
+        {tabBtn('itinerary', 'Itinerary', Compass)}
         {tabBtn('tours', 'Tours', MapPin)}
         {tabBtn('dashboard', 'Dashboard', LayoutDashboard)}
         {tabBtn('finance', 'Finance', LineChart)}
@@ -556,20 +612,54 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
+        {/* ──── ITINERARY TAB ──── */}
+        {activeTab === 'itinerary' && (
+          <ProjectItinerariesTab project={project} projectId={projectId} />
+        )}
+
         {/* ──── TOURS KANBAN TAB ──── */}
         {activeTab === 'tours' && (
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between px-8 pt-6 pb-3">
               <div>
-                <h2 className="text-xl font-bold text-slate-800">Tour Pipeline</h2>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Tour Pipeline</h2>
                 <p className="text-sm text-slate-500 mt-0.5">Drag tours between columns to update their status</p>
               </div>
-              <button
-                onClick={() => setIsTourModalOpen(true)}
-                className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm shadow-sm transition-colors"
-              >
-                <Plus className="w-4 h-4 mr-2" /> New Tour
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  data-testid="toggle-project-tours-collapse"
+                  onClick={() => {
+                    const next = !isToursCollapsedAll;
+                    setIsToursCollapsedAll(next);
+                    setTourCollapseOverrides({});
+                  }}
+                  title={isToursCollapsedAll ? "Extend all tour cards" : "Collapse all tour cards"}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-all shadow-2xs ${
+                    isToursCollapsedAll
+                      ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-cyan-400'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  {isToursCollapsedAll ? (
+                    <>
+                      <Maximize2 className="w-3.5 h-3.5 text-blue-600 dark:text-cyan-400" />
+                      <span>Extend All</span>
+                    </>
+                  ) : (
+                    <>
+                      <Minimize2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      <span>Collapse All</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setIsTourModalOpen(true)}
+                  className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm shadow-sm transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> New Tour
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-x-auto overflow-y-hidden px-8 pb-8">
               <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -580,13 +670,15 @@ export default function ProjectDetailPage() {
                       status={status}
                       tours={tours.filter(t => t.tourStatusId === status.id)}
                       projectId={parseInt(projectId)}
+                      isTourCollapsed={isTourCardCollapsed}
+                      onToggleTourCollapse={toggleTourCardCollapse}
                     />
                   ))}
                 </div>
                 <DragOverlay>
                   {activeTour ? (
                     <div className="opacity-90 rotate-2 scale-105 shadow-xl">
-                      <SortableTourCard id={activeTour.id.toString()} tour={activeTour} projectId={parseInt(projectId)} />
+                      <SortableTourCard id={activeTour.id.toString()} tour={activeTour} projectId={parseInt(projectId)} isCollapsed={isTourCardCollapsed(activeTour.id)} />
                     </div>
                   ) : null}
                 </DragOverlay>

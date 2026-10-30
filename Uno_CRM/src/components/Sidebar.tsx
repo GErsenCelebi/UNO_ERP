@@ -89,9 +89,11 @@ export default function Sidebar() {
                       isDarkMode 
                         ? (user.role === 'Administrator' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
                            user.role === 'TourAdmin' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
+                           user.role === 'Guide' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
                            'bg-cyan-950 text-cyan-300 border border-cyan-800')
                         : (user.role === 'Administrator' ? 'bg-purple-100 text-purple-700' :
                            user.role === 'TourAdmin' ? 'bg-emerald-100 text-emerald-700' :
+                           user.role === 'Guide' ? 'bg-amber-100 text-amber-800' :
                            'bg-blue-100 text-blue-700')
                     }`}>
                       {user.role || 'User'}
@@ -120,7 +122,8 @@ export default function Sidebar() {
       )}
       
       <nav className={`flex-1 py-4 space-y-1 overflow-y-auto overflow-x-hidden ${isCollapsed ? 'px-3' : 'px-4'}`}>
-        {/* Dashboard with sub-menu */}
+        {/* Dashboard with sub-menu (hidden for Guides) */}
+        {user?.role !== 'Guide' && (
         <div>
           {isCollapsed ? (
             <Link
@@ -181,8 +184,27 @@ export default function Sidebar() {
             </>
           )}
         </div>
+        )}
 
-        {/* Projects with sub-menu */}
+        {/* If user is Guide, show only My Tours; otherwise show Projects accordion */}
+        {user?.role === 'Guide' ? (
+          <div>
+            <Link
+              href="/tours"
+              prefetch={false}
+              title={isCollapsed ? "My Tours" : undefined}
+              className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
+                isToursActive
+                  ? (isDarkMode ? 'bg-cyan-500/20 text-cyan-400 shadow-sm border border-cyan-500/40 font-bold' : 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100 font-bold')
+                  : (isDarkMode ? 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200' : 'text-slate-600 hover:bg-slate-50')
+              }`}
+            >
+              <Briefcase className={`w-4 h-4 ${isCollapsed ? 'mr-0' : 'mr-2.5'} ${isToursActive ? (isDarkMode ? 'text-cyan-400' : 'text-blue-600') : 'text-slate-400'}`} />
+              {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">My Tours</span>}
+            </Link>
+          </div>
+        ) : (
+        /* Projects with sub-menu */
         <div>
           {isCollapsed ? (
             <Link
@@ -255,9 +277,10 @@ export default function Sidebar() {
             </>
           )}
         </div>
+        )}
 
-        {/* Master Data */}
-        {bottomItems.map((item) => {
+        {/* Master Data (hidden for Guides) */}
+        {user?.role !== 'Guide' && bottomItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname?.startsWith(item.href);
           return (
@@ -305,19 +328,21 @@ export default function Sidebar() {
           )}
         </button>
 
-        <Link
-          href="/settings"
-          prefetch={false}
-          title={isCollapsed ? 'User Accounts' : undefined}
-          className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
-            pathname?.startsWith('/settings')
-              ? (isDarkMode ? 'bg-cyan-500/20 text-cyan-400 shadow-sm border border-cyan-500/30' : 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100')
-              : (isDarkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60' : 'text-slate-600 hover:bg-slate-50')
-          }`}
-        >
-          <Users className={`w-4 h-4 ${isCollapsed ? 'mr-0' : 'mr-2.5'} ${pathname?.startsWith('/settings') ? (isDarkMode ? 'text-cyan-400' : 'text-blue-600') : 'text-slate-400'}`} />
-          {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">User Accounts</span>}
-        </Link>
+        {user?.role !== 'Guide' && (
+          <Link
+            href="/settings"
+            prefetch={false}
+            title={isCollapsed ? 'User Accounts' : undefined}
+            className={`flex items-center py-2 rounded-lg font-medium text-sm transition-colors ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${
+              pathname?.startsWith('/settings')
+                ? (isDarkMode ? 'bg-cyan-500/20 text-cyan-400 shadow-sm border border-cyan-500/30' : 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100')
+                : (isDarkMode ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60' : 'text-slate-600 hover:bg-slate-50')
+            }`}
+          >
+            <Users className={`w-4 h-4 ${isCollapsed ? 'mr-0' : 'mr-2.5'} ${pathname?.startsWith('/settings') ? (isDarkMode ? 'text-cyan-400' : 'text-blue-600') : 'text-slate-400'}`} />
+            {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">User Accounts</span>}
+          </Link>
+        )}
       </div>
     </aside>
   );

@@ -20,6 +20,10 @@ namespace Uno_API.Controllers
         [HttpGet("analytics")]
         public async Task<IActionResult> GetAnalytics([FromQuery] string? projectIds = null, [FromQuery] string? projectStatusIds = null)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not authorized to view the operational dashboard." });
+            }
             try
             {
                 var parsedProjectIds = string.IsNullOrEmpty(projectIds) ? new List<int>() : projectIds.Split(',').Where(s => !string.IsNullOrWhiteSpace(s)).Select(int.Parse).ToList();
@@ -144,6 +148,10 @@ namespace Uno_API.Controllers
         [HttpGet("executive-kpis")]
         public async Task<IActionResult> GetExecutiveKpis([FromQuery] string? period = "Q3 2026", [FromQuery] int? projectId = null)
         {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not authorized to view the executive dashboard." });
+            }
             try
             {
                 var normPeriod = string.IsNullOrWhiteSpace(period) ? "Q3 2026" : period.Trim();

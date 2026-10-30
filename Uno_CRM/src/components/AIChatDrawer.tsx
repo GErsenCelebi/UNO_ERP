@@ -25,11 +25,21 @@ import {
   UploadCloud,
   Check,
   RefreshCw,
+  Mail,
+  FileText,
   FileCheck,
   ChevronDown,
   ChevronUp,
   Database,
-  Hotel
+  Hotel,
+  Compass,
+  MapPin,
+  Star,
+  Calendar,
+  ExternalLink,
+  Zap,
+  CheckCircle,
+  FolderPlus
 } from 'lucide-react';
 
 import { getApiUrl } from '@/lib/apiConfig';
@@ -90,6 +100,99 @@ export interface ExcelInspectionResult {
   isCommitted?: boolean;
 }
 
+export interface InquiryExtractionResult {
+  fileName: string;
+  fileSize: string;
+  fileType: string;
+  textSnippet: string;
+  detectedCorridor: string;
+  detectedDays: number;
+  detectedPax: number;
+  detectedRooms: number;
+  detectedSeason: string;
+  detectedBudgetCeiling?: number;
+  detectedTargetMarginPct: number;
+  detectedThemes: string[];
+  suggestedPrompt: string;
+  message: string;
+}
+
+interface ItineraryHotelStay {
+  city: string;
+  hotelName: string;
+  starRating: number;
+  nights: number;
+  checkIn: string;
+  checkOut: string;
+  nightlyRoomRate: number;
+  totalStayCost: number;
+  roomType: string;
+  mealPlan: string;
+  rateHawkBookingToken?: string;
+  cancellationDeadline?: string;
+  provenance: string;
+}
+
+interface FinancialBreakdown {
+  accommodationsCostPerPax: number;
+  coachTransportCostPerPax: number;
+  guideFeesCostPerPax: number;
+  cityTaxesCostPerPax: number;
+  excursionsCostPerPax: number;
+  totalCostPerPax: number;
+  targetMarginPct: number;
+  suggestedSellPricePerPax: number;
+}
+
+interface ItineraryDay {
+  dayNumber: number;
+  date: string;
+  city: string;
+  title: string;
+  description: string;
+  transitLeg?: string;
+  drivingHours?: number;
+  distanceKm?: number;
+  mandatoryRestStopInserted: boolean;
+  restStopLocation?: string;
+  mealsIncluded: string;
+  overnightCity: string;
+}
+
+interface ItineraryVariant {
+  variantId: string;
+  variantName: string;
+  starRating: number;
+  costPerPax: number;
+  sellPricePerPax: number;
+  projectedMarginPct: number;
+  totalPackageCost: number;
+  totalPackageRevenue: number;
+  totalProfit: number;
+  qualityTier: string;
+  hotels: ItineraryHotelStay[];
+  days: ItineraryDay[];
+  financialBreakdown: FinancialBreakdown;
+}
+
+interface ItineraryProposal {
+  generationTimeMs: number;
+  currency: string;
+  totalPax: number;
+  totalRooms: number;
+  tourId?: number;
+  destination: string;
+  arrivalDate: string;
+  endDate: string;
+  durationDays: number;
+  isNewConceptFromDesignTool: boolean;
+  conceptTheme?: string;
+  summaryText?: string;
+  variants: ItineraryVariant[];
+  appliedEuRegulations: string[];
+  availableActions: string[];
+}
+
 interface Message {
   id: string;
   sender: 'user' | 'ai';
@@ -104,7 +207,21 @@ interface Message {
     size: string;
   };
   excelInspection?: ExcelInspectionResult;
+  inquiryExtraction?: InquiryExtractionResult;
   confidence?: ConfidenceReport;
+  itineraryProposal?: ItineraryProposal;
+  invokedToolName?: string;
+  itineraryCommitted?: {
+    tourId: number;
+    variantName: string;
+    redirectUrl: string;
+  };
+  itineraryProjectSaved?: {
+    projectId: number;
+    itineraryCode: string;
+    title: string;
+    redirectUrl: string;
+  };
 }
 
 function renderInlineContent(text: string): React.ReactNode[] {
@@ -250,8 +367,30 @@ export default function AIChatDrawer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputQuery, setInputQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<'Projects' | 'Tours' | 'Metadata' | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'Projects' | 'Tours' | 'Metadata' | 'Itinerary' | null>(null);
+  const [committingVariantId, setCommittingVariantId] = useState<string | null>(null);
+  const [savingProjectId, setSavingProjectId] = useState<string | null>(null);
   const [expandedConfidence, setExpandedConfidence] = useState<Record<string, boolean>>({});
+
+  const currentProjectId = React.useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const match = window.location.pathname.match(/\/projects\/(\d+)/i);
+    return match ? parseInt(match[1], 10) : null;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleOpenDrawer = (e: any) => {
+      setIsOpen(true);
+      if (e.detail?.category) {
+        setSelectedCategory(e.detail.category);
+      }
+      if (e.detail?.prompt) {
+        setInputQuery(e.detail.prompt);
+      }
+    };
+    window.addEventListener('uno-open-ai-drawer', handleOpenDrawer);
+    return () => window.removeEventListener('uno-open-ai-drawer', handleOpenDrawer);
+  }, []);
 
   const toggleConfidenceInspector = (msgId: string) => {
     setExpandedConfidence(prev => ({ ...prev, [msgId]: !prev[msgId] }));
@@ -293,6 +432,24 @@ export default function AIChatDrawer() {
     const textToSend = queryText || inputQuery;
     if (!textToSend.trim() || loading) return;
 
+    if (textToSend.includes('Upload Client RFP') || textToSend.includes('Upload Receipt')) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    if (textToSend.includes('Budapest-Vienna-Prague (7D / 36 Pax)')) {
+      setInputQuery('Design a new 7-day Budapest-Vienna-Prague tour for 36 pax (18 doubles) with 20% margin, cultural & Danube cruise theme');
+      return;
+    }
+    if (textToSend.includes('Prague-Vienna-Budapest (7D / 36 Pax)')) {
+      setInputQuery('Design a new 7-day Prague-Vienna-Budapest tour for 36 pax (18 doubles) with 20% margin, cultural & Danube cruise theme');
+      return;
+    }
+    if (textToSend.includes('Vienna-Salzburg-Prague (7D / 36 Pax)')) {
+      setInputQuery('Design a new 7-day Vienna-Salzburg-Prague tour for 36 pax (18 doubles) with 20% margin, alpine & classical music theme');
+      return;
+    }
+
     const userMsg: Message = {
       id: Date.now().toString(),
       sender: 'user',
@@ -328,7 +485,9 @@ export default function AIChatDrawer() {
         pills: data.suggestedPills,
         sourceDocument: data.sourceDocument,
         category: data.category,
-        confidence: data.confidence
+        confidence: data.confidence,
+        itineraryProposal: data.itineraryProposal || data.ItineraryProposal,
+        invokedToolName: data.invokedToolName || data.InvokedToolName
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -350,18 +509,247 @@ export default function AIChatDrawer() {
     }
   };
 
+  const handleActionPillClick = (item: { label: string; query: string }) => {
+    if (item.label.includes('Design New Itinerary')) {
+      const intakeMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `🧭 **Design New Itinerary — Awaiting Your Briefing & Instructions**\n\nI am ready to engineer your tour package. Please specify your requirements below or upload your client's inquiry file (**DOCX, PDF, Email MSG, EML, TXT**):\n\n• **Destination Corridor / Hub**: *(e.g. Budapest-Vienna-Prague, Prague-Vienna-Budapest, Vienna-Salzburg-Prague)*\n• **Duration & Dates / Season**: *(e.g. 7 Days, Autumn 2026, or specific travel dates)*\n• **Group Size & Rooming**: *(e.g. 36 Pax, 18 Twin/Double rooms)*\n• **Target Margin / Budget**: *(e.g. 20% margin, or max €1,200/pax)*\n• **Themes & Special Excursions**: *(e.g. Danube dinner cruise, classical concerts, castle tours)*\n\n💡 *Tip: Choose a template corridor below, edit the prompt in the input bar, or click 📎 to attach an RFP/email document!*`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        invokedToolName: 'await_itinerary_briefing',
+        pills: [
+          "🏛️ Budapest-Vienna-Prague (7D / 36 Pax)",
+          "🏰 Prague-Vienna-Budapest (7D / 36 Pax)",
+          "🏔️ Vienna-Salzburg-Prague (7D / 36 Pax)",
+          "📎 Upload Client RFP / Email File"
+        ]
+      };
+      setMessages(prev => [...prev, intakeMsg]);
+      setInputQuery("Design a new 7-day Central Europe Cultural & Danube Cruise tour for 36 pax (18 doubles) with 20% margin");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Dual-Tier Quote')) {
+      const quoteMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `⚡ **Dual-Tier Quote (3★ vs 4★) — Specify Corridor & Dates**\n\nPlease confirm or adjust your target corridor, dates, and group size to generate comparative 3★ and 4★ packages:`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        pills: [
+          "Budapest-Vienna-Prague (Oct 29 - Nov 5 / 36 Pax)",
+          "Prague-Vienna-Budapest (Oct 29 - Nov 5 / 36 Pax)",
+          "Vienna-Salzburg-Prague (Oct 29 - Nov 5 / 36 Pax)"
+        ]
+      };
+      setMessages(prev => [...prev, quoteMsg]);
+      setInputQuery("Create a Budapest-Vienna-Prague itinerary from 2026-10-29 to 2026-11-05 for 36 pax (18 doubles), 20% target margin");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Regenerate')) {
+      const regenMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `🔄 **Regenerate Tour Itinerary**\n\nCo-pilot can recalculate the active tour itinerary with live RateHawk hotel rates and Master Data pricing.\n\nPlease confirm or specify the tour code (e.g. *'Regenerate itinerary for tour PVB12072026'*):`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        pills: [
+          "Regenerate current tour itinerary with live RateHawk and master data refresh"
+        ]
+      };
+      setMessages(prev => [...prev, regenMsg]);
+      setInputQuery("Regenerate current tour itinerary with live RateHawk and master data refresh");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Update Day')) {
+      const dayMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `📅 **Update Day / Service Schedule**\n\nWhich day number would you like to modify, and what service changes should be applied? *(e.g. 'Update Day 2 in Vienna with Imperial Schonbrunn Palace tour')*`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, dayMsg]);
+      setInputQuery("Update itinerary day 2 with Vienna Imperial tour");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Remove Day')) {
+      const removeMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `➖ **Remove Itinerary Day**\n\nWhich day number should be removed from the tour schedule? *(e.g. 'Remove Day 7 and redistribute nights')*`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, removeMsg]);
+      setInputQuery("Remove itinerary day 7 and redistribute nights");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Cancel All Hotels')) {
+      const cancelMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `⚠️ **Confirm Hotel Bookings Cancellation**\n\nCancelling all hotel bookings will delete supplier room reservations and release costs for the active tour.\n\nPlease confirm: *'please cancel all hotel bookings for this tour'* or specify the tour code (e.g. *'tour PVB12072026'*).`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, cancelMsg]);
+      setInputQuery("please cancel all hotel bookings for this tour");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Process Guide Report')) {
+      const guideMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `📑 **Process Guide Report Slip**\n\nCo-pilot can scan handwritten guide expense & sales vouchers and attach them to tour services and invoices.\n\n• Click 📎 to upload your receipt/slip image (.jpg, .png)\n• Or click below to process existing voucher on Tour #6103.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        pills: [
+          "Process guide_report.jpg for Tour #6103",
+          "📎 Upload Receipt Slip"
+        ]
+      };
+      setMessages(prev => [...prev, guideMsg]);
+      setInputQuery("can co-pilot scan and process the guide report for tour PVB12072026?");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (item.label.includes('Publish Itinerary')) {
+      const pubMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `🚀 **Publish Tour Itinerary**\n\nPlease select which quality package tier should be published to the ERP tour schedule:`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        pills: [
+          "Publish tour itinerary with 3★ Economy Package",
+          "Publish tour itinerary with 4★ Quality Package"
+        ]
+      };
+      setMessages(prev => [...prev, pubMsg]);
+      setInputQuery("Publish tour itinerary with 4★ Quality Package");
+      textInputRef.current?.focus();
+      return;
+    }
+
+    // Default: populate input bar so user can inspect and customize
+    setInputQuery(item.query);
+    textInputRef.current?.focus();
+  };
+
+  const handlePillClick = (pill: string) => {
+    if (pill.includes('📎') || pill.toLowerCase().includes('upload') || pill.toLowerCase().includes('attach') || pill.toLowerCase().includes('slip')) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    if (pill.includes('Budapest-Vienna-Prague') || pill.includes('Prague-Vienna-Budapest') || pill.includes('Vienna-Salzburg-Prague') || pill.includes('BVP') || pill.includes('PVB') || pill.includes('VSP')) {
+      const cleanName = pill.replace(/[🏛️🏰🏔️]/g, '').trim();
+      setInputQuery(`Design a new 7-day Central Europe tour for 36 pax (18 doubles) with 20% margin corridor: ${cleanName}`);
+      textInputRef.current?.focus();
+      return;
+    }
+
+    if (pill.includes('Cancel') || pill.includes('Publish') || pill.includes('Process')) {
+      setInputQuery(pill);
+      textInputRef.current?.focus();
+      return;
+    }
+
+    // Populate input bar and focus so user can review/edit before sending
+    setInputQuery(pill);
+    textInputRef.current?.focus();
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [isDragging, setIsDragging] = useState(false);
   const [committingId, setCommittingId] = useState<string | null>(null);
 
-  // Process uploaded Excel file
+  // Process uploaded file (Inquiry RFP/Email, Excel, or Receipt)
   const processUploadedFile = async (file: File) => {
     if (!file) return;
 
     const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    // 1. Client Inquiry Documents (.docx, .pdf, .msg, .eml, .txt, .rtf)
+    if (['.docx', '.pdf', '.msg', '.eml', '.txt', '.rtf'].includes(ext)) {
+      const userMsgId = Date.now().toString();
+      const userMsg: Message = {
+        id: userMsgId,
+        sender: 'user',
+        text: `Uploaded client inquiry document: ${file.name}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fileCard: {
+          name: file.name,
+          size: `${(file.size / 1024).toFixed(1)} KB`
+        }
+      };
+
+      setMessages(prev => [...prev, userMsg]);
+      setLoading(true);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (typeof window !== 'undefined') {
+          formData.append('contextUrl', window.location.pathname);
+        }
+
+        const res = await fetch(`${API}/ai/upload-inquiry`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || 'Failed to inspect inquiry document');
+        }
+
+        const extraction: InquiryExtractionResult = await res.json();
+        const aiMsgId = (Date.now() + 1).toString();
+
+        const aiMsg: Message = {
+          id: aiMsgId,
+          sender: 'ai',
+          text: `📄 **Client Inquiry Document Analyzed**: '${extraction.fileName}' (${extraction.fileSize}).\n\nI have parsed the client specifications and detected **${extraction.detectedCorridor}** for **${extraction.detectedPax} Pax** (${extraction.detectedRooms} Doubles) across **${extraction.detectedDays} Days** in **${extraction.detectedSeason}**.\n\nReview the extracted brief below and click **Generate 3★ & 4★ Proposal** or customize the prompt as needed:`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          inquiryExtraction: extraction
+        };
+
+        setMessages(prev => [...prev, aiMsg]);
+        setInputQuery(extraction.suggestedPrompt);
+      } catch (err: any) {
+        console.error('Inquiry inspect error:', err);
+        const errorMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          sender: 'ai',
+          text: `❌ **Document Inspection Error**: Could not parse '${file.name}'. Please ensure it is a readable document.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, errorMsg]);
+      } finally {
+        setLoading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // 2. Receipt / Guide Report Image (.jpg, .jpeg, .png)
+    if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+      handleSend(`can co-pilot scan and process the "guide_report" file in "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests" and add the details as expenses and revenue then attach it to invoices ?`);
+      return;
+    }
+
+    // 3. Excel Manifest or Master Data (.xlsx, .xls, .csv)
     if (!['.xlsx', '.xls', '.csv'].includes(ext)) {
-      alert('Please upload an Excel workbook (.xlsx, .xls) or .csv manifest.');
+      alert('Please upload an inquiry document (.docx, .pdf, .msg, .eml, .txt), Excel spreadsheet (.xlsx, .xls, .csv), or receipt image (.jpg, .png).');
       return;
     }
 
@@ -508,6 +896,121 @@ export default function AIChatDrawer() {
   };
 
   // 1-Click Commit to Database
+  const handleApplyVariant = async (msgId: string, proposal: ItineraryProposal, variant: ItineraryVariant) => {
+    try {
+      setCommittingVariantId(`${msgId}-${variant.variantId}`);
+      const res = await fetch(`${API}/ai/itinerary/apply-variant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tourId: proposal.tourId,
+          variant: variant,
+          destination: proposal.destination,
+          arrivalDate: proposal.arrivalDate,
+          endDate: proposal.endDate,
+          pax: proposal.totalPax
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to commit itinerary to ERP');
+      }
+      const result = await res.json();
+
+      setMessages(prev => prev.map(m => {
+        if (m.id === msgId) {
+          return {
+            ...m,
+            itineraryCommitted: {
+              tourId: result.tourId,
+              variantName: variant.variantName,
+              redirectUrl: result.redirectUrl || '/tours'
+            }
+          };
+        }
+        return m;
+      }));
+
+      // Real-time dispatch of update event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('uno-erp-data-updated', {
+          detail: { entity: 'tour', action: 'create', id: result.tourId, category: 'Itinerary' }
+        }));
+      }
+    } catch (err: any) {
+      console.error('Error applying variant to ERP:', err);
+      alert('Error applying variant to ERP: ' + (err.message || 'Network error'));
+    } finally {
+      setCommittingVariantId(null);
+    }
+  };
+
+  const handleSaveToProject = async (msgId: string, proposal: ItineraryProposal, variant: ItineraryVariant, explicitProjectId?: number) => {
+    let targetProjectId = explicitProjectId || currentProjectId;
+
+    if (!targetProjectId) {
+      const input = typeof window !== 'undefined' ? window.prompt("Enter the Project ID to save this itinerary under (e.g. 6102 or 5063):") : null;
+      if (!input) return;
+      targetProjectId = parseInt(input, 10);
+      if (isNaN(targetProjectId) || targetProjectId <= 0) {
+        alert("Invalid Project ID.");
+        return;
+      }
+    }
+
+    try {
+      setSavingProjectId(`${msgId}-${variant.variantId}`);
+      const res = await fetch(`${API}/ai/itinerary/save-to-project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: targetProjectId,
+          variant: variant,
+          destination: proposal.destination,
+          arrivalDate: proposal.arrivalDate,
+          endDate: proposal.endDate,
+          pax: proposal.totalPax,
+          customTitle: `${proposal.destination} ${variant.starRating}★ (${variant.variantName})`,
+          makePrimary: true
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to save itinerary under project');
+      }
+      const result = await res.json();
+
+      setMessages(prev => prev.map(m => {
+        if (m.id === msgId) {
+          return {
+            ...m,
+            itineraryProjectSaved: {
+              projectId: result.projectId,
+              itineraryCode: result.itineraryCode,
+              title: result.title,
+              redirectUrl: result.redirectUrl || `/projects/${result.projectId}`
+            }
+          };
+        }
+        return m;
+      }));
+
+      // Real-time dispatch of update event to refresh ProjectItinerariesTab immediately!
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('uno-erp-data-updated', {
+          detail: { entity: 'projectitinerary', action: 'create', id: result.itineraryId, projectId: result.projectId, category: 'ProjectItinerary' }
+        }));
+      }
+    } catch (err: any) {
+      console.error('Error saving itinerary to project:', err);
+      alert('Error saving itinerary to project: ' + (err.message || 'Network error'));
+    } finally {
+      setSavingProjectId(null);
+    }
+  };
+
   const handleCommitImport = async (msgId: string, inspection: ExcelInspectionResult) => {
     const file = uploadedFiles[msgId];
     if (!file) {
@@ -981,6 +1484,385 @@ export default function AIChatDrawer() {
                     </div>
                   )}
 
+                  {/* Interactive Client Inquiry Document Brief Card */}
+                  {msg.inquiryExtraction && (
+                    <div className="bg-gradient-to-b from-white to-blue-50/50 border border-blue-200/90 rounded-2xl p-3.5 space-y-3 shadow-xs text-xs">
+                      {/* Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-blue-100">
+                        <div className="flex items-center gap-2">
+                          <span className="p-1.5 rounded-lg bg-blue-100 text-blue-700">
+                            {msg.inquiryExtraction.fileType === 'msg' || msg.inquiryExtraction.fileType === 'eml' ? (
+                              <Mail className="w-4 h-4 text-blue-600" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-blue-600" />
+                            )}
+                          </span>
+                          <div>
+                            <div className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                              <span>{msg.inquiryExtraction.fileName}</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 uppercase">
+                                {msg.inquiryExtraction.fileType}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              {msg.inquiryExtraction.fileSize} • Client Inquiry Brief Parsed
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Parameters Grounded</span>
+                        </div>
+                      </div>
+
+                      {/* Parameters Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                        <div className="p-2 bg-white rounded-xl border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] font-semibold text-slate-400 block">🗺️ Corridor</span>
+                          <span className="font-bold text-slate-800 truncate block">{msg.inquiryExtraction.detectedCorridor}</span>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] font-semibold text-slate-400 block">📅 Duration</span>
+                          <span className="font-bold text-slate-800 block">{msg.inquiryExtraction.detectedDays} Days ({msg.inquiryExtraction.detectedSeason})</span>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] font-semibold text-slate-400 block">👥 Group Size</span>
+                          <span className="font-bold text-slate-800 block">{msg.inquiryExtraction.detectedPax} Pax ({msg.inquiryExtraction.detectedRooms} DBL)</span>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] font-semibold text-slate-400 block">🎯 Target Margin</span>
+                          <span className="font-bold text-emerald-700 block">{msg.inquiryExtraction.detectedTargetMarginPct}%</span>
+                          {msg.inquiryExtraction.detectedBudgetCeiling && (
+                            <span className="text-[9px] text-slate-400 block">Ceiling: €{msg.inquiryExtraction.detectedBudgetCeiling}/pax</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Themes */}
+                      {msg.inquiryExtraction.detectedThemes && msg.inquiryExtraction.detectedThemes.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <span className="text-[10px] font-semibold text-slate-500">Preferences:</span>
+                          {msg.inquiryExtraction.detectedThemes.map((th, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-blue-100/70 text-blue-900 rounded-md text-[10px] font-medium">
+                              {th}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Document Excerpt */}
+                      {msg.inquiryExtraction.textSnippet && (
+                        <div className="p-2.5 bg-white/80 rounded-xl border border-blue-100 text-[11px] text-slate-600 italic leading-snug">
+                          "{msg.inquiryExtraction.textSnippet}"
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSend(msg.inquiryExtraction!.suggestedPrompt)}
+                          disabled={loading}
+                          className="w-full sm:flex-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs disabled:opacity-50"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Generate 3★ & 4★ Proposal from Brief</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInputQuery(msg.inquiryExtraction!.suggestedPrompt);
+                            textInputRef.current?.focus();
+                          }}
+                          className="w-full sm:w-auto px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 shadow-2xs transition text-xs cursor-pointer"
+                        >
+                          ✏️ Customize Prompt
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Awaiting Itinerary Briefing Interactive Card */}
+                  {(msg.invokedToolName === 'await_itinerary_briefing' || msg.text.includes('Design New Itinerary — Awaiting Your Briefing')) && (
+                    <div className="bg-gradient-to-b from-indigo-50/70 to-slate-50 border border-indigo-200 rounded-2xl p-3.5 space-y-3 shadow-xs text-xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                          <Compass className="w-4 h-4 text-indigo-600" />
+                          <span>Interactive Tour Briefing & RFP Ingestion</span>
+                        </div>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                          ⏳ Awaiting Instructions
+                        </span>
+                      </div>
+
+                      {/* File Upload Dropzone */}
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-indigo-300 hover:border-indigo-500 rounded-xl p-3 bg-white/80 hover:bg-indigo-50/40 transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 text-center group"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center text-indigo-600 transition">
+                          <Paperclip className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800 text-[11px] group-hover:text-indigo-600">
+                            Click to Upload Client RFP or Inquiry Document
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            Supported: Word (.docx), PDF (.pdf), Email (.msg, .eml), Text (.txt)
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Corridor Quick Selectors */}
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Or Select Corridor Template:
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                          {[
+                            { name: 'Budapest-Vienna-Prague', code: 'BVP', icon: '🏛️' },
+                            { name: 'Prague-Vienna-Budapest', code: 'PVB', icon: '🏰' },
+                            { name: 'Vienna-Salzburg-Prague', code: 'VSP', icon: '🏔️' }
+                          ].map((c, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setInputQuery(`Design a new 7-day ${c.name} tour for 36 pax (18 doubles) with 20% margin corridor: ${c.code}`);
+                                textInputRef.current?.focus();
+                              }}
+                              className="p-2 rounded-xl bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-left transition-all flex items-center gap-1.5 group cursor-pointer"
+                            >
+                              <span className="text-base">{c.icon}</span>
+                              <div className="truncate">
+                                <div className="font-bold text-[11px] text-slate-800 group-hover:text-indigo-600 truncate">{c.code}</div>
+                                <div className="text-[9px] text-slate-500 truncate">{c.name}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Explicit Action: Generate Button */}
+                      <div className="pt-1 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSend(inputQuery || "Design a new 7-day Central Europe tour for 36 pax (18 doubles) with 20% margin")}
+                          disabled={loading}
+                          className="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-xs disabled:opacity-50"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>🚀 Generate Proposal with Current Instructions</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive Dual-Tier Itinerary Proposal & 1-Click ERP Ingestion Card */}
+                  {msg.itineraryProposal && (
+                    <div className="bg-gradient-to-b from-white to-slate-50 border border-indigo-200/90 rounded-2xl p-3.5 space-y-3 shadow-xs text-xs">
+                      {/* Header & Telemetry */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-indigo-100">
+                        <div className="flex items-center gap-1.5">
+                          <span className="p-1 rounded-lg bg-indigo-50 text-indigo-700">
+                            <Compass className="w-4 h-4 text-indigo-600" />
+                          </span>
+                          <div>
+                            <div className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                              <span>{msg.itineraryProposal.destination}</span>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                                {msg.itineraryProposal.durationDays} Days / {msg.itineraryProposal.durationDays - 1} Nts
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              {new Date(msg.itineraryProposal.arrivalDate).toLocaleDateString()} – {new Date(msg.itineraryProposal.endDate).toLocaleDateString()} • {msg.itineraryProposal.totalPax} Pax ({msg.itineraryProposal.totalRooms} Rooms)
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                          <Zap className="w-3 h-3 text-emerald-600" />
+                          <span>{msg.itineraryProposal.generationTimeMs}ms • RateHawk Live</span>
+                        </div>
+                      </div>
+
+                      {/* Committed Banner if already applied */}
+                      {msg.itineraryCommitted && (
+                        <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 flex items-center justify-between shadow-2xs">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div>
+                              <div className="font-bold text-xs">Committed to Uno_ERP: Tour #{msg.itineraryCommitted.tourId}</div>
+                              <div className="text-[10px] text-emerald-700">{msg.itineraryCommitted.variantName} line items & hotel vouchers created.</div>
+                            </div>
+                          </div>
+                          <Link
+                            href={msg.itineraryCommitted.redirectUrl}
+                            onClick={() => setIsOpen(false)}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0"
+                          >
+                            <span>Open Tour #{msg.itineraryCommitted.tourId}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      )}
+
+                      {/* Dual-Tier Side-by-Side Comparison Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {msg.itineraryProposal.variants.map((v) => {
+                          const is3Star = v.starRating === 3;
+                          const isCommittingThis = committingVariantId === `${msg.id}-${v.variantId}`;
+                          return (
+                            <div
+                              key={v.variantId}
+                              className={`p-3 rounded-xl border transition-all flex flex-col justify-between ${
+                                is3Star
+                                  ? 'bg-amber-50/40 border-amber-200/90'
+                                  : 'bg-indigo-50/40 border-indigo-200/90 shadow-2xs'
+                              }`}
+                            >
+                              <div className="space-y-2">
+                                {/* Title & Stars */}
+                                <div className="flex items-center justify-between">
+                                  <div className="font-bold text-xs text-slate-900 flex items-center gap-1">
+                                    <span>{v.variantName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-0.5 text-amber-500">
+                                    {Array.from({ length: v.starRating }).map((_, i) => (
+                                      <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Financial Metrics Pill Grid */}
+                                <div className="bg-white p-2 rounded-lg border border-slate-200/70 space-y-1">
+                                  <div className="flex items-baseline justify-between">
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Suggested Sell</span>
+                                    <span className={`text-sm font-extrabold ${is3Star ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                                      €{v.sellPricePerPax.toFixed(2)}<span className="text-[9px] font-normal text-slate-400">/pax</span>
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[10px] text-slate-600 pt-0.5 border-t border-slate-100">
+                                    <span>Cost / Pax: <strong>€{v.costPerPax.toFixed(2)}</strong></span>
+                                    <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                      {v.projectedMarginPct.toFixed(1)}% Margin
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[9px] text-slate-500 pt-0.5">
+                                    <span>Total Rev: €{v.totalPackageRevenue.toLocaleString()}</span>
+                                    <span className="font-semibold text-slate-700">Profit: €{v.totalProfit.toLocaleString()}</span>
+                                  </div>
+                                </div>
+
+                                {/* RateHawk Hotel Stays */}
+                                <div className="space-y-1">
+                                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                                    🏨 Grounded RateHawk Hotels:
+                                  </div>
+                                  <div className="space-y-1">
+                                    {v.hotels.map((h, hIdx) => (
+                                      <div key={hIdx} className="bg-white p-1.5 rounded border border-slate-200/60 text-[10px] flex items-center justify-between gap-1">
+                                        <div className="truncate">
+                                          <span className="font-bold text-slate-800">{h.city}:</span>{' '}
+                                          <span className="text-slate-700">{h.hotelName}</span>{' '}
+                                          <span className="text-amber-500">{'★'.repeat(h.starRating)}</span>
+                                        </div>
+                                        <div className="shrink-0 text-right font-mono text-[9px] text-slate-600">
+                                          €{h.nightlyRoomRate}/nt
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 1-Click Commit Button */}
+                              <div className="pt-2.5">
+                                {msg.itineraryCommitted ? (
+                                  <button
+                                    disabled
+                                    className="w-full py-1.5 bg-slate-200 text-slate-500 text-[11px] font-bold rounded-lg cursor-not-allowed flex items-center justify-center gap-1"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>{msg.itineraryCommitted.variantName === v.variantName ? 'Active in ERP' : 'Archived'}</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyVariant(msg.id, msg.itineraryProposal!, v)}
+                                    disabled={Boolean(committingVariantId)}
+                                    className={`w-full py-1.5 text-[11px] font-extrabold rounded-lg shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                                      is3Star
+                                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                    }`}
+                                  >
+                                    {isCommittingThis ? (
+                                      <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Committing to ERP...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Apply {v.qualityTier} to ERP</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+
+                                {/* 1-Click Save as Project Itinerary */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveToProject(msg.id, msg.itineraryProposal!, v, currentProjectId || undefined)}
+                                  disabled={Boolean(savingProjectId)}
+                                  className="w-full mt-1.5 py-1.5 text-[11px] font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                  title={currentProjectId ? `Save this package under Project #${currentProjectId} Itinerary tab` : "Save this package under a Project"}
+                                >
+                                  {savingProjectId === `${msg.id}-${v.variantId}` ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                                      <span>Saving to Project...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FolderPlus className="w-3.5 h-3.5 text-blue-500" />
+                                      <span>Save to Project {currentProjectId ? `(#${currentProjectId})` : ''} as Itinerary</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Project Saved Confirmation Banner */}
+                      {msg.itineraryProjectSaved && (
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-[11px] text-emerald-800 shadow-2xs">
+                          <div className="flex items-center gap-1.5 font-semibold">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Saved to Project #{msg.itineraryProjectSaved.projectId} as <strong>{msg.itineraryProjectSaved.itineraryCode}</strong></span>
+                          </div>
+                          <a
+                            href={msg.itineraryProjectSaved.redirectUrl}
+                            className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold text-[10px] hover:bg-emerald-700 transition"
+                          >
+                            View Itinerary Tab →
+                          </a>
+                        </div>
+                      )}
+
+                      {/* EU Regulation (EC) 561/2006 Sentinel Banner */}
+                      <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl p-2.5 flex items-start gap-2 text-[10px] text-slate-700">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-slate-900">EU Reg. (EC) 561/2006 Driver Rest Compliant:</strong>{' '}
+                          Vienna to Prague transit (4.1h) automatically injected with mandatory 1h 15m cultural & lunch rest stop in Brno Historic Center. Max continuous driving limit (4.5h) preserved.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Source Document Citation Badge (Only for .pdf, .docx, .pptx - NEVER for .md) */}
                   {msg.sourceDocument && 
                    !msg.sourceDocument.endsWith('.md') && 
@@ -1014,8 +1896,8 @@ export default function AIChatDrawer() {
                       {msg.pills.map((pill, idx) => (
                         <button
                           key={idx}
-                          onClick={() => handleSend(pill)}
-                          className="px-2.5 py-1 bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 hover:border-purple-200 rounded-lg text-[11px] font-semibold transition-all hover:scale-[1.02]"
+                          onClick={() => handlePillClick(pill)}
+                          className="px-2.5 py-1 bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200 hover:border-purple-200 rounded-lg text-[11px] font-semibold transition-all hover:scale-[1.02] cursor-pointer"
                         >
                           {pill}
                         </button>
@@ -1086,6 +1968,17 @@ export default function AIChatDrawer() {
                 ⚙️ Master Data
               </button>
 
+              <button
+                onClick={() => setSelectedCategory(selectedCategory === 'Itinerary' ? null : 'Itinerary')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 border ${
+                  selectedCategory === 'Itinerary' 
+                    ? 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white border-indigo-600 shadow-xs' 
+                    : 'bg-white text-slate-700 hover:bg-slate-200 border-slate-300'
+                }`}
+              >
+                🗺️ Itinerary Co-pilot
+              </button>
+
             </div>
 
             {/* Sub-Topic Selection Pills for Selected Category */}
@@ -1105,8 +1998,11 @@ export default function AIChatDrawer() {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => handleSend(item.query)}
-                    className="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105"
+                    onClick={() => {
+                      setInputQuery(item.query);
+                      textInputRef.current?.focus();
+                    }}
+                    className="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105 cursor-pointer"
                   >
                     {item.label}
                   </button>
@@ -1125,8 +2021,11 @@ export default function AIChatDrawer() {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => handleSend(item.query)}
-                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105"
+                    onClick={() => {
+                      setInputQuery(item.query);
+                      textInputRef.current?.focus();
+                    }}
+                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105 cursor-pointer"
                   >
                     {item.label}
                   </button>
@@ -1147,8 +2046,36 @@ export default function AIChatDrawer() {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    onClick={() => handleSend(item.query)}
-                    className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105"
+                    onClick={() => {
+                      setInputQuery(item.query);
+                      textInputRef.current?.focus();
+                    }}
+                    className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105 cursor-pointer"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedCategory === 'Itinerary' && (
+              <div className="pt-1 border-t border-slate-200/60 flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-[10px] font-semibold text-indigo-700">Itinerary Actions:</span>
+                {[
+                  { label: '✨ Design New Itinerary', query: 'Design a new 7-day Central Europe Cultural & Danube Cruise tour for 36 pax (18 doubles) with 20% margin' },
+                  { label: '⚡ Dual-Tier Quote (3★ vs 4★)', query: 'Create a Budapest-Vienna-Prague itinerary from 2026-10-29 to 2026-11-05 for 36 pax (18 doubles), 20% target margin' },
+                  { label: '🔄 Regenerate Current Tour', query: 'Regenerate current tour itinerary with live RateHawk and master data refresh' },
+                  { label: '📅 Update Day / Service', query: 'Update itinerary day 2 with Vienna Imperial tour' },
+                  { label: '➖ Remove Day', query: 'Remove itinerary day 7 and redistribute nights' },
+                  { label: '📋 List Saved Itineraries', query: 'List saved itineraries in Central Europe' },
+                  { label: '❌ Cancel All Hotels', query: 'please cancel all hotel bookings for this tour' },
+                  { label: '📑 Process Guide Report', query: 'can co-pilot scan and process the "guide_report" file in "C:\\Ersen\\Projects_2025\\Uno_ERP\\tests" and add the details as expenses and revenue then attach it to invoices ?' },
+                  { label: '🚀 Publish Itinerary', query: 'Publish tour itinerary with 4★ Quality Package' }
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleActionPillClick(item)}
+                    className="px-2 py-0.5 bg-gradient-to-r from-amber-50 to-indigo-50 hover:from-amber-100 hover:to-indigo-100 text-indigo-900 border border-indigo-200 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap hover:scale-105 cursor-pointer"
                   >
                     {item.label}
                   </button>
@@ -1168,16 +2095,16 @@ export default function AIChatDrawer() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileSelect}
-                accept=".xlsx,.xls,.csv"
+                accept=".docx,.pdf,.msg,.eml,.txt,.rtf,.xlsx,.xls,.csv,.jpg,.jpeg,.png"
                 className="hidden"
               />
 
-              {/* Paperclip Button for Excel Upload */}
+              {/* Paperclip Button for RFP / Email / Excel / Receipt Upload */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                title="Upload Excel Manifest or Master Data (.xlsx, .xls, .csv)"
+                title="Upload Client RFP (.docx, .pdf), Email (.msg, .eml), Excel (.xlsx) or Slip (.jpg, .png)"
                 className="p-2.5 bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 rounded-xl transition-all cursor-pointer border border-slate-200 hover:border-purple-300 disabled:opacity-40 shrink-0"
               >
                 <Paperclip className="w-4 h-4" />
@@ -1185,9 +2112,10 @@ export default function AIChatDrawer() {
 
               <input 
                 type="text"
+                ref={textInputRef}
                 value={inputQuery}
                 onChange={e => setInputQuery(e.target.value)}
-                placeholder="Ask ERP question, or upload Excel rooming list..."
+                placeholder="Ask ERP question, or attach client RFP (.docx, .pdf, .msg)..."
                 className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium text-slate-800"
               />
               <button
@@ -1200,7 +2128,7 @@ export default function AIChatDrawer() {
             </form>
 
             <div className="text-[10px] text-slate-400 flex items-center justify-between px-1">
-              <span>Supports Excel (.xlsx, .xls) rooming lists & master data</span>
+              <span>Supports RFP (.docx, .pdf), Email (.msg, .eml), Excel (.xlsx) & slips (.jpg)</span>
               <span>Drop file or click 📎</span>
             </div>
           </div>

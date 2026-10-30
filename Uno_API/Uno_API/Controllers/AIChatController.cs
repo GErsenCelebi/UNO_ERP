@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Uno_API.Data;
 using Uno_API.Models;
 using Uno_API.Services;
+using Uno_API.Services.ItineraryCopilot;
+using System.Text;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using System.IO;
@@ -73,6 +76,25 @@ namespace Uno_API.Controllers
         public List<GroundedDatapointDto> Datapoints { get; set; } = new();
     }
 
+    public class InquiryExtractionDto
+    {
+        public bool Success { get; set; } = true;
+        public string FileName { get; set; } = string.Empty;
+        public string FileSize { get; set; } = string.Empty;
+        public string FileType { get; set; } = string.Empty;
+        public string TextSnippet { get; set; } = string.Empty;
+        public string DetectedCorridor { get; set; } = "Budapest-Vienna-Prague";
+        public int DetectedDays { get; set; } = 7;
+        public int DetectedPax { get; set; } = 36;
+        public int DetectedRooms { get; set; } = 18;
+        public string DetectedSeason { get; set; } = "Autumn 2026";
+        public decimal? DetectedBudgetCeiling { get; set; }
+        public decimal DetectedTargetMarginPct { get; set; } = 20.0m;
+        public List<string> DetectedThemes { get; set; } = new();
+        public string SuggestedPrompt { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+    }
+
     public class AIChatResponse
     {
         public string Answer { get; set; } = string.Empty;
@@ -82,6 +104,9 @@ namespace Uno_API.Controllers
         public string? SourceDocument { get; set; }
         public string? Category { get; set; }
         public ConfidenceReportDto? Confidence { get; set; }
+        public ItineraryCopilotPayloadDto? ItineraryProposal { get; set; }
+        public string? InvokedToolName { get; set; }
+        public InquiryExtractionDto? InquiryExtraction { get; set; }
     }
 
     public class QuickActionLink
@@ -98,17 +123,23 @@ namespace Uno_API.Controllers
         private readonly IKnowledgeRetrievalService _retrievalService;
         private readonly ITourProjectLookupService _entityLookupService;
         private readonly ILocalLlmService _llmService;
+        private readonly IItineraryCopilotAgentService _itineraryCopilotService;
+        private readonly IItineraryToolDispatcher _itineraryToolDispatcher;
 
         public AIChatController(
             UnoDbContext context, 
             IKnowledgeRetrievalService retrievalService, 
             ITourProjectLookupService entityLookupService,
-            ILocalLlmService llmService)
+            ILocalLlmService llmService,
+            IItineraryCopilotAgentService itineraryCopilotService,
+            IItineraryToolDispatcher itineraryToolDispatcher)
         {
             _context = context;
             _retrievalService = retrievalService;
             _entityLookupService = entityLookupService;
             _llmService = llmService;
+            _itineraryCopilotService = itineraryCopilotService;
+            _itineraryToolDispatcher = itineraryToolDispatcher;
         }
 
         [HttpPost("chat")]
@@ -117,6 +148,46 @@ namespace Uno_API.Controllers
             if (string.IsNullOrWhiteSpace(request.Query))
             {
                 return BadRequest(new { error = "Query text is required." });
+            }
+
+            // Itinerary Co-pilot Category Routing & Autonomous Intent Detection
+            var qLower = request.Query.ToLowerInvariant();
+            var qUpper = request.Query.ToUpperInvariant();
+            bool isItineraryIntent =
+                string.Equals(request.Category, "Itinerary", StringComparison.OrdinalIgnoreCase) ||
+                qLower.Contains("design") ||
+                qLower.Contains("itinerary") ||
+                qLower.Contains("create_itinerary") ||
+                qLower.Contains("regenerate_itinerary") ||
+                qLower.Contains("publish_itinerary") ||
+                qLower.Contains("unpublish_itinerary") ||
+                qLower.Contains("update_itinerary_day") ||
+                qLower.Contains("remove_itinerary_day") ||
+                qLower.Contains("list_itineraries") ||
+                qLower.Contains("ratehawk") ||
+                qLower.Contains("quote") ||
+                qLower.Contains("dual-tier") ||
+                qUpper.Contains("PVB") ||
+                qUpper.Contains("BVP") ||
+                qUpper.Contains("VPB") ||
+                qLower.Contains("guide_report") ||
+                qLower.Contains("guide report") ||
+                qLower.Contains("rehber raporu") ||
+                ((qLower.Contains("cancel") || qLower.Contains("iptal") || qLower.Contains("remove") || qLower.Contains("delete")) &&
+                 (qLower.Contains("hotel") || qLower.Contains("hotels") || qLower.Contains("booking") || qLower.Contains("bookings") || qLower.Contains("otel"))) ||
+                (qLower.Contains("tour") && (qLower.Contains("pax") || qLower.Contains("day") || qLower.Contains("margin") || qLower.Contains("budapest") || qLower.Contains("vienna") || qLower.Contains("prague")));
+
+            if (isItineraryIntent)
+            {
+                try
+                {
+                    var itineraryResponse = await _itineraryCopilotService.ExecuteAsync(request);
+                    return Ok(itineraryResponse);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AIChatController] Error executing itinerary copilot: {ex}");
+                }
             }
 
             // 0. Specific Entity Live Database Lookup (Specific Tour, Project, Current City, Guide, Hotel, Margin, Pax)
@@ -695,6 +766,196 @@ namespace Uno_API.Controllers
 
             return response;
         }
+
+        [HttpPost("upload-inquiry")]
+        public async Task<ActionResult<InquiryExtractionDto>> UploadInquiry(
+            [FromForm] IFormFile file,
+            [FromForm] string? contextUrl = null)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "No file was uploaded." });
+            }
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var result = new InquiryExtractionDto
+            {
+                FileName = file.FileName,
+                FileSize = $"{(file.Length / 1024.0):F1} KB",
+                FileType = ext.TrimStart('.')
+            };
+
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            string extractedText = "";
+
+            try
+            {
+                if (ext == ".docx")
+                {
+                    using var archive = new System.IO.Compression.ZipArchive(memoryStream, System.IO.Compression.ZipArchiveMode.Read);
+                    var entry = archive.GetEntry("word/document.xml");
+                    if (entry != null)
+                    {
+                        using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
+                        string xml = await reader.ReadToEndAsync();
+                        var matches = Regex.Matches(xml, @"<w:t(?:\s+[^>]*)?>([^<]*)</w:t>");
+                        var sb = new StringBuilder();
+                        foreach (Match m in matches)
+                        {
+                            sb.Append(m.Groups[1].Value).Append(" ");
+                        }
+                        extractedText = sb.ToString();
+                    }
+                }
+                else if (ext == ".pdf")
+                {
+                    byte[] bytes = memoryStream.ToArray();
+                    string raw = Encoding.Latin1.GetString(bytes);
+                    var sb = new StringBuilder();
+                    var btMatches = Regex.Matches(raw, @"BT\s*(.*?)\s*ET", RegexOptions.Singleline);
+                    foreach (Match m in btMatches)
+                    {
+                        var textParts = Regex.Matches(m.Groups[1].Value, @"\(([^)]+)\)");
+                        foreach (Match tp in textParts)
+                        {
+                            sb.Append(tp.Groups[1].Value).Append(" ");
+                        }
+                    }
+                    if (sb.Length < 30)
+                    {
+                        var strMatches = Regex.Matches(raw, @"\(([A-Za-z0-9\s,.\-!?:;/]{3,})\)");
+                        foreach (Match sm in strMatches)
+                        {
+                            sb.Append(sm.Groups[1].Value).Append(" ");
+                        }
+                    }
+                    extractedText = sb.ToString();
+                }
+                else if (ext == ".msg")
+                {
+                    byte[] bytes = memoryStream.ToArray();
+                    string asUtf8 = Encoding.UTF8.GetString(bytes);
+                    string asUnicode = Encoding.Unicode.GetString(bytes);
+                    var sb = new StringBuilder();
+                    var printableUtf8 = Regex.Matches(asUtf8, @"[A-Za-z0-9\s,.\-!?:;/@]{4,}");
+                    foreach (Match m in printableUtf8) sb.Append(m.Value).Append(" ");
+                    var printableUni = Regex.Matches(asUnicode, @"[A-Za-z0-9\s,.\-!?:;/@]{4,}");
+                    foreach (Match m in printableUni) sb.Append(m.Value).Append(" ");
+                    extractedText = sb.ToString();
+                }
+                else // .txt, .eml, .rtf, .csv, etc.
+                {
+                    using var reader = new StreamReader(memoryStream, Encoding.UTF8);
+                    extractedText = await reader.ReadToEndAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                result.TextSnippet = $"[Error reading file: {ex.Message}]";
+            }
+
+            // Extract Snippet
+            string cleanSnippet = Regex.Replace(extractedText, @"\s+", " ").Trim();
+            result.TextSnippet = cleanSnippet.Length > 400 ? cleanSnippet.Substring(0, 400) + "..." : cleanSnippet;
+
+            string lowerText = cleanSnippet.ToLowerInvariant();
+
+            // 1. Detect Corridor
+            if (lowerText.Contains("salzburg") && (lowerText.Contains("vienna") || lowerText.Contains("wien")))
+            {
+                result.DetectedCorridor = "Vienna-Salzburg-Prague";
+            }
+            else if (lowerText.Contains("prague") && lowerText.Contains("budapest") && lowerText.Contains("vienna"))
+            {
+                result.DetectedCorridor = (lowerText.IndexOf("prague") < lowerText.IndexOf("budapest"))
+                    ? "Prague-Vienna-Budapest"
+                    : "Budapest-Vienna-Prague";
+            }
+            else if (lowerText.Contains("prague") && lowerText.Contains("vienna"))
+            {
+                result.DetectedCorridor = "Prague-Vienna-Budapest";
+            }
+            else if (lowerText.Contains("budapest") || lowerText.Contains("danube"))
+            {
+                result.DetectedCorridor = "Budapest-Vienna-Prague";
+            }
+            else
+            {
+                result.DetectedCorridor = "Budapest-Vienna-Prague";
+            }
+
+            // 2. Detect Pax
+            var paxMatch = Regex.Match(lowerText, @"(\d+)\s*(?:pax|passengers|guests|people|persons|travellers|yolcu)");
+            if (paxMatch.Success && int.TryParse(paxMatch.Groups[1].Value, out int p) && p > 0 && p <= 200)
+            {
+                result.DetectedPax = p;
+            }
+
+            // 3. Detect Rooms
+            var roomsMatch = Regex.Match(lowerText, @"(\d+)\s*(?:rooms|doubles|twins|dbl|twn|oda)");
+            if (roomsMatch.Success && int.TryParse(roomsMatch.Groups[1].Value, out int r) && r > 0 && r <= 100)
+            {
+                result.DetectedRooms = r;
+            }
+            else
+            {
+                result.DetectedRooms = (result.DetectedPax + 1) / 2;
+            }
+
+            // 4. Detect Duration Days
+            var daysMatch = Regex.Match(lowerText, @"(\d+)\s*-?\s*(?:days?|gün|nights?|gece)");
+            if (daysMatch.Success && int.TryParse(daysMatch.Groups[1].Value, out int d) && d >= 3 && d <= 30)
+            {
+                result.DetectedDays = d;
+            }
+
+            // 5. Detect Season / Month
+            if (lowerText.Contains("october") || lowerText.Contains("oct") || lowerText.Contains("ekim")) result.DetectedSeason = "October 2026";
+            else if (lowerText.Contains("november") || lowerText.Contains("nov") || lowerText.Contains("kasım")) result.DetectedSeason = "November 2026";
+            else if (lowerText.Contains("september") || lowerText.Contains("sep") || lowerText.Contains("eylül")) result.DetectedSeason = "September 2026";
+            else if (lowerText.Contains("spring") || lowerText.Contains("april") || lowerText.Contains("may")) result.DetectedSeason = "Spring 2027";
+            else if (lowerText.Contains("summer") || lowerText.Contains("july") || lowerText.Contains("august")) result.DetectedSeason = "Summer 2026";
+
+            // 6. Detect Budget Ceiling
+            var ceilMatch = Regex.Match(lowerText, @"(?:budget|ceiling|max(?:imum)?\s*price|price\s*ceiling|max)\s*(?:of|is|:)?\s*€?\s*([\d,]+(?:\.\d+)?)");
+            if (ceilMatch.Success)
+            {
+                string rawVal = ceilMatch.Groups[1].Value.Replace(",", "");
+                if (decimal.TryParse(rawVal, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal ceilVal))
+                {
+                    result.DetectedBudgetCeiling = ceilVal;
+                }
+            }
+
+            // 7. Detect Margin
+            var marginMatch = Regex.Match(lowerText, @"(\d+(?:\.\d+)?)\s*%\s*(?:margin|target|marj)");
+            if (marginMatch.Success && decimal.TryParse(marginMatch.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal mVal))
+            {
+                result.DetectedTargetMarginPct = mVal;
+            }
+
+            // 8. Detect Themes
+            if (lowerText.Contains("danube") || lowerText.Contains("cruise") || lowerText.Contains("boat")) result.DetectedThemes.Add("Danube Scenic Cruise");
+            if (lowerText.Contains("concert") || lowerText.Contains("mozart") || lowerText.Contains("classical")) result.DetectedThemes.Add("Classical Concerts");
+            if (lowerText.Contains("castle") || lowerText.Contains("palace") || lowerText.Contains("schonbrunn")) result.DetectedThemes.Add("Imperial Palaces & Castles");
+            if (lowerText.Contains("wine") || lowerText.Contains("folklore") || lowerText.Contains("dinner")) result.DetectedThemes.Add("Folklore Dinner & Wine Tasting");
+            if (result.DetectedThemes.Count == 0)
+            {
+                result.DetectedThemes.AddRange(new[] { "Imperial Architecture", "Old Town Heritage", "Danube Cruise" });
+            }
+
+            // Formulate Suggested Prompt
+            string themeStr = string.Join(", ", result.DetectedThemes);
+            string budgetStr = result.DetectedBudgetCeiling.HasValue ? $", max sell price ceiling of €{result.DetectedBudgetCeiling.Value:N0}/pax" : "";
+            result.SuggestedPrompt = $"Design a new {result.DetectedDays}-day {result.DetectedCorridor} tour for {result.DetectedPax} pax ({result.DetectedRooms} doubles) in {result.DetectedSeason} with {result.DetectedTargetMarginPct:F0}% target margin{budgetStr}, based on brief in {result.FileName}. Themes: {themeStr}";
+
+            result.Message = $"Successfully extracted tour requirements from '{result.FileName}'.";
+            return Ok(result);
+        }
+
         [HttpPost("inspect-excel")]
         public async Task<ActionResult<ExcelInspectionResultDto>> InspectExcel(
             [FromForm] IFormFile file,
@@ -1059,6 +1320,66 @@ namespace Uno_API.Controllers
             }
 
             return Ok(result);
+        }
+
+        [HttpPost("itinerary/apply-variant")]
+        public async Task<ActionResult<ApplyItineraryVariantResponseDto>> ApplyItineraryVariant([FromBody] ApplyItineraryVariantRequestDto request)
+        {
+            if (request == null || request.Variant == null)
+            {
+                return BadRequest(new { error = "Invalid itinerary variant payload." });
+            }
+
+            try
+            {
+                var result = await _itineraryToolDispatcher.ApplyItineraryVariantToUnoErpAsync(
+                    tourId: request.TourId,
+                    variantPayload: request.Variant,
+                    destination: request.Destination,
+                    arrivalDate: request.ArrivalDate,
+                    endDate: request.EndDate,
+                    pax: request.Pax);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AIChatController] Error applying variant to ERP: {ex}");
+                return StatusCode(500, new { error = $"Failed to commit variant to Uno_ERP: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("itinerary/save-to-project")]
+        public async Task<ActionResult<SaveProjectItineraryResponseDto>> SaveItineraryToProject([FromBody] SaveItineraryToProjectRequestDto request)
+        {
+            if (request == null || request.Variant.ValueKind == System.Text.Json.JsonValueKind.Undefined || request.ProjectId <= 0)
+            {
+                return BadRequest(new { error = "Valid ProjectId and Itinerary Variant payload are required." });
+            }
+
+            try
+            {
+                var result = await _itineraryToolDispatcher.SaveItineraryVariantToProjectAsync(
+                    projectId: request.ProjectId,
+                    variantPayload: request.Variant,
+                    destination: request.Destination,
+                    arrivalDate: request.ArrivalDate,
+                    endDate: request.EndDate,
+                    pax: request.Pax,
+                    customTitle: request.CustomTitle,
+                    makePrimary: request.MakePrimary);
+
+                return Ok(result);
+            }
+            catch (ArgumentException aex)
+            {
+                return NotFound(new { error = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AIChatController] Error saving itinerary to project: {ex}");
+                return StatusCode(500, new { error = $"Failed to save itinerary under Project: {ex.Message}" });
+            }
         }
     }
 }

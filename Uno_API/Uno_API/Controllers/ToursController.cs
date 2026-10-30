@@ -356,6 +356,7 @@ namespace Uno_API.Controllers
             if (tour.ProjectId > 0) existingTour.ProjectId = tour.ProjectId;
             if (tour.TotalFee > 0) existingTour.TotalFee = tour.TotalFee;
             existingTour.Notes = tour.Notes;
+            existingTour.AccountingClosed = tour.AccountingClosed;
 
             if (tour.BaseFee >= 0)
             {
@@ -687,6 +688,37 @@ namespace Uno_API.Controllers
             stream.Seek(0, SeekOrigin.Begin);
 
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        public class AccountingClosedDto
+        {
+            public bool AccountingClosed { get; set; }
+        }
+
+        // PATCH: api/tours/5/accounting-closed
+        [HttpPatch("{id}/accounting-closed")]
+        public async Task<IActionResult> UpdateAccountingClosed(int id, [FromBody] AccountingClosedDto request)
+        {
+            if (string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Guides are not permitted to modify tour accounting status." });
+            }
+
+            var tour = await _context.Tours.FindAsync(id);
+            if (tour == null)
+            {
+                return NotFound();
+            }
+
+            tour.AccountingClosed = request.AccountingClosed;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                tourId = tour.Id,
+                accountingClosed = tour.AccountingClosed,
+                message = tour.AccountingClosed ? "Accounting audit marked as closed / completed." : "Accounting audit reopened."
+            });
         }
 
         private bool TourExists(int id)

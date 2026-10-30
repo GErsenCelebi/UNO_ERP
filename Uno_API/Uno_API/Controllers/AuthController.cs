@@ -54,6 +54,7 @@ namespace Uno_API.Controllers
                     Email = user.Email,
                     Name = user.Name,
                     Role = user.Role,
+                    GuideId = user.GuideId,
                     LoginTime = DateTime.UtcNow.ToString("o")
                 }
             });
@@ -123,6 +124,7 @@ namespace Uno_API.Controllers
                 user.Password = updatedUser.Password;
             }
             user.Role = updatedUser.Role;
+            user.GuideId = updatedUser.GuideId;
             user.IsActive = updatedUser.IsActive;
 
             await _context.SaveChangesAsync();

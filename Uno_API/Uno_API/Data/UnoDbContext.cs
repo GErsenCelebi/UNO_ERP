@@ -38,10 +38,20 @@ namespace Uno_API.Data
         public DbSet<AiKnowledgeItem> AiKnowledgeItems { get; set; } = null!;
         public DbSet<TourAttachment> TourAttachments { get; set; } = null!;
         public DbSet<TourExcursionSale> TourExcursionSales { get; set; } = null!;
+        public DbSet<ProjectItinerary> ProjectItineraries { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ProjectItinerary>().Property(x => x.EstimatedCostPerPax).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ProjectItinerary>().Property(x => x.EstimatedSellPricePerPax).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ProjectItinerary>().Property(x => x.TargetMarginPct).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ProjectItinerary>()
+                .HasOne(x => x.Project)
+                .WithMany(p => p.Itineraries)
+                .HasForeignKey(x => x.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Driver>().Property(x => x.DailyRate).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Excursion>().Property(x => x.Price).HasColumnType("decimal(18,2)");

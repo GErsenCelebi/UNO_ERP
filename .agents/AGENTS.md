@@ -18,3 +18,7 @@
 ## 5. E2E Test Suite Storage Location
 **Rule:** All Playwright and E2E automation test scripts created or updated during development MUST be saved directly in the repository under `tests/e2e/` (e.g., `C:\Ersen\Projects_2025\Uno_ERP\tests\e2e\`).
 **Reason:** This ensures the AI Chatbot, developers, and CI/CD pipelines can read, execute, and learn all application workflows and UI interactions directly from the repository codebase.
+
+## 6. AI Team Alias Reference
+**Rule:** `01_AITeam` directly refers to the centralized multi-agent AI engineering team located at `C:\Ersen\Projects_2025\AntiG\AITeam` and MUST be addressed and called as `@01-AI_team` in all future system architecture, model training, and agentic workflows.
+**Reason:** Unifies the product management, data science, RAG retrieval, and AI engineering roles under a singular authoritative team handle.

@@ -16,5 +16,6 @@ namespace Uno_API.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public Client? Client { get; set; }
         public ICollection<Tour> Tours { get; set; } = new List<Tour>();
+        public ICollection<ProjectItinerary> Itineraries { get; set; } = new List<ProjectItinerary>();
     }
 }

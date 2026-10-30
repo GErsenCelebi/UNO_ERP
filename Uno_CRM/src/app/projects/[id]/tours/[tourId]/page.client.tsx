@@ -1,7 +1,7 @@
 "use client"
 import React, {  useEffect, useState, useMemo , useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, RefreshCw, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent, BedDouble, BedSingle, Sun, Moon, Clock, Bed, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, Edit, Pencil, Briefcase, MapPin, CalendarDays, Users, User, Plus, X, Trash2, PlaneLanding, PlaneTakeoff, Hotel, Car, PersonStanding, Compass, Plane, Save, Package, FileText, Printer, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronRight, Building2, Truck, Paperclip, Upload, ExternalLink, Eye, Download, PieChart, DollarSign, Sparkles, Tag, Percent, BedDouble, BedSingle, Sun, Moon, Clock, Bed, CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
 
 import TourCheckpointWidget from '@/components/TourCheckpointWidget';
 import EntityAuditHistorySection from '@/components/EntityAuditHistorySection';
@@ -29,6 +29,7 @@ interface Tour {
   departureAirport?: string;
   tourStatus?: { name: string };
   guideId?: number | null;
+  accountingClosed?: boolean;
   [key: string]: any;
 }
 
@@ -55,6 +56,7 @@ interface TourService {
   hotelId?: number | null;
   driverId?: number | null;
   guideId?: number | null;
+  accountingClosed?: boolean;
   excursionId?: number | null;
   transportCompanyId?: number | null;
   roomType?: string | null;
@@ -175,6 +177,8 @@ export default function TourDetailPage() {
   const [editData, setEditData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [togglingAccounting, setTogglingAccounting] = useState(false);
+  const [checkpointRefreshKey, setCheckpointRefreshKey] = useState(0);
 
   // Services
   const [services, setServices] = useState<TourService[]>([]);
@@ -724,6 +728,37 @@ export default function TourDetailPage() {
         }
       }
     } catch (err) { console.error(err); } finally { setSaving(false); }
+  };
+
+  const handleToggleAccountingClosed = async () => {
+    if (!tour) return;
+    const newStatus = !tour.accountingClosed;
+    setTogglingAccounting(true);
+    try {
+      const res = await fetch(`${API}/tours/${tourId}/accounting-closed`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ accountingClosed: newStatus }),
+      });
+      if (res.ok) {
+        setTour(prev => prev ? { ...prev, accountingClosed: newStatus } : null);
+        if (editData) {
+          setEditData((prev: any) => prev ? { ...prev, accountingClosed: newStatus } : prev);
+        }
+        setCheckpointRefreshKey(k => k + 1);
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.message || err?.error || 'Failed to update accounting audit status');
+      }
+    } catch (err) {
+      console.error('Error toggling accounting closed:', err);
+      alert('Network error updating accounting status');
+    } finally {
+      setTogglingAccounting(false);
+    }
   };
 
   const getCategoryId = (name: string): number => {
@@ -2361,6 +2396,28 @@ export default function TourDetailPage() {
                         </div>
                       </div>
 
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-slate-500" />
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Accounting Audit Status</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Check when financial auditing and commissions are closed</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(editData.accountingClosed)}
+                            onChange={e => setEditData({ ...editData, accountingClosed: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                          <span className="ml-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {editData.accountingClosed ? 'Closed' : 'Open'}
+                          </span>
+                        </label>
+                      </div>
+
                       <div className="pt-2 flex gap-3">
                         <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl">Cancel</button>
                         <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-60">
@@ -2878,7 +2935,7 @@ export default function TourDetailPage() {
                     </div>
                   )}
                 </div>
-                <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} />
+                <TourCheckpointWidget tourId={parseInt(tourId)} onStatusUpdated={fetchAll} refreshTrigger={checkpointRefreshKey} />
               </div>
 
               {/* RIGHT COLUMN (3-4 Cols): Compact Operational Remarks & Special Tour Notes Card */}
@@ -6145,6 +6202,86 @@ export default function TourDetailPage() {
                   <button onClick={handleCreateNewInvoice} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors gap-1.5 shadow-2xs">
                     <Plus className="w-4 h-4" /> Create Invoice
                   </button>
+                </div>
+              </div>
+
+              {/* Accounting Audit Gate Switch Card */}
+              <div className={`p-4 rounded-xl border transition-all ${
+                tour?.accountingClosed 
+                  ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800' 
+                  : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                      tour?.accountingClosed
+                        ? 'bg-emerald-500 text-white shadow-xs'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {tour?.accountingClosed ? (
+                        <CheckCircle2 className="w-5 h-5 text-white" />
+                      ) : (
+                        <Lock className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          Accounting Audit Status
+                        </h3>
+                        {tour?.accountingClosed ? (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Completed
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactive (Open)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {tour?.accountingClosed
+                          ? "Accounting audit is completed. Status Gate requirement is satisfied and this tour is ready to be advanced to Completed."
+                          : "Default is inactive (Accounting Open). Turn switch to green (Completed) once supplier costs, passenger invoices, and commissions are audited."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* The Switch Button */}
+                  <div className="flex items-center gap-2.5 self-end sm:self-center bg-white dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      Audit Lock:
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={Boolean(tour?.accountingClosed)}
+                      disabled={togglingAccounting}
+                      onClick={handleToggleAccountingClosed}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                        tour?.accountingClosed ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'
+                      } ${togglingAccounting ? 'opacity-50 cursor-wait' : ''}`}
+                      title={tour?.accountingClosed ? "Click to reopen accounting audit" : "Click to switch to green (Completed)"}
+                    >
+                      <span className="sr-only">Toggle Accounting Audit Status</span>
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                          tour?.accountingClosed ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      >
+                        {togglingAccounting ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
+                        ) : tour?.accountingClosed ? (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        ) : null}
+                      </span>
+                    </button>
+                    <span className={`text-xs font-bold ${
+                      tour?.accountingClosed ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {tour?.accountingClosed ? 'COMPLETED' : 'INACTIVE'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
