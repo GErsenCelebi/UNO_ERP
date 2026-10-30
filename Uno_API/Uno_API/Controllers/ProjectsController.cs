@@ -33,6 +33,73 @@ namespace Uno_API.Controllers
             });
         }
 
+        [HttpGet("storage-audit")]
+        public ActionResult AuditLocalStorage([FromServices] IWebHostEnvironment env)
+        {
+            if (!string.Equals(Request.Headers["X-User-Role"].FirstOrDefault(), "Administrator", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { error = "Only Administrators can audit server storage." });
+            }
+            var root = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "Storage");
+            if (!Directory.Exists(root)) return Ok(new { exists = false, root });
+            var projects = Directory.GetDirectories(root).Select(p => new {
+                projectName = Path.GetFileName(p),
+                tours = Directory.GetDirectories(p).Select(t => Path.GetFileName(t)).ToList()
+            }).ToList();
+            return Ok(new { exists = true, root, projects });
+        }
+
+        [HttpPost("storage-resync-all")]
+        public async Task<ActionResult> ResyncAllLocalStorage()
+        {
+            var tours = await _context.Tours.Include(t => t.Project).ToListAsync();
+            int ensured = 0;
+            foreach (var t in tours)
+            {
+                var pCode = t.Project?.ProjectCode ?? $"Project_{t.ProjectId}";
+                var tCode = t.TourCode ?? $"Tour_{t.Id}";
+                _storageService.EnsureTourFolders(pCode, tCode);
+                ensured++;
+            }
+            return Ok(new { ensuredTours = ensured });
+        }
+
+        [HttpPost("storage-cleanup")]
+        public async Task<ActionResult> CleanupLocalStorage([FromServices] IWebHostEnvironment env)
+        {
+            var root = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "Storage");
+            if (!Directory.Exists(root)) return Ok(new { message = "Storage root does not exist." });
+
+            var validProjects = await _context.Projects.Select(p => p.ProjectCode.Trim().ToLower()).ToListAsync();
+            var validTours = await _context.Tours.Select(t => t.TourCode.Trim().ToLower()).ToListAsync();
+
+            var deletedDirs = new List<string>();
+            foreach (var projDir in Directory.GetDirectories(root))
+            {
+                var pName = Path.GetFileName(projDir);
+                var normP = pName.Replace("-", " ").Trim().ToLower();
+                var normPStrict = pName.Trim().ToLower();
+                if (!validProjects.Contains(normP) && !validProjects.Contains(normPStrict))
+                {
+                    Directory.Delete(projDir, true);
+                    deletedDirs.Add($"Project: {pName}");
+                    continue;
+                }
+                foreach (var tourDir in Directory.GetDirectories(projDir))
+                {
+                    var tName = Path.GetFileName(tourDir);
+                    var normT = tName.Replace("-", " ").Trim().ToLower();
+                    var normTStrict = tName.Trim().ToLower();
+                    if (!validTours.Contains(normT) && !validTours.Contains(normTStrict))
+                    {
+                        Directory.Delete(tourDir, true);
+                        deletedDirs.Add($"Tour: {pName}/{tName}");
+                    }
+                }
+            }
+            return Ok(new { deletedCount = deletedDirs.Count, deletedDirs });
+        }
+
         // GET: api/Projects
         [HttpGet]
         public async Task<IActionResult> GetProjects()
